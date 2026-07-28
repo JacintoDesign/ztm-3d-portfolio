@@ -104,17 +104,26 @@ Reads the contact channels from `CONTENT.md` (`contact@jacinto.design`) plus the
 | Alley length | 46.0 (`z ∈ [-23, +23]`) |
 | Alley width | 9.0 (`x ∈ [-4.5, +4.5]`) |
 | Facade height | 14.0 west, 12.5 east (asymmetry stops it reading as a corridor) |
+| **Wall thickness** | **1.00**, all facades and end walls, inner faces at `x = ±4.5`. Set by the 0.55 shopfront recess in §2.1 — a thinner wall leaves too little behind it. Outer faces are never seen. |
 | Ground | `y = 0`, single plane 60 × 60 (overscan hidden by fog) |
 | Kerb | 0.12 high, 0.60 wide, both sides, inner edge at `x = ±3.90` |
-| Gutter channel | 0.22 wide at `x = ±3.72`, 0.03 deep — standing water, roughness 0.06 |
+| Gutter channel | 0.22 wide at `x = ±3.72`, 0.03 deep — standing water, roughness 0.06. **Expressed through the puddle mask, not as overlay geometry — see below.** |
 | **Walkable clamp** | **`x ∈ [-3.60, +3.60]`, `z ∈ [-21.0, +21.4]`** (hard, in addition to AABBs) |
 | Player radius | 0.32 |
+
+**The gutter is the mask, not a strip.** This section gives the gutter roughness 0.06, and §6.2 gives puddle-wet ground roughness 0.06 and biases the mask toward `x = ±3.72` — the two sections describe one surface. Laying a separate strip over the reflector would invert it, because a plain material on top of the reflector makes the wettest line in the alley the only one that does not reflect. **What remains genuinely unbuilt is the 0.03 recess**, which cannot exist while the floor is a plane; it needs real floor geometry and arrives with the kerb and drain modelling in the surroundings step. Until then the gutter reads as standing water, which at eye height is what 3 cm of depth looks like anyway.
 
 ### 3.1 The two ends (there is no horizon)
 
 - **North, `z = -23`** — the station ticket gate. Full-width wall, roller shutter down, a dark backlit `終電` plate above it at 4.2 m, three dead gate machines in silhouette. This is behind you at spawn; turning round is the story beat.
 - **South, `z = +23`** — the alley bends left. A 6 m return wall of shuttered doors at 20° to the axis, so no vanishing point is visible, and fog closes it at 0.24 transmittance.
 - **Above** — an overhead mat of cable and wire at `y ∈ [6.5, 9.0]`, plus three cross-alley banner wires. There is **no sky dome and no HDRI**: `scene.background` is a flat `#04060B` and the fog eats everything before the facade tops.
+
+**End wall height — 14.0, both ends.** This document gives heights for the two facades and none for the caps. They take the taller of the two, because a cap shorter than its neighbours opens a strip of sky in a world whose whole premise is that there is none. Derived from the constraint, not chosen.
+
+**"20° to the axis" means across the end, not along it.** The phrase admits two readings, and only one does the job the same sentence asks for: a wall swung 20° off the *long* axis runs nearly parallel to the alley and blocks nothing, while a wall across the end swung 20° off square hides the vanishing point. **The second reading is the one that holds.** Its west end meets the west wall and it opens toward `+X` — the visitor's left when facing `+Z`, which is the direction the alley is stated to bend. What lies past the opening is §16.2 and still unmodelled; at 42 m from spawn the fog is at ~0.21 transmittance and closes it unaided.
+
+**Facades run `z ∈ [-24, +24]`** — the alley length plus a wall thickness at each end, so the facades meet the outer faces of both caps and no corner shows a seam.
 
 ### 3.2 Surroundings inventory (atmosphere only)
 
@@ -176,8 +185,10 @@ Every colour in the world comes from this table. Nothing else.
 
 | Value | Setting |
 |---|---|
-| Fog | `FogExp2`, colour `fogColor` `#0A0F1A`, **density `0.032`** |
+| Fog | `FogExp2`, colour `fogColor` `#0A0F1A`, **density `0.0300`** |
 | Fog check | ~0.62 transmittance at 23 m, ~0.24 at 40 m — the far end is legible but never resolves |
+
+**On the density.** This read `0.032` until the shell was built and the check was actually run. three's `FogExp2` is `transmittance = exp(-(density · depth)²)`, which puts `0.032` at **0.582 at 23 m and 0.194 at 40 m** — denser than this document's own check in both places. Solving the check backwards gives `0.03006` from the 23 m figure and `0.02987` from the 40 m figure, independently. Two figures agreeing to three decimal places are the intent; the density was the typo. **`0.0300`.**
 | Background | flat `void` `#04060B`, no skybox, no HDRI file |
 | Tone mapping | `ACESFilmicToneMapping`, **exposure `1.05`** |
 | Colour space | `SRGBColorSpace` output, `ColorManagement.enabled = true` |
@@ -214,12 +225,49 @@ The ground is the picture. Budget for it first, cut it last.
 | `depthToBlurRatioBias` | 0.28 | 0.28 |
 | `distortion` | **0.28** | 0.18 |
 | `mirror` | 0.0 | 0.0 |
+| `reflectorOffset` | **0.0** | 0.0 |
 | `roughness` (base) | 0.18 | 0.22 |
 | `metalness` | 0.0 | 0.0 |
 
+`reflectorOffset` is `0` deliberately. It exists to push the reflection plane off the geometry when the reflective surface sits above what it is drawn on — a pool with real depth. A rain film has no thickness worth modelling, and the puddle mask already carries where the water is. Anything non-zero floats the neon off the road.
+
+### 6.1 Reflector strip geometry
+
+The ground is two surfaces, not one.
+
+| | Value |
+|---|---|
+| Base plane | 60 × 60 at `y = 0`, plain material in `asphalt`, overscan hidden by fog (§3) |
+| **Reflector strip** | **12 × 52** — `x ∈ [-6, 6]`, `z ∈ [-26, 26]` — at **`y = 0.004`** |
+
+**Reflections render at half the ground width only**; beyond `x = ±6` the fog has it anyway. Neither seam is ever in frame: the walls at `x = ±4.5` stand 1.5 m inside the x-edge, and the z-edge sits 3 m behind each end wall.
+
+**The 4 mm lift is depth-buffer arithmetic, not a look choice.** At the §12.1 near/far of `0.10` / `90.0`, depth precision at the far end of the alley is around a millimetre — the conventional 1 mm separation z-fights at 40 m, exactly where nobody thinks to look for it. 4 mm clears it and stays an order of magnitude under the gutter's own 0.03 depth, so nothing about it is visible.
+
+### 6.2 The two ground maps
+
 - **Roughness map** — a puddle mask, generated once to a canvas: values `0.06` inside puddles, `0.55` on dry patches, blurred 14 px at the boundary. Same mask drives `distortionMap`.
-- **Normal map** — a tiling ripple, `normalScale = [0.15, 0.15]`, UV repeat 8, scrolling `+0.012 u/s` in `z`. Off under reduced motion.
-- **Reflections render at half the ground plane only** (`x ∈ [-6, 6]`); beyond that the fog has it anyway.
+
+  **Coverage is ~60% wet.** §1 says the asphalt is a mirror and this is that sentence taken at its word: water is the ground and the dry patches are broken islands within it. Puddles are unions of 3–6 overlapping ellipses, 0.8–4.5 m on the major axis, biased toward the alley centre and toward the gutter lines at `x = ±3.72`, thinning against the kerb faces — where water actually goes.
+
+  | Mask value | Desktop | Mobile |
+  |---|---|---|
+  | Canvas size | 512 × 2048 | 256 × 1024 |
+  | Boundary blur | 14 px | 7 px |
+
+  The mask maps 1:1 onto the reflector strip — no UV repeat — so puddles are anchored to world positions and stay put as the visitor walks. **The blur scales with the canvas** because 14 px is a value in the desktop map's pixel space; held at 14 on a half-size map it would double the physical softness of every puddle edge. Both sizes put the transition at about a third of a metre.
+
+  **Coverage is measured across the alley only, `x ∈ [-4.5, 4.5]`.** The strip runs 1.5 m past the walls on each side so its seam is never in frame (§6.1), but that margin is hidden geometry. Measuring across the full 12 m counts floor nobody can see, and the generator compensates by flooding the part they can — in practice driving the centre of the alley to 99% wet, one unbroken mirror with the dry islands pushed out under the walls, while the global figure still read 60%.
+
+  **The placement weight needs a non-zero baseline** for the same reason: a weight that falls to nothing between the centre and the gutter bumps concentrates water into bands and saturates them, rather than biasing a floor that is wet throughout. Bias, not concentration.
+
+- **Normal map** — a tiling ripple, `normalScale = [0.15, 0.15]`, UV repeat 8, scrolling `+0.012 u/s` in `z`. Scroll off under reduced motion; the map itself stays.
+
+  **Fine isotropic stipple**, no direction. 512², a height field summed from ~140 Gaussian dimples of 6–22 px radius wrapped toroidally so it tiles seamlessly, plus one faint low-frequency wave so the eye does not find the grid, then Sobel to normals. At repeat 8 across the 12 m strip each tile is 1.5 m, putting the dimples at 2–7 cm — raindrop scale. The §10 ripple emitters own the expanding rings; this is only the resting texture beneath them, and a second directional cue on top of the scroll would read as a texture sliding rather than water sitting.
+
+  **Height-to-normal slope: 1.1.** This is the map's own strength, before `normalScale` scales it, and it matters more than it looks like it should. At the grazing angles a 1.68 m eye height gives across a 46 m alley, a small normal perturbation swings the reflected ray a long way, so this value decides how far a reflection breaks up. Authored at 2.4 it shredded every reflection edge into long torn slivers; 1.1 keeps the break-up at the scale of rain on a film of water, which is the wet-pavement look §1 is describing. Neon on wet asphalt genuinely does shatter — the dial sets how much.
+
+Both maps are deterministic — no `Math.random()`, identical on every load.
 
 **Turn-down order under budget pressure:** resolution 1024 → 512 → 256, then `blur` halves, then `distortion` → 0, then the reflector becomes a plain rough material with the env map. Never delete the puddles.
 
@@ -369,6 +417,10 @@ Any string not on this list and not from `CONTENT.md` does not go in the world.
 | Near / far | 0.10 / 90.0 |
 | Spawn | position `(0, 1.68, -19.5)`, yaw `0` (facing `+Z`), pitch `-4°` |
 
+**This document's yaw is not three's, and the difference is exactly π.** Yaw `0` here faces `+Z`; a three.js camera at `rotation.y = 0` looks down `−Z`. For a world yaw ψ, three's rotation is **ψ + π**, giving a view direction of `(sin ψ, 0, cos ψ)`. Checked against the §12.6 stops rather than taken on trust: ψ = 0° → `+Z`, the alley ahead at spawn; ψ = −90° → `−X`, the west wall, where the shopfront and payphone are; ψ = +90° → `+X`, the east wall and the vending machine. All three agree. **Convert once, at the point a camera is posed** — never by sprinkling `+ Math.PI` through the navigation code, where one missing conversion faces the visitor at a wall for reasons that look like a layout bug.
+
+**Rotation order is `YXZ`.** Under three's default `XYZ`, pitching rolls the horizon as you turn. `YXZ` is what keeps yaw and pitch independent, and it must be set *before* the rotation values or the same three numbers describe a different orientation.
+
 ### 12.2 Looking — drag-to-look, one model on desktop and touch
 
 **No `PointerLockControls`.** Pointer events on the canvas, yaw and pitch held on refs.
@@ -505,6 +557,16 @@ Appears 900 ms after the gate, bottom-centre, fades after **6 s** or on first in
 
 Everything repeated is `InstancedMesh` or drei `<Instances>`: shutters, lanterns, condensers, cables, crates, rain, steam, ripples. Geometries and materials are created once at module scope or in `useMemo`, never in a render body.
 
+### 15.1 Which column the world reads
+
+§6, §7, §9, §10 and §15 all table a desktop and a mobile value. One rule picks between them.
+
+**Mobile when the pointer is coarse, or the viewport is 820 px or narrower.** The pointer test is the honest one — it is what actually distinguishes a phone. The width test exists so the mobile column can be exercised by resizing a desktop browser, which is how it gets checked during development.
+
+**Resolved once at first read, then frozen for the life of the page.** It has to be: the tier feeds the Canvas's `antialias` flag, which is fixed at WebGL context creation and cannot be changed afterwards. A tier that flipped mid-session would leave the renderer and the values describing it disagreeing — a fault that shows up looking like it lives somewhere else entirely. A window dragged narrow after load keeps the tier it started with, by design.
+
+Orientation is the exception and *is* live, because the §12.1 FOV split has to follow the device in the visitor's hands.
+
 ---
 
 ## 16. Deliberately not specified
@@ -512,9 +574,14 @@ Everything repeated is `InstancedMesh` or drei `<Instances>`: shutters, lanterns
 These need a decision before the code that depends on them is written, and the brief will be updated rather than the value invented:
 
 1. **Screenshot pre-processing** — whether the four JPGs get a build-step darken/desaturate pass, or the `#A6B2C6` tint in §8 does the whole job. Decide when the shopfront is first lit.
-2. **The bend geometry at `z = +23`** — §3.1 gives the angle and the fog, not the modelled form of the return wall.
+2. **The bend geometry at `z = +23`** — the *orientation* is settled (§3.1: across the end, 20° off square) and thickness is 1.00 (§3), so the shell builds it as a bare box. What remains open is the modelled form — the shuttered doors, and whatever the opening reveals past it. Lands with the surroundings.
 3. **Font subsetting for the Japanese canvas faces** — currently system faces only; if a webfont ships, it must be subset to the fourteen strings in §11.4 and re-budgeted against §15.
 4. **Whether the door opens a real tab or a confirm step on mobile** — popup blockers treat a canvas click differently across browsers.
+5. **The gutter's 0.03 recess** — §3 resolves how the gutter *reads* (through the puddle mask) but not how it gets depth. It needs the floor to stop being a plane. Decide with the kerb and drain modelling.
+
+### 16.1 Settled during the shell build
+
+Recorded so the reasoning is not re-litigated: wall thickness and end-wall height (§3), the return wall's orientation (§3.1), fog density (§5), the reflector strip's extent and 4 mm lift and `reflectorOffset` (§6.1), puddle coverage with its measurement region and baseline, the mask sizes and blur scaling, and the ripple slope (§6.2), the yaw convention and rotation order (§12.1), and the tier rule (§15.1).
 
 ---
 

@@ -1,0 +1,25 @@
+@import 'tailwindcss';
+
+/*
+ * Tailwind is for the 2D overlay only — nav, overlays, gate, hint — and never inside
+ * the Canvas. Nothing in the shell uses it yet.
+ *
+ * There are no colours in this file. Atmospheric values live in lib/world.ts and are
+ * never duplicated by hand; the page background is set in layout.tsx from PALETTE.void.
+ */
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+  /* The canvas is the page. Nothing scrolls, and nothing rubber-bands on touch. */
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+canvas {
+  display: block;
+  /* §12.2 — drag-to-look owns the gesture. Without this the browser claims the drag
+     as a scroll on touch and the camera stutters or stops mid-turn. */
+  touch-action: none;
+}

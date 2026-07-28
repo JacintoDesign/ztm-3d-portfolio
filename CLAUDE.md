@@ -41,7 +41,9 @@ If a value is needed and the brief does not contain it, **stop and say so** rath
 - **Tailwind** — 2D overlay UI only (nav, overlays, gate, hint). Never inside the Canvas.
 - **Vercel**
 
-Install the four 3D packages together so they resolve as a set. Then **pin `three` to an exact version and write the reason beside it** — these packages peer-depend in narrow ranges, and a mismatch surfaces weeks later on an unrelated `npm update`, looking like application code is at fault. A pin without a stated reason gets deleted by whoever reads it next.
+Install the four 3D packages together so they resolve as a set. Then **pin `three` to an exact version and write the reason beside it** — these packages peer-depend in narrow ranges, and a mismatch surfaces weeks later on an unrelated `npm update`, looking like application code is at fault. A pin without a stated reason gets deleted by whoever reads it next. Pin `@types/three` to match: `three` ships no declarations of its own and DefinitelyTyped tracks its version 1:1, so a floating `@types/three` is the same mismatch at compile time.
+
+**Never import drei's `<StatsGl>`.** It pulls `stats-gl`, which nests *its own copy of `three`* — a second engine in the bundle, defeating the pin and the chunk split at once. The duplicate is already in the dependency tree and is harmless only for as long as nothing imports it. Read `gl.info.render` directly, or use drei's `<Stats>` (stats.js, no three dependency).
 
 Never add a dependency without asking.
 
@@ -71,6 +73,8 @@ useFrame((state, delta) => {
   meshRef.current.position.lerp(tmp, delta)   // mutate, don't setState
 })
 ```
+
+**`react-hooks/immutability` is off for the scene-graph files**, and must stay off. React Compiler's rule assumes values flowing through a component are immutable data; R3F's scene graph is a live tree of three.js objects where animation *is* mutation of it. The rule forbids exactly what the paragraph above requires. The suppression is scoped in `eslint.config.mjs` to `components/world/**`, `components/player/**` and `lib/textures/**`, so it keeps protecting the 2D overlay code where it is correct — **do not widen it, and do not satisfy it by allocating**.
 
 **Allocation and reuse.** Geometries and materials are created once and reused, never constructed in a render body. Repeated geometry uses `InstancedMesh` or drei's `<Instances>` — with any density this is not optional. Prefer declarative primitives so disposal is handled; anything constructed manually must be disposed manually.
 
@@ -207,6 +211,8 @@ Turn things down in this order:
 Also cap device pixel ratio on mobile.
 
 **On weight, be honest.** A 3D world ships megabytes. Split the engine into its own chunk so it caches independently of application code, and let the entry gate cover the wait.
+
+That split comes from the `next/dynamic({ ssr: false })` boundary the Canvas already needs — everything reachable only through it lands in its own async chunk. **Do not write a `splitChunks` block for it:** Next builds with Turbopack, which does not expose webpack's `splitChunks`, so hand-written `cacheGroups` would be config that silently does nothing while looking like it works.
 
 ---
 

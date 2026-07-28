@@ -1,0 +1,38 @@
+{
+  "name": "ztm-3d-portfolio",
+  "version": "0.1.0",
+  "private": true,
+  "comments": {
+    "three": "PINNED EXACT — do not add a caret, and do not bump without reading this. postprocessing@6.x, a transitive dependency of @react-three/postprocessing, peer-deps three '>=0.168.0 <0.186.0'. three 0.186 is outside it. The failure mode is not an install error: it surfaces weeks later, on an unrelated `npm update`, as a black canvas or a broken effect composer that looks like application code is at fault.",
+    "@types/three": "PINNED EXACT to match three. three ships no .d.ts files of its own (verified against the 0.185.1 tarball), so these types are required, and DefinitelyTyped tracks three's version 1:1 — a drifting @types/three against a pinned three is the same class of mismatch described above, but at compile time.",
+    "typescript": "Held at 5.x deliberately. TypeScript 7 (the Go rewrite) is released, but @react-three/fiber v9 augments the React JSX namespace with every three.js element, and that is not the type machinery to be first to prove out on a new compiler implementation.",
+    "engine-chunk": "§15 wants three + @react-three/* cached independently of app code. That split comes from the next/dynamic boundary in components/world/WorldMount.tsx, not from bundler config — see the note in next.config.ts."
+  },
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@react-three/drei": "^10.7.7",
+    "@react-three/fiber": "^9.6.1",
+    "@react-three/postprocessing": "^3.0.4",
+    "next": "16.2.12",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "three": "0.185.1"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.3.3",
+    "@types/node": "^24.9.2",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "@types/three": "0.185.1",
+    "eslint": "^9.39.1",
+    "eslint-config-next": "16.2.12",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^5.9.3"
+  }
+}
