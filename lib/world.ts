@@ -173,6 +173,205 @@ export const SURROUNDINGS_INVENTORY = [
   { item: 'rippleEmitters', count: 12, solid: false },
 ] as const
 
+/**
+ * §3.3 — the upper facade window bays.
+ *
+ * The grid is worked out from each wall's real height rather than listed per wall:
+ * `floors = floor((facadeHeight − bandBaseY) / floorHeight)`, which gives 3 west and 2
+ * east and leaves whatever does not divide as parapet. Both walls share one texture set;
+ * the two-floor wall samples the bottom two thirds of the same image, so the height
+ * classes cost geometry and not memory.
+ *
+ * Nothing here is solid. The bays lie flush on walls at x = ±4.5 and §3's clamp already
+ * stops the eye at ±3.60 — see BOUNDS above.
+ */
+export const FACADE_WINDOWS = {
+  /** Top of the §2.1 shopfront recess: the tallest ground-floor feature the brief gives. */
+  bandBaseY: 4.6,
+  floorHeight: 2.85,
+  /** 6 bays per wall over the §3.1 facade extent of 48.0. */
+  bay: { width: 8.0, count: 6 },
+  /** 5 windows per floor per bay, at 1.60 pitch in a 1.60 × 2.85 cell. */
+  window: { pitch: 1.6, width: 0.95, height: 1.35 },
+  /** Mostly dark. It is 3am. */
+  litFraction: 0.16,
+  /**
+   * Cool by constraint, not by taste. §17 keeps three things lit warmer than everything
+   * else, and they are the three you can touch; a hundred and fifty warm windows break
+   * that. `rain` is the only cool unsaturated token in §4 not already spoken for.
+   */
+  litColor: 'rain',
+  /** Darker than the wall it sits in. */
+  unlitColor: 'void',
+  baseColor: 'facade',
+  /** §8.1 — under the 0.90 bloom threshold, between infoPanelBacklight 0.70 and 0. */
+  emissiveIntensity: 0.55,
+  /** §11.4's precedent: assigned by index, never randomised. Six bays cycle A B C A B C. */
+  variants: 3,
+  /**
+   * §15 — 512 across 8.00 m is 64 px/m. The §11.1 painter scale is a signage figure; at
+   * 4 px/cm this bay would want 3200 px and spend the entire texture budget on one wall.
+   */
+  canvas: { desktop: 512, mobile: 256 },
+  /** §6.1's depth arithmetic, unchanged — 1 mm z-fights at the far end, 4 mm does not. */
+  offset: 0.004,
+} as const satisfies {
+  litColor: ColorToken
+  unlitColor: ColorToken
+  baseColor: ColorToken
+  [key: string]: unknown
+}
+
+/**
+ * §3.4 — the storefronts, the lower 4.00 m of both facades. The §3.2 inventory line
+ * built out: 14 units, 7 per wall, 3 shutter variants, solid.
+ *
+ * Boxes and cylinders throughout. The one thing that is *not* a box is the shutter
+ * corrugation, and it is not a normal map either — see `slatPitch`.
+ */
+export const STOREFRONT = {
+  /** §3.3's window band starts at 4.60, so 0.60 of bare spandrel sits between. */
+  bandHeight: 4.0,
+  perWall: 7,
+  variants: 3,
+  /** Five sizes, so a run of them never reads as one shape repeated. */
+  widths: [3.6, 4.2, 4.8, 5.4, 6.2],
+  plinth: { height: 0.1, depth: 0.2 },
+  /** Inset from each edge of the unit, so a pier of fascia stands between neighbours. */
+  aperture: { sideInset: 0.3, baseY: 0.1, headY: 2.55, recess: 0.35 },
+  /**
+   * §3.4 — geometry, not §8's `normalRepeat`. Unit widths run 3.60 to 6.20 and a
+   * material's repeat is shared by every instance using it, so one repeat across five
+   * widths puts the rib pitch between 0.15 and 0.26 m — a corrugation that coarsens as
+   * you walk past. A fixed world pitch cannot do that.
+   */
+  slatPitch: 0.09,
+  slatDepth: 0.035,
+  rollRadius: 0.16,
+  /** §2.1 gives the shopfront door 2.05; this is the ordinary version of that door. */
+  doorway: { width: 0.9, height: 2.05, recess: 0.45 },
+  /** Centred over the doorway, not over the unit — a shop sign hangs above its entrance. */
+  signBox: { width: 1.3, height: 0.7, baseY: 2.85, proud: 0.14 },
+  /** The doorway takes one end of the unit; the shutter aperture takes the rest. */
+  doorGap: 0.15,
+  /** Underside clears the 2.55 aperture head and stops below the 2.85 sign box. */
+  awning: { count: 5, depth: 1.25, undersideY: 2.6, barRadius: 0.05, thickness: 0.07 },
+  serviceGap: 1.8,
+  /** §3.4 — nine shut and nobody in any of them. §1: nobody else is here. */
+  states: { closed: 9, ajar: 3, open: 2 },
+  /** How far the shutter still hangs when ajar — light under it is the whole point. */
+  ajarClearance: 0.62,
+  /** Rolled up to the head, but never fully gone. */
+  openClearance: 2.3,
+  litSignCount: 7,
+  /** §8.1 — 1.10 is over the knee, 0.85 is under it. Both placed against §17. */
+  spillEmissive: 1.1,
+  signEmissive: 0.85,
+  /**
+   * §3.4 — the spill is a band on the shop floor, not the whole opening. An open shutter
+   * showing 2.30 m of lit panel is a 2.55 × 2.30 billboard of flat `sodium`, and it beat
+   * every content surface in the alley before any of them existed.
+   */
+  spillBandHeight: 0.55,
+  spillColor: 'sodium',
+  unlitSignColor: 'shutter',
+  /**
+   * §4's neon ratio over 14 units: 8 / 4 / 2 / 0. Blue rounds away, which is right for
+   * fourteen signs in one alley when §4 calls it rare and for distance only. Within a
+   * bucket the two tokens alternate.
+   */
+  signPalette: [
+    ['neonMagenta', 'neonPink'],
+    ['sodium', 'lantern'],
+    ['neonCyan'],
+  ],
+  /** No unit may enter these — §2.1, §2.3 west; §2.2 east. */
+  reserved: {
+    west: [
+      [-6.6, -1.4],
+      [12.9, 15.1],
+    ],
+    east: [[5.1, 6.9]],
+  },
+  /** The run stays inside the alley proper, not the facade's full extent. */
+  z: [-22.0, 22.0],
+} as const satisfies {
+  spillColor: ColorToken
+  unlitSignColor: ColorToken
+  signPalette: readonly (readonly ColorToken[])[]
+  [key: string]: unknown
+}
+
+/**
+ * §3.5 — the decorative neon signs. Nine of them, projecting into the alley at 90° on
+ * brackets and read from both directions. A flush panel is a poster; a projecting
+ * double-sided box is signage, and that is the whole difference between a wall with
+ * decals on it and a street.
+ *
+ * Not solid (§3.2), and the lowest face is at 2.90 against a 1.68 eye — no boxes.
+ */
+export const NEON_SIGNS = {
+  count: 9,
+  vertical: 6,
+  /** Per character, plus padding, in the direction the text runs. */
+  verticalSize: { width: 0.44, perChar: 0.34, pad: 0.22 },
+  horizontalSize: { height: 0.52, perChar: 0.4, pad: 0.28 },
+  thickness: 0.09,
+  /**
+   * §3.5 — the near face must clear §3.4's shopfront frame, which stands 0.35 proud, and
+   * the sign box on it, which stands 0.14 further at 0.49. A sign starting at 0.30 hangs
+   * inside the fascia it is supposed to be mounted on.
+   */
+  projection: [0.55, 1.15],
+  bracket: 0.05,
+  mountY: [2.9, 5.2],
+  /** §8 — the tube. `meshBasicMaterial`, colour at full, standing 0.03 proud all round. */
+  rim: 0.03,
+  /** §8.1 — vertical signs. */
+  faceEmissive: 2.4,
+  /** §11.4 — signs take strings 0 through 8, by index. Banners continue from 9. */
+  stringOffset: 0,
+  canvas: { desktop: [128, 512], mobile: [64, 256] },
+} as const
+
+/**
+ * §3.5 / §3.1 — the overhead mat. 34 spans between 6.50 and 9.00, three of them
+ * carrying a banner. Three straight segments per span approximate the catenary; at that
+ * height through §5's fog nobody can tell them from thirty.
+ */
+export const OVERHEAD = {
+  spans: 34,
+  y: [6.5, 9.0],
+  radius: 0.018,
+  sag: [0.35, 0.9],
+  segmentsPerSpan: 3,
+  /** Most cross at an angle rather than square — the z offset between the two anchors. */
+  skew: 3.4,
+  color: 'metalDark',
+  banner: {
+    count: 3,
+    width: 3.2,
+    height: 0.62,
+    /** Hangs this far under its wire. */
+    drop: 0.5,
+    wireY: 6.9,
+    z: [-12.0, 2.0, 16.0],
+    /** §8.1 — the station plate's rung. Read-through cloth, not tube. */
+    emissive: 0.95,
+    /** §11.4 — the signs took 0..8. */
+    stringOffset: 9,
+    canvas: { desktop: [512, 128], mobile: [256, 64] },
+  },
+} as const satisfies { color: ColorToken; [key: string]: unknown }
+
+/**
+ * §3.3 — how many whole floors of window fit on a wall of this height. Whatever does
+ * not divide is left as parapet, which is why the two walls come out at 3 and 2 from
+ * one rule rather than from two listed numbers.
+ */
+export const facadeWindowFloors = (facadeHeight: number): number =>
+  Math.floor((facadeHeight - FACADE_WINDOWS.bandBaseY) / FACADE_WINDOWS.floorHeight)
+
 /* ────────────────────────────────────────────────────────────────────────────
  * §2 — The three content surfaces
  * The objects are defined here; what they carry comes from CONTENT.md, never from

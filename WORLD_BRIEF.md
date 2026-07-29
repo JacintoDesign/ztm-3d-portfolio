@@ -148,6 +148,138 @@ Placed as instanced geometry, reviewed as a diff, bounding boxes added as they g
 | Puddle decals | 18 | no |
 | Ripple emitters | 12 | no |
 
+### 3.3 The upper facade — window bays
+
+Above the shopfront line both facades are flat colour across 48 m, and it is the surface a visitor looking up actually meets. It carries a **window grid painted to a canvas and used as both `map` and `emissiveMap`** — the same pixels in both, so a window cannot be lit in colour and dark in glow.
+
+**This is not a skyline.** §1 and §3.1 stand unchanged: no sky dome, no towers, no horizon. The grid goes on the two walls that already exist, inside the fog, capped at the same heights.
+
+| Value | | From |
+|---|---|---|
+| Band base | `y = 4.60` | top of the §2.1 shopfront recess — the tallest ground-floor feature |
+| **Floor height** | **2.85** | free |
+| Floors | `floor((facadeHeight − 4.60) ÷ 2.85)` → **3 west, 2 east** | the wall's own height |
+| Band | west `y ∈ [4.60, 13.15]`, east `y ∈ [4.60, 10.30]` | the above |
+| Bay | 8.00 wide × 8.55 tall, **6 per wall** | facades run `z ∈ [−24, +24]` = 48.0 |
+| **Window pitch** | **1.60** → 5 per floor per bay | free |
+| **Window** | **0.95 × 1.35** in a 1.60 × 2.85 cell | free |
+| **Lit fraction** | **0.16** | free |
+| **Lit colour** | **`rain` `#9FB4D6`** | must be cool — below |
+| Unlit colour | `void` `#04060B` | the darkest token; a window is darker than its wall |
+| Emissive | **0.55** | below the 0.90 bloom threshold — below |
+| Panel offset | 0.004 in front of the wall face | §6.1's depth arithmetic, unchanged |
+
+**Lit windows are cool, and that is a constraint rather than a taste.** §17: *three things are lit warmer than everything else and they are the only three things you can touch.* A hundred and fifty warm windows break that sentence outright. `rain` is the only cool unsaturated token in §4 not already spoken for by a light or a content surface.
+
+**Emissive 0.55, under the knee.** §8.1's dimmest rung that still touches bloom is the station plate at 0.95, against a threshold of 0.90. Windows are the most numerous emissive thing in the world by an order of magnitude; put them anywhere on the bloom side and two 48 m walls flare brighter than the shopfront. 0.55 sits between the info panel backlight at 0.70 and the screenshot at 0 — lit, never flaring.
+
+**They light nothing, and they do not reach the floor.** An emissive material in three.js illuminates nothing but itself, and §7's ten dynamic lights are all allocated with none spent here — so the windows never fall on the alley. §1's *every sign in the alley is in it, upside down and softer* does **not** extend to them either: measured on the built wall, a lit window leaves no trace in the reflection, and forcing the emissive to 12 — twenty-two times the shipped value — changes it no further. Between the §6 blur of 420 × 100 at `mixBlur` 0.85 and a source that starts 4.6 m up, nothing of this size survives the pass. This is stated because it is the tempting fix in the wrong direction: **a wall of windows can never be brightened into the floor**, and any attempt to get them there by climbing §8.1's ladder buys a blown facade and no reflection.
+
+**Three variants, assigned by index, never randomised** — the §3.2 precedent for shutters, the §11.4 precedent for signage. Six bays per wall cycle A B C A B C. One texture set serves both walls: the east wall's two floors sample the bottom two thirds of the same image, so the height classes cost geometry, not memory.
+
+| Texture | Desktop | Mobile |
+|---|---|---|
+| Bay canvas | 512 × 512 | 256 × 256 |
+| Count | 3 | 3 |
+| With mipmaps | 4.00 MB | 1.00 MB |
+
+**512, not the §11.1 painter scale.** §11.1's 4 device-px per world cm is a signage figure; applied to an 8 m bay it asks for 3200 px and spends §15's whole 14 MB texture budget on one wall. 512 across 8.00 m is 64 px/m, and the closest a visitor gets to any window is about 4.5 m — from the walkable clamp the §12.2 pitch stop of 62° cannot reach the band base on the near wall at all, so that grid only opens up as you step away from it.
+
+**No collision.** The bays sit flush on walls at `x = ±4.5` and §3's hard clamp already stops the eye at `±3.60`. Bounding boxes are for what protrudes into the alley — the §3.2 standpipes, crates and poles.
+
+**West loses its warmth above 4.60.** One texture for both walls means one base colour, `facade` `#10141D`; the west wall's `facadeWarm` `#151119` stays on the box below the band and behind it. The two differ by about 1% of a channel, and the step falls at 4.6 m through fog.
+
+### 3.4 Storefronts — the lower 4.00 m
+
+The §3.2 inventory line, built out: **14 shuttered storefronts, 7 per wall, 3 shutter variants, solid.** This is the band the visitor actually walks past, and it gets the detail budget accordingly. Everything in it is boxes and cylinders — no sculpted geometry, no alpha maps.
+
+| Value | | From |
+|---|---|---|
+| Band | `y ∈ [0, 4.00]`, both facades | the band base of §3.3 sits at 4.60, leaving 0.60 of bare spandrel between |
+| Units | **14** — 7 per wall | §3.2 |
+| **Widths** | **3.60 / 4.20 / 4.80 / 5.40 / 6.20**, five sizes | free |
+| Plinth | 0.10 high × 0.20 deep, `concrete` | free |
+| Aperture | full unit width less 0.30 each side, `y ∈ [0.10, 2.55]`, recessed **0.35** | free |
+| Shutter | slats **0.09** pitch, instanced boxes — see below | free |
+| Shutter roll | cylinder r 0.16, at the aperture head | free |
+| Doorway | **0.90 × 2.05**, recessed **0.45**, at one end of the unit, side alternating | height from §2.1's door, which this is the ordinary version of |
+| Sign box | **1.30 × 0.70** at `y = 2.85`, standing 0.14 proud, **centred over the doorway** | free |
+| Fascia | `y ∈ [2.55, 4.00]`, flush | the remainder |
+| **Awning** | 5 of 14, depth **1.25**, underside `y = 2.60`, front bar cylinder r 0.05 | clears the 2.55 head, stops under the 2.85 sign box |
+| Service gap | **1.80**, one per wall | free |
+
+**States: 9 closed, 3 ajar, 2 open.** Ajar is the shutter down to 0.62 with light under it, which is the shape a half-shut alley shop actually makes; open is the shutter rolled up to the head. Both ajar and open get a **spill plane** recessed in the aperture. Nine of fourteen shut, and nobody in any of them — §1 says nobody else is here, and the count is what keeps that true.
+
+**Slats are geometry, not the §8 normal map.** §8 gives the roller shutter `normalRepeat` 24 × 1, and that value cannot survive this section: unit widths run 3.60 to 6.20, a material's repeat is shared across every instance using it, so one repeat across five widths puts the rib pitch anywhere from 0.15 to 0.26 m — a corrugation that visibly coarsens as you walk. Instanced slat boxes at a fixed **0.09** world pitch hold the same pitch on every unit and on every shutter height, and cost one draw call per variant. The `normalRepeat` figure stays in §8 for surfaces that are one size.
+
+**Colour, and the §4 ratio.** Sign boxes carry the alley's accent, and the ratio in §4 is what assigns them: 55% magenta/pink, 30% sodium/lantern, 12% cyan, 3% blue. **It is measured over the seven *lit* boxes, not over all fourteen** — an unlit box carries no colour at all, so counting it would make the ratio describe something nobody can see. Seven gives **4 / 2 / 1 / 0**; blue rounds away, which is correct for one alley when §4 calls it *rare, distance signs only*. Within a bucket the two tokens alternate. Everything not a sign box or a spill is `shutter`, `concrete`, `metalDark` or `facade`.
+
+**Two new rungs on §8.1**, both placed against §17's rule that the only three things lit warmer than the rest are the three you can touch:
+
+| Element | Emissive | |
+|---|---|---|
+| Open-shutter spill | **1.10** | above the knee, so it glows — but under the paper lanterns at 1.30 and every content surface |
+| Storefront sign box | **0.85** | under the 0.90 threshold. Fourteen of these; on the bloom side they would out-glow the shopfront |
+
+**Seven sign boxes are lit** — the five non-closed units and two of the nine closed. An unlit box is `shutter` and not emissive at all, which is what a shut shop's sign looks like. A unit whose box is suppressed by a §3.5 neon sign is excluded before the seven are dealt, so the count survives the suppression.
+
+**An emissive panel takes `void` as its diffuse colour and carries the accent only in the emissive term.** Putting the accent in both — the obvious way to write it — stacks a fully-lit diffuse surface underneath the glow, so the panel reads as coloured paint instead of as a light and arrives at roughly twice the intensity §8.1 specified. Nothing in the numbers shows this; it is only visible on the wall. It applies to every emissive surface in the world, not just these.
+
+**The spill is a 0.55 band on the shop floor, not the whole opening.** Filling an open aperture makes a 2.55 × 2.30 slab of flat `sodium` — a billboard that beat every content surface in the alley before any of them had been built. Ajar shows nearly all of its 0.62 slot, which is the point of that state; open shows 0.55 of lit floor beneath 1.75 of dark interior, which is what a lit room behind a raised shutter looks like from the street.
+
+**Layout is generated, not placed.** Three slots are reserved for the content surfaces and no unit may enter them: west `z ∈ [−6.60, −1.40]` for §2.1's shopfront, west `[12.90, 15.10]` for §2.3's payphone, east `[5.10, 6.90]` for §2.2's vending machine. What is left is five segments; the seven units per wall are apportioned across them by length (largest remainder), widths are drawn to fit with no two neighbours equal, and the slack is spread evenly as joints. One designated joint per wall widens to the 1.80 service gap.
+
+**Each width aims at its fair share of what is left, not at the largest that fits, and this is not a detail.** Taking the largest feasible size is legal at every step and still wrong: one 6.20 early in a 14.30 m segment leaves nothing but the narrowest size for the two behind it, and the first generated wall came out **eight of fourteen at 3.60** with two adjacent pairs identical. Aiming at `remaining ÷ slots left` and taking a coin between the two nearest sizes spreads them across all five. Five sizes exist so the wall does not read as one shape repeated; a greedy pick defeats them while satisfying every constraint that was actually written down.
+
+**Nothing here is reachable, and the boxes go on anyway.** The deepest solid part of a unit is the doorway jamb at 0.45 proud, putting its face at `x = ±4.05`; §12.4's 0.32 radius resolved against that stops the eye at `±3.73`, and §3's clamp has already stopped it at `±3.60`. The clamp wins by 0.13 m at the worst unit, so no storefront AABB can ever fire. They are registered regardless, because §12.4 asks for boxes on everything solid *as it is placed*, and the registry they go into is the one the vending machines, crates, bicycles and poles will actually need. The resolver is verified with a temporary box in mid-alley rather than by assertion.
+
+**The awning is the one thing that does reach over the visitor**, at 1.25 deep — its outer edge at `x = ±3.25` overhangs the walkable band by 0.35 m. It gets no box: the underside is at 2.60 and the eye is at 1.68, so §12.4's 2D boxes are right to ignore it and a visitor walks under it as intended.
+
+### 3.5 Neon signs and the overhead layer
+
+Two more §3.2 lines built out: **9 decorative neon signs** and **34 overhead cable spans** with §3.1's three cross-alley banner wires. Between them they are most of what an alley like this is made of above eye level, and neither is solid.
+
+**Signs project into the alley, they do not lie on the wall.** A flush panel is a poster; a sign that sticks out at 90° and reads from both directions is signage, and it is the difference between a wall with decals and a street. Every one of the nine is a double-sided box on a bracket.
+
+| Value | | From |
+|---|---|---|
+| Count | **9** — 6 vertical, 3 horizontal | §3.2 |
+| Vertical sign | 0.44 wide, **0.34** per character plus 0.22 of padding | free |
+| Horizontal sign | 0.52 high, **0.40** per character plus 0.28 of padding | free |
+| Panel | 0.09 thick, both faces carrying the same painted texture | free |
+| Projection | face plane **0.55 – 1.15** from the wall, varied | must clear §3.4's frame — below |
+| Bracket | 0.05 square, wall to panel, `metalDark` | free |
+| Mount | base `y ∈ [2.90, 5.20]` | above §3.4's 2.55 aperture head, below §3.1's 6.50 cable band |
+| Tube rim | **0.03** proud all round, `meshBasicMaterial` at full colour | §8's neon tube |
+| Face emissive | **2.40** | §8.1, *vertical signs* |
+| Strings | §11.4 **by index**, signs take 0–8 | §11.4 |
+| Flicker | indices **3 and 7** | §11.3 |
+| Colour | §4 ratio over 9 → **5 / 3 / 1 / 0** | §4 |
+
+**A sign must project clear of the shopfront it is mounted on, and where it does, the lightbox under it goes.** Two rules, from one fault. §3.4's frame stands 0.35 proud and its sign box 0.14 further at 0.49, so a projection starting at 0.30 hangs the panel *inside* the fascia — the minimum is 0.55. That stops them intersecting but not stacking: a projecting sign and a flush lightbox on the same stretch of wall still read from the street as one cluttered object with a blank slab hung under it. So **a §3.4 sign box is suppressed wherever a §3.5 neon sign claims its span, plus 0.25 of clear air either side.** The sign wins because it carries a §11.4 string and the box carries nothing.
+
+Five of the fourteen units lose their box this way. **The suppression is resolved before the lit boxes are dealt**, so a suppressed unit does not consume one of §3.4's seven — otherwise the alley quietly ships six while every count in this document still says seven.
+
+**The §8 halo shell is not built, and bloom is why.** §8 gives the neon tube a 0.03 emissive shell at 0.6 to carry its glow. That shell exists to fake what a bloom pass does properly, and §9's bloom pass lands in the next step at threshold 0.90 — with the rim at full colour and the face at 2.40, both sit well over the knee and the glow is real rather than modelled. Building the shell as well would double the sign draw calls to blur something that is about to be blurred correctly. Revisit if bloom comes out too tight.
+
+**Overhead: 34 spans, three of them carrying a banner.** Anchors between `y = 6.50` and `9.00` per §3.1, wall to wall, most of them crossing at an angle rather than square, radius **0.018** in `metalDark`. Each span is **three straight segments** approximating a catenary — a real curve here is a tube geometry per cable, and at 6.5 m up through fog at 0.03 density nobody can tell the difference between three segments and thirty. Sag **0.35 – 0.90**.
+
+The three banner wires hang a **3.20 × 0.62** cloth 0.50 beneath them, carrying §11.4 strings **9, 10 and 11** — the signs already took 0 through 8, and §11.4 says by index. Banners are lit at **0.95**, the same rung as the station plate: they are read-through cloth, not tube.
+
+**A banner is backlit; a sign is not.** §3.4's rule that an emissive panel takes `void` as its diffuse holds for the nine signs — a neon tube is a dark panel with lit strokes on it, and that is all it is. It does not hold for a banner, because **there is no light anywhere near `y = 6.90`**. §7's ten are all at 6.0 or below with finite distance, so cloth lit by the scene is cloth nobody can see: the first build hung three strings in mid-air with no banner under them, and switching the diffuse from `void` to `concrete` did not help, because nothing was illuminating either. A banner's *painted ground* therefore keeps **a sixteenth of its own colour**, carried through the same emissive map that lights the text. A backlit banner is a real object; this is the honest way to build one, rather than climbing §8.1's ladder to make an unlit surface visible.
+
+**Nothing overhead and no sign is solid.** §3.2 marks both `no`, and the lowest sign face is at 2.90 against a 1.68 eye. No boxes are registered.
+
+**This section puts the world over §15's texture budget, and the figure is measured, not estimated.** Nine signs and three banners come to 4.19 MB across twelve 128 × 512 canvases, and the world now holds **14.66 MB against the 14 MB** in §15 — 4.7% over, desktop only. Mobile is at 4.67 of 9 and comfortable.
+
+| Consumer | Desktop |
+|---|---|
+| §6.2 puddle mask, 512 × 2048 | 5.59 MB |
+| §3.3 window bays + §6.2 ripple normal, 4 × 512² | 5.59 MB |
+| §3.5 signs and banners, 12 × 128 × 512 | 4.19 MB |
+
+**Every lever here is a value in this document**, which is why it is not quietly fixed: dropping the sign canvases to 64 × 256 saves 3.1 MB and costs the legibility that makes a projecting sign worth projecting; halving the puddle mask saves 4.2 MB and is the §6 turn-down ladder, which exists for frame time rather than for memory. §16 item 6 is the same problem arriving much harder — the screenshots do not fit at all — so **the budget itself is what should be revisited, once.**
+
 ---
 
 ## 4. Palette
@@ -327,7 +459,9 @@ Bloom's threshold is `0.90`. This ladder is what sits either side of it.
 | Vending front panel | **1.60** | just — soft halo |
 | Lightbox surround strip | 1.40 | just |
 | Paper lanterns | 1.30 | edge |
+| **Open-shutter spill** (§3.4) | **1.10** | yes — soft |
 | Station `終電` plate | 0.95 | edge, deliberately |
+| **Storefront sign box** (§3.4) | **0.85** | no — fourteen of them |
 | Info panel backlight | 0.70 | no |
 | **Project screenshot** | **0 (basic, tinted 0.68)** | **no — never** |
 
@@ -595,7 +729,8 @@ These need a decision before the code that depends on them is written, and the b
 3. **Font subsetting for the Japanese canvas faces** — currently system faces only; if a webfont ships, it must be subset to the fourteen strings in §11.4 and re-budgeted against §15.
 4. **Whether the door opens a real tab or a confirm step on mobile** — popup blockers treat a canvas click differently across browsers.
 5. **The gutter's 0.03 recess** — §3 resolves how the gutter *reads* (through the puddle mask) but not how it gets depth. It needs the floor to stop being a plane. Decide with the kerb and drain modelling.
-6. **Turning without a pointer** — §12.2 makes looking a drag and §12.3 spends the arrows on movement, so a visitor with a keyboard and no pointing device can walk but cannot turn. The answer this document already contains is §12.6's guided path and §12.7's top nav, which reach every surface without walking; whether that is *enough*, or whether a key should rotate the camera, is decided when those two exist and can be tested against the ten-second test in §17. Named rather than patched, because a `Q`/`E` binding invented now would be a second movement basis nobody asked for.
+6. **§15's 14 MB texture budget cannot hold §2.1's screenshots.** A 1920 × 1020 JPEG decodes to about 7.8 MB of RGBA and 10.4 with mipmaps, and §3.5 has already spent 13.2 of the 14. One screenshot is over budget on its own; four are not close. The answer is a build-step resize — the lightbox is 3.20 × 1.70 world metres and at §11.1's painter scale wants roughly 1280 × 680, which is a 2.5× saving before anything else — but it belongs with item 1 below, which is the other reason those files get pre-processed. **Decide both at once, when the shopfront is first lit.**
+7. **Turning without a pointer** — §12.2 makes looking a drag and §12.3 spends the arrows on movement, so a visitor with a keyboard and no pointing device can walk but cannot turn. The answer this document already contains is §12.6's guided path and §12.7's top nav, which reach every surface without walking; whether that is *enough*, or whether a key should rotate the camera, is decided when those two exist and can be tested against the ten-second test in §17. Named rather than patched, because a `Q`/`E` binding invented now would be a second movement basis nobody asked for.
 
 ### 16.1 Settled during the shell build
 
@@ -604,6 +739,30 @@ Recorded so the reasoning is not re-litigated: wall thickness and end-wall heigh
 ### 16.2 Settled during the navigation build
 
 The clamp acting on the eye position rather than the eye minus the player radius (§3); the look gate and the one-pointer-per-element rule (§12.2); the acceleration/damping split that recovers the stated 2.6 m/s, diagonal normalisation, the sum-and-clamp convergence rule, the arrow binding, the focus-loss reset and the stick's inset (§12.3).
+
+### 16.3 Settled during the upper-facade build
+
+All of §3.3. Five of its values are free choices — floor height 2.85, window pitch 1.60, window 0.95 × 1.35, lit fraction 0.16, and `rain` as the lit colour. Everything else in that section is derived from something this document already said: the band base from the §2.1 recess, the floor counts from the facade heights, the bay count from the §3.1 facade extent, the emissive rung from §8.1's ladder and §17's three-warm-things rule, the panel offset from §6.1, the texture size from §15's budget, and the absence of collision from §3's clamp.
+
+**Towers were considered and rejected**, since the question will be asked again: the facades occlude them, the §12.2 pitch stop of 62° does not reach either parapet from the alley centre (69.9° west, 67.4° east), and at §5's fog density a subject 60 m out sits at 0.039 transmittance. Three separate parts of this document each erase them on their own.
+
+### 16.4 Settled during the storefront build
+
+All of §3.4, and the two rungs it adds to §8.1. Free choices: the five unit widths, the plinth, aperture, doorway offset, sign box and awning dimensions, the 0.09 slat pitch, the 1.80 service gap, and the 9 / 3 / 2 split of shutter states. Derived: the unit count and variant count from §3.2, the band top from §3.3's 4.60, the doorway height from §2.1, the sign-box colour split from §4's neon ratio, the two emissive rungs from §8.1's ordering against §17, and the reserved slots from §2.1, §2.2 and §2.3.
+
+**§8's `normalRepeat` 24 × 1 is not used on the shutters**, and §3.4 says why: a shared material's repeat cannot follow five unit widths. The value stays for one-size surfaces.
+
+**The collision registry arrived here with nothing to collide with.** Every storefront AABB is inert against §3's clamp, by 0.13 m at the worst unit. It was built anyway because §12.4 asks for boxes as objects are placed and the §3.2 items that stand *in* the alley all need the same registry.
+
+### 16.5 Settled during the signage build
+
+All of §3.5. Free choices: the sign and banner dimensions, the projection range, the mount band, the bracket, the 0.03 rim, the 34 spans' radius, sag and skew, and the three-segment approximation. Derived: the counts from §3.2, the strings and their index order from §11.4, the flicker pair from §11.3, the colour split from §4's ratio, the face and banner rungs from §8.1, the cable band from §3.1, and the mount band from §3.4's aperture head below and §3.1's cable band above.
+
+**§8's 0.03 halo shell is deliberately not built** — §9's bloom does that job properly one step later, and building both means doubling the sign draw calls to pre-blur something about to be blurred. Revisit if bloom lands too tight.
+
+**A banner is backlit and a sign is not**, which is why §3.4's `void`-diffuse rule stops at the nine signs. There is no light within reach of `y = 6.90`.
+
+**Texture memory is over budget by 4.7% on desktop** and every lever is a value in this document. Open, and named in §3.5.
 
 ---
 

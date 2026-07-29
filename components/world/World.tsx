@@ -12,7 +12,11 @@ import { resolveTier, useIsPortrait } from '@/lib/device'
 import { ATMOSPHERE, BUDGET, CAMERA, GL } from '@/lib/world'
 import Alley from './Alley'
 import Atmosphere from './Atmosphere'
+import FacadeWindows from './FacadeWindows'
 import Ground from './Ground'
+import NeonSigns from './NeonSigns'
+import Overhead from './Overhead'
+import Storefronts from './Storefronts'
 
 /**
  * §5 — set explicitly rather than leaning on the renderer default. The brief names it,
@@ -72,6 +76,11 @@ export default function World() {
         <Player />
         <Atmosphere />
         <Alley />
+        {/* §3.3 / §3.4 / §3.5 — all sit on the alley envelope, so they follow it. */}
+        <FacadeWindows />
+        <Storefronts />
+        <NeonSigns />
+        <Overhead />
         <Ground />
       </Canvas>
 

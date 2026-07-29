@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react'
 import { useFrame } from '@react-three/fiber'
+import { boxCount, registerBoxes, resolveX, resolveZ } from '@/lib/collision'
 import { expose } from '@/lib/debug'
 import { attachKeyboard, hasMovementInput, readIntent } from '@/lib/input'
 import { prefersReducedMotion } from '@/lib/reducedMotion'
@@ -51,6 +52,10 @@ export default function Player(): null {
     // §13 cannot be checked from here — it is an OS setting. Exposed so the manual check
     // is one line: `__world.prefersReducedMotion()` should read `true` with it on.
     expose('prefersReducedMotion', prefersReducedMotion)
+    // §12.4 — so a test box can be dropped in mid-alley and walked into. Every storefront
+    // box is inert against the §3 clamp, so this is the only way to exercise the resolver.
+    expose('boxCount', boxCount)
+    expose('registerBoxes', registerBoxes)
   }, [])
 
   /**
@@ -114,8 +119,13 @@ export default function Player(): null {
       }
     }
 
+    /* §12.4 — integrate and resolve one axis at a time. Both passes run before the §3
+       clamp, so the clamp always has the last word; a box that disagreed with it would
+       otherwise be able to park the visitor outside the walkable bounds. */
     position.x += velocity.x * delta
+    resolveX(position, velocity)
     position.z += velocity.z * delta
+    resolveZ(position, velocity)
 
     /* §3 — the hard clamp, per axis. Clamping each axis independently is what lets the
        visitor slide along a bound instead of sticking to it, and zeroing only the
