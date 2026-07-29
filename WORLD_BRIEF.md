@@ -139,7 +139,7 @@ Placed as instanced geometry, reviewed as a diff, bounding boxes added as they g
 | Vertical neon signs (decorative, §11.4) | 9 | no |
 | Air-con condensers on brackets | 16 | no |
 | Standpipes / drainpipes | 22 | yes (12 of them) |
-| Bicycles leaning | 4 | yes |
+| **Scooters** leaning on side stands | 4 | yes |
 | Crates and beer cases stacked | 9 | yes |
 | Traffic cone + barrier | 3 | yes |
 | Steam vents (grates) | 3 | no |
@@ -148,6 +148,11 @@ Placed as instanced geometry, reviewed as a diff, bounding boxes added as they g
 | Puddle decals | 18 | no |
 | Ripple emitters | 12 | no |
 | Cross-street vehicles (§3.6, past the bend) | 6 | no — unreachable |
+| **Food cart** (§3.7) | 1 | yes |
+| **Rubbish points** (§3.7) | 2 | yes |
+| **Alley-mouth guardrail** (§3.7) | 1 | yes |
+
+**Scooters, not bicycles.** This line read *bicycles leaning* until §3.7 built it, and the change is technical before it is anything else. Everything in this world is boxes and cylinders (§3.4), and a bicycle at that vocabulary is two wire wheels and a lattice of thin tubes — it reads as a mess at any distance the alley offers. A scooter is a floorboard, a cowl, a leg shield, a seat and two fat wheels: five primitives that read as one object at 20 m and still hold up at 2 m. It is the same object in the same place doing the same job, drawn in a vocabulary this world already has.
 
 ### 3.3 The upper facade — window bays
 
@@ -392,6 +397,71 @@ Headlights take **`signWhite`**, not `sodium`, and §17 decides it: *three thing
 **Nothing here is legible from spawn, and that is §5 rather than a fault in this section.** From the middle of the alley the carriageway is at **0.21 transmittance** and the far wall at **0.14**; from spawn the far wall is at **0.088**. The opening subtends about **4.6°** from there — roughly a sixtieth of the frame — and §7's lantern light at `z = +19` lays a saturated red pool directly beneath it. The street reads properly from about the last twelve metres of the alley and is a coloured glimmer before that. §3.1 already says the far end is *legible but never resolves*, and this is that sentence measured. **The only lever that would change it is §5's fog density**, which was derived twice and settled; §9's bloom will not do it either, since a fogged board lands well under the 0.90 knee.
 
 **Texture cost: two painted alphas.** A 128 × 128 radial ellipse for the underglow and tail smear, and a 128 × 128 forward beam for the headlight pool — 64 × 64 on mobile. **0.17 MB desktop**, taking §3.5's measured 14.66 to **14.84 against §15's 14 MB**. The window bays and the panels add nothing. This does not change the answer in §3.5: the budget is what wants revisiting, and it wants revisiting once, with §16 items 1 and 6.
+
+### 3.7 Street props — the band you walk through
+
+The rest of the §3.2 inventory that stands on the ground: **5 dead vending machines, 4 scooters, 9 crate stacks, 2 cones and a barrier, 22 standpipes, 6 utility poles, 11 paper lanterns**, plus three things this section adds — **a food cart, 2 rubbish points and the guardrail across the alley mouth**.
+
+§3.4 built the wall and §3.5 built everything above head height. This is the layer between them, and it is the only one the visitor can walk into. **Everything here is boxes and cylinders**, the §3.4 vocabulary, for the reason §3.4 gives: sculpted geometry in this alley would be one object at a fidelity nothing around it shares.
+
+**Carries nothing** (§2.4). No strings, nothing clickable, nothing raycast against.
+
+| Object | Count | Size (along alley × deep × high) | Solid |
+|---|---|---|---|
+| Dead vending machine | 5 | **1.12 × 0.82 × 1.94** — §2.2's body verbatim | yes |
+| Food cart | 1 | **2.10 × 1.00 × 2.10** | yes |
+| Scooter | 4 | **1.75 × 0.62 × 1.08**, leaning **8°** on a side stand | yes |
+| Crate | 9 stacks of 2–4 | **0.52 × 0.36 × 0.31** each | yes |
+| Traffic cone | 2 | base r **0.17**, top r **0.035**, **0.56** high, on a 0.36 foot | yes |
+| Barrier | 1 | board **1.20 × 0.20** at `y ∈ [0.56, 0.76]`, legs splayed 10° | yes |
+| Rubbish point | 2 | drum r **0.30** × **0.74** high, lid r 0.32, two sacks beside it | yes |
+| Standpipe | 22 | r **0.055**, from `y = 0.10` to 2.60 or 4.00, two clamps each | 12 of them |
+| Utility pole | 6 | r **0.11**, **8.40** high, crossarms at `y = 6.40` and `7.10` | yes |
+| Paper lantern | 11 | shade r **0.135** × **0.36**, on a 0.34 bracket arm at `y = 3.46` | no |
+| Mouth guardrail | 1 | 5 posts 0.07², two rails at `y = 0.84` and `0.52` | yes |
+
+**The vending machines are §2.2's machine, unlit — and that is the whole point of them.** The bio station *is* a vending machine (§2), so five more of the same object is the strongest thing this world can do to make one of them mean something: the lit one is the only lit one in the alley, and it is the one you can open. They therefore take §2.2's body dimensions exactly rather than a size of their own, carry §2.2's 0.96 × 1.42 front panel as a `void` slab instead of a `vendGlow` one, and get no emissive term at all. §3.2 already said *unlit, dark*; this records why that line is load-bearing rather than a detail. **Lighting them is the single most tempting change in this section and it would cost the bio station its meaning.**
+
+**Where things stand: 0.20 from the wall, which is the §3.4 plinth.** Wall props put their **back face at `|x| = 4.30`** — the wall plane at ±4.50 less the plinth's 0.20 depth — so nothing sits inside the storefront that is already there. What that means for the visitor is the interesting part: a 0.82-deep vending machine reaches `|x| = 3.48` and the food cart reaches `3.30`, both **inside §3's clamp at ±3.60**. See the collision note below.
+
+**Utility poles stand at `|x| = 3.72`, on the gutter line, not against the wall.** §3.4's fascia projects 0.35 across the full width of every unit from `y = 2.55` up, so an 8.4 m pole anywhere behind `|x| = 4.15` is buried in the fascia for three quarters of its length. The gutter centre is the line §3 already draws down the alley, and a pole on it clears everything — at the cost of standing 0.11 m inside the walkable band, which is what a utility pole in a Tokyo alley actually does. **No pole stands in front of an awninged unit**: the awnings reach `|x| = 3.25` at `y ∈ [2.60, 2.67]`, so those five z spans are closed to poles on that wall.
+
+**Standpipes run at `|x| = 4.09`, in front of the fascia rather than behind it**, for the same arithmetic one line up — 4.15 less the pipe radius. Their z positions are the §3.4 joints, which is where a downpipe between two buildings goes, and which are uneven for free because §3.4 generated them.
+
+**Nothing is evenly spaced, and the positions are authored rather than generated.** §3.5's nine signs and §3.6's six vehicles set the precedent: a list this short is better read than run. The lists live in `lib/props.ts`, not here — this section gives the sizes, the counts and the rules, the way §3.5 gives them for the signs. What is *derived* is the standpipe and lantern anchors, which come off §3.4's generated joints.
+
+**One thing lights up, and it is not on the ladder twice.** The food cart's canopy is lit from underneath at **`sodium`, emissive 1.10** — §8.1's open-shutter rung, reused rather than extended, because it is the same phenomenon: warm light falling out of a place with nobody in it. The paper lanterns take their existing **1.30**. Nothing else here is emissive. The cones' bands, the vending fronts and the guardrail are lit by §7 or they are not lit at all, which at 3am is the honest answer for all three.
+
+**§17 survives the food cart, and the lanterns are the proof.** *Three things are lit warmer than everything else and they are the only three things you can touch.* Eleven paper lanterns at 1.30 already sit **above** the cart's 1.10 and were always in §3.2 — if eleven of those do not break the sentence, one cart does not. It also carries **no dynamic light**: §7's cap of ten is fully spent, and what actually makes the three content surfaces dominant is that each has a light of its own (§7 #2, #4, #5). An emissive material illuminates nothing but itself. The cart sits on the east wall at the far end, past the payphone, so it is the last thing before the bend and the first warm thing that is not a destination.
+
+**Collision — these are the first boxes in this world that can actually fire.** §3.4 registered fourteen units' worth of AABBs and said outright that every one of them is inert, because the deepest storefront part stops at `|x| = 4.05` and §3's clamp has already stopped the eye at ±3.60. That changes here. A vending machine's front face at 3.48 resolves the eye to **3.16**, the food cart's at 3.30 resolves it to **2.98**, and the cones and the barrier stand in open alley at `x ≈ −1` where there is no clamp at all. **§12.4's resolver has been shipped and never tested against anything; this is the section that tests it**, and it is verified by walking into each of them rather than by assertion.
+
+**The guardrail is a visible reason for a stop that already happens, not a new barrier.** §3.6 settled that the cross street is unreachable — the clamp stops the eye at `z = +21.40` against a carriageway starting at 26.20 — but from inside the alley that stop has no cause you can see, and an invisible wall reads as a bug in a world whose whole premise is that you may walk to the end of it. The rail spans the §3.1 opening, `x ∈ [0.90, 4.15]` — stopping on §3.4's frame face rather than on the wall behind it — at **`z = 21.755`**, which is not a round number and is not free. Half a 0.07 post puts its near face at **21.72**; less §12.4's 0.32 radius, the resolver's stop is **21.40**, which is §3's clamp exactly. The clamp is therefore what fires and the rail is exactly where it fires — the visitor stops with the rail at arm's length and nothing about the stop is unexplained.
+
+**It is a pedestrian railing and not a solid panel, and §3.6 is why.** That section spent its whole budget on a 3.36 m slot: 22 far-side boards spaced against a 4.2 m sightline, six vehicles on a 240 m loop timed to cross it. Closing the slot with a hoarding would delete all of it. Two horizontal rails on five posts stop the visitor, say *road*, and leave the traffic visible through them.
+
+**A kerbside guardrail at `z = 26.20` was considered and rejected.** It is where a real one goes, and it is 4.8 m past a clamp nobody can reach — scenery answering a question the visitor has already stopped asking. The rail belongs where the stop is.
+
+**Contact-AO decals, at last.** §7 asks for a painted radial decal — `void`, opacity 0.55, 1.4 × 1.4 — *under every solid object*, and nothing in the world has had one. Free-standing props on §6's reflector are where their absence finally shows: a crate stack on a mirror with no contact darkening reads as pasted on. They go under every prop here, at `y = 0.010` — above §6.1's strip at 0.004 and below §3.6's road glow at 0.014 — at **each prop's own footprint × 1.55**, since §7 gives one size for objects that are not one size and 1.4 m of shadow under a 0.36 m cone is a stain rather than a contact. The multiplier lands a vending machine on §7's own figure and scales the rest off it. **The texture is free**: §3.6's painted radial pool alpha is already in memory and is exactly a radial falloff. §3.4's fourteen storefronts still owe theirs.
+
+**Drawn by material, not by object — twelve draw calls for sixty-four props.** Every part is bucketed on `(geometry, material)`, so a crate, a scooter cowl and a vending machine body are one `InstancedMesh` because they are the same box in the same dark. Drawn per object this section alone would be sixty-four calls. Two hundred and twenty-five parts, twelve buckets, plus one instanced pass for the decals.
+
+| Measured | | |
+|---|---|---|
+| Desktop peak | **99** of §15's 140 | at spawn, whole alley in frame |
+| **Mobile peak** | **93 of 90** | at spawn, and identical from the north clamp |
+| Triangles | 117 k desktop / 54 k mobile | of 350 k / 220 k — not close |
+| Collision boxes | 43, of which **30 can fire** | see below |
+
+**§15's mobile draw-call budget is now exceeded, and this is the section that crossed it.** §3.6 measured 80 of 90 and named the ceiling as the number to watch; §3.7 costs thirteen and lands at **93**. Everything about the props is already instanced, so the ladder's *instance harder before deleting anything* has been spent. **The lever that remains is merging by material rather than by (geometry, material)** — folding `box + cylinder` of one surface into a single merged geometry takes the twelve buckets to eight and the peak to **89**. It costs nothing visually and it is the same technique §3.6 used for the vehicles.
+
+It is not applied here, for one reason: it buys four calls, and §2 still owes three content surfaces and §9 owes a post-processing chain. **89 of 90 is not headroom, it is the same problem one section later.** The real question is whether 90 was ever the right number for a world with this much in it, and that is a §15 decision rather than a §3.7 one. Recorded, measured, and left where it belongs.
+
+**Nothing here moves, so §13 has nothing to turn off.** Every prop is static geometry written once at mount. Reduced motion is satisfied by construction rather than by a branch, which is worth stating because it is the only section so far where that is true.
+
+**Deliberately not built here.** The remaining §3.2 lines belong to other passes and are not smuggled in: air-con condensers want §8's alpha-mapped grille and a texture budget that is already over (§16.5); the steam-vent grates are pointless without §10's sprites; the puddle decals and ripple emitters are §6 and §10's ground work. **The cart has no noren** — a red fabric strip would be one box in one colour nothing else here uses, which is a whole draw call for a detail, and it comes back the moment something else wants that material.
+
+**The rail cannot be seen from the exact point it stops you, and that is a property of railings.** At the clamp the visitor's eye is 1.68 m up and 0.32 m from a rail 0.89 m tall, which is 68° below horizontal against §12.2's pitch stop of 62°. It is fully legible on approach — posts and both rails silhouetted against the lit carriageway, with §3.6's traffic still visible through them — and it drops below the view in the last half-metre, exactly as a waist-height barrier does when you walk up to one.
 
 ---
 
@@ -903,6 +973,22 @@ All of §3.6, which closes the second half of item 2 above. Free choices: the ca
 **Frustum culling had been switched off, and that was the wrong fix.** The instance matrices are written with the car at the origin, so bounds computed at mount are wrong and the street empties itself as you look at it — turning culling off makes that stop, at the cost of submitting every triangle of every car every frame. Recomputing the sphere from the instance matrices costs nothing and fixes the cause instead of the symptom: peak drawn triangles fell from **136 k to 110 k**, and to **49 k** from spawn.
 
 **Left open.** Whether the street should be legible from spawn at all — §5's fog says no and §3.1 agrees, but the request that produced this section was made from the middle of the alley. The lever is §5's density and it is not this section's to pull. See §3.6.
+
+### 16.7 Settled during the street-prop build
+
+All of §3.7. Free choices: every dimension in its table except the vending machine's, the 0.20 wall standoff, the 8° scooter lean, the stack depths, and the guardrail's post and rail sizes. Derived: the counts from §3.2, the vending machine's body from §2.2, the pole line from §3's gutter centre, the standpipe line and the fascia clearance from §3.4, the lantern rung and the cart rung from §8.1, the decal from §7, the guardrail's z from §3's clamp plus §12.4's radius, and the decision to light nothing else from §17.
+
+**Three objects were added to §3.2 rather than found in it** — the food cart, two rubbish points and the guardrail. The first two were asked for and are ordinary alley furniture; the third is the one worth recording, because it is the first thing in this world built to explain a rule rather than to decorate. §3's clamp has been in the document since the shell and correct throughout; what it never had was a reason the visitor could see.
+
+**The bicycles became scooters**, and §3.2 carries the argument: at this world's box-and-cylinder fidelity a bicycle is a lattice of thin tubes that reads as noise, and a scooter is five solids that read as one object. Same count, same places, same job.
+
+**Lighting the dead vending machines was the tempting change and it is the one that would cost the most.** Five lit drinks machines and the §2.2 bio station is no longer the only lit drinks machine in the alley — it is one of six, and the thing §17 asks a stranger to find in ten seconds has been hidden inside its own scenery. §3.2 said *unlit, dark* before any of this was built; §3.7 now says why.
+
+**§12.4's resolver had never been exercised.** Every AABB in the world before this section was inert against §3's clamp by construction, and §3.4 said so at the time. The props are the first objects standing in the walkable band, so the per-axis resolution, the slide-don't-stop behaviour and the 0.32 radius are tested here for the first time — by walking into a vending machine, a cone and the guardrail, not by reading the diff. **Thirty of the forty-three boxes can fire**, and seven cases were checked against a predicted stop before anything else was believed: the cart to 2.98, a vending machine to 3.16, a pole to 3.29, a crate to 3.12, the two mid-alley clusters out to 0.30, and the guardrail to 21.40. All seven landed on the predicted number.
+
+**Placement was checked by a rule rather than by eye, and it moved three props before anything was drawn.** *"No collisions"* is four properties — no prop overlaps another, none stands in a §3.4 doorway, none enters a §2 slot, and no pole passes through an awning — and `audit()` in `lib/props.ts` states them as findings. It caught a rubbish point across unit 8's door and a second one wedged between a crate stack and a vending machine in a 3.76 m aperture. **Neither was visible in the numbers and both would have shipped.** A fifth rule went in afterwards for the paper lanterns, which share a height band with six of §3.5's projecting signs.
+
+**One fault was found by looking, and it is §3.6's headlights again in a different costume.** §7's contact decal was wired to `alphaMap`, and three's `alphaMap` samples the **green** channel while the painted texture carries its entire shape in **alpha** — green is 255 across every pixel of it. Every decal in the world was therefore a hard-edged opaque rectangle: right size, right colour, right place, right count, no error anywhere. §3.6 had already used the same texture correctly in `map`, one file away. **The lesson is the one this document keeps writing down**: the faults that survive lint, types and the build are the ones where every number is correct.
 
 ---
 

@@ -187,7 +187,10 @@ export const SURROUNDINGS_INVENTORY = [
   { item: 'decorativeNeonSigns', count: 9, solid: false },
   { item: 'airConCondensers', count: 16, solid: false },
   { item: 'standpipes', count: 22, solid: true, solidCount: 12 },
-  { item: 'bicycles', count: 4, solid: true },
+  /* §3.2 — scooters, not bicycles. At this world's box-and-cylinder vocabulary a bicycle
+     is a lattice of thin tubes that reads as noise; a scooter is five solids that read as
+     one object. Same count, same places, same job — see §3.2 and §16.7. */
+  { item: 'scooters', count: 4, solid: true },
   { item: 'crates', count: 9, solid: true },
   { item: 'conesAndBarriers', count: 3, solid: true },
   { item: 'steamVentGrates', count: 3, solid: false },
@@ -195,6 +198,12 @@ export const SURROUNDINGS_INVENTORY = [
   { item: 'utilityPoles', count: 6, solid: true },
   { item: 'puddleDecals', count: 18, solid: false },
   { item: 'rippleEmitters', count: 12, solid: false },
+  { item: 'crossStreetVehicles', count: 6, solid: false },
+  /* §3.7 added these three. The guardrail is the one worth noticing: it is the first
+     object in this world built to explain a rule rather than to decorate one. */
+  { item: 'foodCart', count: 1, solid: true },
+  { item: 'rubbishPoints', count: 2, solid: true },
+  { item: 'mouthGuardrail', count: 1, solid: true },
 ] as const
 
 /**
@@ -692,6 +701,222 @@ export const TRAFFIC = {
 }
 
 export type VehicleVariant = keyof typeof TRAFFIC.models
+
+/**
+ * §3.7 — the street props. The rest of the §3.2 inventory that stands on the ground,
+ * plus the food cart, the two rubbish points and the alley-mouth guardrail.
+ *
+ * Everything is boxes and cylinders — §3.4's vocabulary, for §3.4's reason. Sizes are
+ * given as **[alongAlley, deep, high]** throughout, which is the frame the brief's own
+ * table uses; a prop rotated to face the other wall is turned by the placement, never by
+ * swapping two numbers here.
+ *
+ * Carries nothing (§2.4). *Where* each one goes lives in `lib/props.ts` — this block is
+ * the brief's table and nothing more, the same split §3.5's signs already use.
+ */
+export const PROPS = {
+  /**
+   * §3.7 — back face 0.20 from the wall plane, which is exactly the §3.4 plinth depth.
+   * Wall props therefore stand in front of the storefront rather than inside it.
+   */
+  wallStandoff: 0.2,
+
+  /**
+   * §3.7 — §2.2's body, unlit. Five more of the bio station's own object is what makes
+   * the lit one mean something: it is the only lit drinks machine in the alley and it is
+   * the one you can open. The front panel takes §2.2's 0.96 × 1.42 as a `void` slab and
+   * there is no emissive term anywhere on it.
+   */
+  vendingMachine: {
+    size: [1.12, 0.82, 1.94],
+    kick: { height: 0.08 },
+    front: { width: 0.96, height: 1.42, baseY: 0.44, proud: 0.03 },
+    flap: { width: 0.7, height: 0.2, baseY: 0.16, proud: 0.04 },
+    bodyColor: 'shutter',
+    panelColor: 'void',
+    kickColor: 'metalDark',
+  },
+
+  /**
+   * §3.7 — the one thing here that lights up. §8.1's open-shutter rung reused rather
+   * than extended: warm light falling out of a place with nobody in it is the same
+   * phenomenon at both ends of the alley.
+   *
+   * No dynamic light. §7's ten are spent, and an emissive material illuminates nothing
+   * but itself — which is precisely why §17 survives this (see §3.7).
+   */
+  foodCart: {
+    size: [2.1, 1.0, 2.1],
+    wheel: { radius: 0.2, width: 0.07 },
+    deck: { length: 1.9, depth: 0.78, y: [0.3, 1.1] },
+    worktop: { length: 1.98, depth: 0.86, thickness: 0.06 },
+    post: { radius: 0.03, y: [1.16, 2.02] },
+    canopy: { length: 2.1, depth: 1.0, thickness: 0.08 },
+    /** Faces down, under the canopy. §8.1's 1.10 — over the knee, under the lanterns. */
+    lamp: { length: 1.7, depth: 0.7, y: 1.98, color: 'sodium', emissive: 1.1 },
+    bodyColor: 'shutter',
+    metalColor: 'metalDark',
+    wheelColor: 'void',
+  },
+
+  /** §3.2's line, redrawn — see there for why a bicycle could not be built. */
+  scooter: {
+    size: [1.75, 0.62, 1.08],
+    leanDeg: 8,
+    floorpan: { length: 1.05, depth: 0.32, y: [0.3, 0.42] },
+    cowl: { length: 0.66, depth: 0.4, y: [0.42, 0.84] },
+    legShield: { length: 0.24, depth: 0.38, y: [0.36, 1.02] },
+    seat: { length: 0.54, depth: 0.34, y: [0.84, 0.95] },
+    wheel: { radius: 0.21, width: 0.07, spacing: 1.22 },
+    bar: { radius: 0.018, length: 0.54, y: 1.04 },
+    bodyColor: 'shutter',
+    metalColor: 'metalDark',
+    darkColor: 'void',
+  },
+
+  /** Stacks of 2 to 4, each stack offset and turned a little off square. */
+  crate: {
+    size: [0.52, 0.36, 0.31],
+    /** Two tints of the same dark, so nine stacks do not read as nine materials. */
+    colors: ['shutter', 'metalDark'],
+  },
+
+  /**
+   * §3.7 — the band's radii come off the cone's own taper rather than being authored,
+   * so a straight collar can never poke through the slope it is wrapped around.
+   */
+  cone: {
+    baseRadius: 0.17,
+    topRadius: 0.035,
+    height: 0.56,
+    foot: { size: 0.36, thickness: 0.04 },
+    band: { y: [0.28, 0.38], proud: 0.004 },
+    color: 'sodiumDeep',
+    bandColor: 'signWhite',
+    footColor: 'shutter',
+  },
+
+  barrier: {
+    board: { length: 1.2, depth: 0.05, y: [0.56, 0.76] },
+    leg: { size: 0.06, height: 0.92, splayDeg: 10 },
+    footRail: { length: 1.2, size: 0.05, y: 0.1 },
+    boardColor: 'sodiumDeep',
+    metalColor: 'metalDark',
+  },
+
+  rubbishPoint: {
+    drum: { radius: 0.3, height: 0.74 },
+    lid: { radius: 0.32, height: 0.05 },
+    sack: { size: [0.42, 0.36, 0.34] },
+    drumColor: 'metalDark',
+    lidColor: 'concrete',
+    sackColor: 'shutter',
+  },
+
+  /**
+   * §3.7 — 4.09 is §3.4's fascia face at 4.15 less the pipe radius. Anywhere behind it
+   * and three quarters of the pipe is inside the bulkhead. z comes off §3.4's generated
+   * joints, which is where a downpipe between two buildings goes.
+   */
+  standpipe: {
+    x: 4.09,
+    radius: 0.055,
+    baseY: 0.1,
+    /** Two lengths, alternating by index — a wall of identical pipes is a fence. */
+    topY: [2.6, 4.0],
+    clamp: { size: 0.15, depth: 0.2, thickness: 0.05 },
+    solidCount: 12,
+    color: 'metalDark',
+  },
+
+  /**
+   * §3.7 — on §3's gutter centre, not against the wall: §3.4's fascia projects 0.35
+   * across every unit above 2.55, so a pole behind 4.15 is buried for most of its
+   * height. The cost is 0.11 m inside the walkable band, which is where a real one
+   * stands. No pole may share a z span with an awninged unit (see §3.7).
+   */
+  utilityPole: {
+    x: 3.72,
+    radius: 0.11,
+    height: 8.4,
+    crossarms: [
+      { length: 1.5, size: 0.1, y: 6.4 },
+      { length: 1.1, size: 0.09, y: 7.1 },
+    ],
+    color: 'concrete',
+  },
+
+  /** §8.1 — 1.30, already on the ladder. §8 gives the material `side: DoubleSide`. */
+  paperLantern: {
+    shade: { radius: 0.135, height: 0.36 },
+    arm: { length: 0.34, size: 0.045, y: 3.46 },
+    drop: { radius: 0.008, length: 0.1 },
+    color: 'lantern',
+    emissive: 1.3,
+    armColor: 'metalDark',
+  },
+
+  /**
+   * §3.7 — across §3.1's opening. `z` is not free: the near face at 21.72 less §12.4's
+   * 0.32 radius resolves the eye to 21.40, which is §3's clamp exactly. Whichever of the
+   * two fires, the visitor stops at the rail.
+   *
+   * Railings and not a panel — §3.6 spent its whole budget on the 3.36 m slot this
+   * spans, and a hoarding would delete every bit of it.
+   */
+  guardrail: {
+    /**
+     * Not a round number, and not free: 21.755 less half a 0.07 post puts the near face
+     * at **21.72**, and 21.72 less §12.4's 0.32 radius is **21.40** — §3's clamp exactly.
+     * The clamp is what fires, and the rail is exactly where it fires.
+     */
+    z: 21.755,
+    /** Stops at 4.15, not 4.50: §3.4's frame stands 0.35 proud and the rail meets it. */
+    x: [0.9, 4.15],
+    posts: 5,
+    post: { size: 0.07, height: 0.88 },
+    rail: { height: 0.05, depth: 0.045, y: [0.52, 0.84] },
+    color: 'metalDark',
+  },
+
+  /**
+   * §7's decal, finally built. Only the height is §3.7's: 0.010 sits above §6.1's strip
+   * at 0.004 and below §3.6's road glow at 0.014. **Colour, opacity and size stay in
+   * `CONTACT_AO_DECAL` below**, which is where §7 put them — restating them here would
+   * be two copies of one value in one file, which is the drift this module exists to
+   * prevent. The texture is §3.6's painted radial pool alpha, already in memory, so
+   * §15's budget does not move.
+   */
+  contactDecal: {
+    y: 0.01,
+    /**
+     * §7 gives one decal size, 1.4 × 1.4, and the props are not one size — a 1.4 m smear
+     * under a 0.36 m traffic cone is a stain, not a contact shadow. Each decal is its
+     * prop's own footprint at this multiplier, which lands a vending machine near §7's
+     * figure and scales everything else off it.
+     */
+    spread: 1.55,
+  },
+} as const satisfies {
+  vendingMachine: { bodyColor: ColorToken; panelColor: ColorToken; kickColor: ColorToken; [key: string]: unknown }
+  foodCart: {
+    lamp: { color: ColorToken; [key: string]: unknown }
+    bodyColor: ColorToken
+    metalColor: ColorToken
+    wheelColor: ColorToken
+    [key: string]: unknown
+  }
+  scooter: { bodyColor: ColorToken; metalColor: ColorToken; darkColor: ColorToken; [key: string]: unknown }
+  crate: { colors: readonly ColorToken[]; [key: string]: unknown }
+  cone: { color: ColorToken; bandColor: ColorToken; footColor: ColorToken; [key: string]: unknown }
+  barrier: { boardColor: ColorToken; metalColor: ColorToken; [key: string]: unknown }
+  rubbishPoint: { drumColor: ColorToken; lidColor: ColorToken; sackColor: ColorToken; [key: string]: unknown }
+  standpipe: { color: ColorToken; [key: string]: unknown }
+  utilityPole: { color: ColorToken; [key: string]: unknown }
+  paperLantern: { color: ColorToken; armColor: ColorToken; [key: string]: unknown }
+  guardrail: { color: ColorToken; [key: string]: unknown }
+  [key: string]: unknown
+}
 
 /**
  * §3.3 — how many whole floors of window fit on a wall of this height. Whatever does

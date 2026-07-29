@@ -17,6 +17,7 @@ import FacadeWindows from './FacadeWindows'
 import Ground from './Ground'
 import NeonSigns from './NeonSigns'
 import Overhead from './Overhead'
+import Props from './Props'
 import Storefronts from './Storefronts'
 import Traffic from './Traffic'
 
@@ -83,6 +84,10 @@ export default function World() {
         <Storefronts />
         <NeonSigns />
         <Overhead />
+        {/* §3.7 — the ground-level inventory. After the storefronts because it stands in
+            front of them, and the first thing in this world whose collision boxes are
+            not inert against §3's clamp. */}
+        <Props />
         {/* §3.6 — past the bend, and past §3's clamp. Nothing out here is reachable. */}
         <CrossStreet />
         {/* The vehicles are glTF files, so they suspend. The boundary is around Traffic
