@@ -138,8 +138,12 @@ export const LAYOUT = {
 
 /**
  * §3 — the hard walkable clamp, in addition to per-object AABBs.
- * Bounding boxes leak at corners; a clamp cannot. The player enforces this in the
- * navigation step — in the shell it is data and a dev-only wireframe.
+ * Bounding boxes leak at corners; a clamp cannot.
+ *
+ * The clamp acts on the eye position and `playerRadius` is NOT subtracted from it: ±3.60
+ * already stands 0.90 m inside the walls at ±4.5, so taking the radius off again would
+ * stop the visitor at ±3.28 for no reason the brief gives. The radius is the §12.4 box
+ * resolution's business — the distance a capsule keeps from a solid object.
  */
 export const BOUNDS = {
   x: [-3.6, 3.6],
@@ -755,17 +759,40 @@ export const LOOK = {
    * mouse button, so without this a drag ending over a door opens the door.
    */
   clickGuardPx: 6,
+  /**
+   * §12.2 — looking is gated on `canControl` exactly as movement is. An overlay covers
+   * the screen; a drag across it must not spin the world behind it, and Escape returning
+   * the visitor to a heading they did not choose reads as a bug in the overlay.
+   */
+  gatedOnCanControl: true,
 } as const
 
 export const WALK = {
   /** One speed, no run. It is 3am and you are tired. */
   speed: 2.6,
+  /**
+   * §12.3 — these two never apply at the same time. Together they are a first-order
+   * system settling at acceleration ÷ damping = 1.2 m/s, less than half the 2.6 above.
+   * Acceleration runs while there is input, damping while there is none.
+   */
   acceleration: 12.0,
   damping: 10.0,
-  stick: { sizePx: 128, deadZone: 0.12, position: 'bottom-left' },
+  stick: {
+    sizePx: 128,
+    deadZone: 0.12,
+    position: 'bottom-left',
+    /** §12.3 — plus env(safe-area-inset-*); a notched phone puts the home indicator here. */
+    insetPx: 24,
+  },
   headBob: { amplitude: 0.022, frequencyHz: 1.9 },
   /** Camera yaw only, flattened to the ground plane. */
   basis: 'cameraYawFlattened',
+  /**
+   * §12.3 — how the two input paths converge. Keyboard normalised so W+D is not 1.41×,
+   * stick dead-zone remapped, the two summed and clamped to the unit disc. Summed, not
+   * maxed: it is the only rule that keeps a half-pushed stick at half speed.
+   */
+  convergence: 'sumThenClampToUnitDisc',
 } as const
 
 /** §12.5 — the interact manager. One owner of the key; no station listens for it. */

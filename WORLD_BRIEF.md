@@ -111,6 +111,8 @@ Reads the contact channels from `CONTENT.md` (`contact@jacinto.design`) plus the
 | **Walkable clamp** | **`x ∈ [-3.60, +3.60]`, `z ∈ [-21.0, +21.4]`** (hard, in addition to AABBs) |
 | Player radius | 0.32 |
 
+**The clamp acts on the eye position, and the player radius is not subtracted from it.** The two numbers meet here and it is worth saying which does what: ±3.60 already stands 0.90 m inside the walls at ±4.5, so taking the 0.32 radius off it again would stop the visitor at ±3.28 for no reason this document gives. The radius belongs to the §12.4 box resolution, where it is the distance a capsule keeps from a *solid object*; the clamp is a literal coordinate limit on the camera.
+
 **The gutter is the mask, not a strip.** This section gives the gutter roughness 0.06, and §6.2 gives puddle-wet ground roughness 0.06 and biases the mask toward `x = ±3.72` — the two sections describe one surface. Laying a separate strip over the reflector would invert it, because a plain material on top of the reflector makes the wettest line in the alley the only one that does not reflect. **What remains genuinely unbuilt is the 0.03 recess**, which cannot exist while the floor is a plane; it needs real floor geometry and arrives with the kerb and drain modelling in the surroundings step. Until then the gutter reads as standing water, which at eye height is what 3 cm of depth looks like anyway.
 
 ### 3.1 The two ends (there is no horizon)
@@ -433,6 +435,11 @@ Any string not on this list and not from `CONTENT.md` does not go in the world.
 | Smoothing | framerate-independent: `α = 1 - exp(-18 * delta)` |
 | Invert Y | no |
 | **Click guard** | a pointer that travelled **> 6 px** between down and up is a look, not a click — interactive objects ignore it |
+| **Gate** | **looking runs only while `canControl(state)`, exactly as movement does** |
+
+**Looking is gated too, and §12.3's gate is not the whole rule.** An overlay covers the screen; a drag across it must not spin the world behind it, and `Escape` returning the visitor to a heading they did not choose reads as a bug in the overlay rather than in the camera.
+
+**One pointer stream per element, tracked by `pointerId` and held with `setPointerCapture`.** The stick is a sibling of the canvas, not a child, so a thumb on the stick never reaches the look listener — which is what lets a left thumb steer while a right thumb looks. Capture is also what keeps a drag alive once it leaves the window, instead of the camera stopping mid-turn.
 
 ### 12.3 Walking
 
@@ -441,10 +448,20 @@ Any string not on this list and not from `CONTENT.md` does not go in the world.
 | Speed | **2.6 m/s** — one speed, no run. It is 3am and you are tired. |
 | Acceleration | 12.0 m/s² |
 | Damping | 10.0 /s |
-| Input | `WASD` + arrows (desktop), on-screen stick (touch, bottom-left, 128 px, dead zone 0.12) — **both feed one intent vector** |
+| Input | `WASD` + arrows (desktop), on-screen stick (touch, bottom-left, 128 px, dead zone 0.12, **24 px from the corner plus `env(safe-area-inset-*)`**) — **both feed one intent vector** |
 | Movement basis | camera yaw only, flattened to the ground plane |
 | Head bob | amplitude **0.022**, frequency **1.9 Hz** at full speed, scaled by speed. Off under reduced motion. |
 | Gate | movement runs only while `canControl(state)` — no exceptions |
+
+**Acceleration applies only while there is input; damping only while there is none.** Applied together they are a first-order system whose terminal speed is `acceleration ÷ damping` — 12 ÷ 10 = **1.2 m/s**, less than half the 2.6 this same table states. Splitting them is what makes 2.6 the speed the visitor actually reaches: 0.22 s to get there, about 0.3 s to come to rest. Acceleration is applied toward the desired *velocity vector* rather than along the input direction, so turning while walking redirects instead of adding.
+
+**The two paths converge before anything reads them.** Keyboard keys produce a raw vector normalised to length 1, so `W+D` is not 1.41× faster than `W`; the stick produces an analog vector with the dead zone remapped so its edge is 0 and the ring edge is 1. The two are **summed and then clamped to the unit disc** — not maxed — which is the only rule that keeps a half-pushed stick at half speed while holding `W` and pushing the stick forward still gives 1, not 2. Neither path may pass through React state: a `pointermove` at 120 Hz through a store re-renders the tree faster than the world draws, and the symptom looks like the ground's fault.
+
+**Arrow keys strafe; they do not turn.** They sit in the same intent vector as `WASD` and the basis is camera yaw, so a turning binding would need a second basis this document does not describe.
+
+**The key set clears on `blur` and on `visibilitychange`.** A `keyup` delivered to a hidden tab is never delivered at all, and the visitor returns to find themselves walking into a wall with nothing held down.
+
+**The stick's inset.** 128 px and a 0.12 dead zone are given above; the inset is not. 24 px plus `env(safe-area-inset-*)`, because on a notched phone the home indicator otherwise sits directly under the thumb.
 
 ### 12.4 Collision
 
@@ -578,10 +595,15 @@ These need a decision before the code that depends on them is written, and the b
 3. **Font subsetting for the Japanese canvas faces** — currently system faces only; if a webfont ships, it must be subset to the fourteen strings in §11.4 and re-budgeted against §15.
 4. **Whether the door opens a real tab or a confirm step on mobile** — popup blockers treat a canvas click differently across browsers.
 5. **The gutter's 0.03 recess** — §3 resolves how the gutter *reads* (through the puddle mask) but not how it gets depth. It needs the floor to stop being a plane. Decide with the kerb and drain modelling.
+6. **Turning without a pointer** — §12.2 makes looking a drag and §12.3 spends the arrows on movement, so a visitor with a keyboard and no pointing device can walk but cannot turn. The answer this document already contains is §12.6's guided path and §12.7's top nav, which reach every surface without walking; whether that is *enough*, or whether a key should rotate the camera, is decided when those two exist and can be tested against the ten-second test in §17. Named rather than patched, because a `Q`/`E` binding invented now would be a second movement basis nobody asked for.
 
 ### 16.1 Settled during the shell build
 
 Recorded so the reasoning is not re-litigated: wall thickness and end-wall height (§3), the return wall's orientation (§3.1), fog density (§5), the reflector strip's extent and 4 mm lift and `reflectorOffset` (§6.1), puddle coverage with its measurement region and baseline, the mask sizes and blur scaling, and the ripple slope (§6.2), the yaw convention and rotation order (§12.1), and the tier rule (§15.1).
+
+### 16.2 Settled during the navigation build
+
+The clamp acting on the eye position rather than the eye minus the player radius (§3); the look gate and the one-pointer-per-element rule (§12.2); the acceleration/damping split that recovers the stated 2.6 m/s, diagonal normalisation, the sum-and-clamp convergence rule, the arrow binding, the focus-loss reset and the stick's inset (§12.3).
 
 ---
 

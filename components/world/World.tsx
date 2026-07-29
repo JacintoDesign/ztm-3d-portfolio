@@ -5,8 +5,11 @@ import { PerspectiveCamera } from '@react-three/drei'
 import { Canvas } from '@react-three/fiber'
 import type { PerspectiveCamera as ThreePerspectiveCamera } from 'three'
 import { ACESFilmicToneMapping, ColorManagement, SRGBColorSpace } from 'three'
+import Camera from '@/components/player/Camera'
+import Player from '@/components/player/Player'
+import TouchStick from '@/components/ui/TouchStick'
 import { resolveTier, useIsPortrait } from '@/lib/device'
-import { ATMOSPHERE, BUDGET, CAMERA, GL, degToRad, v3, yawToThreeRotationY } from '@/lib/world'
+import { ATMOSPHERE, BUDGET, CAMERA, GL } from '@/lib/world'
 import Alley from './Alley'
 import Atmosphere from './Atmosphere'
 import Ground from './Ground'
@@ -29,24 +32,20 @@ export default function World() {
   const fov = portrait ? CAMERA.fovDeg.portrait : CAMERA.fovDeg.landscape
 
   /**
-   * The spawn pose, applied once when the camera mounts.
+   * §12.1 — `YXZ`, set once when the camera mounts. Under three's default `XYZ`, pitching
+   * rolls the horizon as you turn.
    *
-   * Deliberately a ref callback and not a prop: `rotation.order` has to be set before
-   * `rotation`, or the same three numbers describe a different orientation — and a
-   * declarative `rotation` would be re-applied on every render, which would yank the
-   * visitor back to spawn mid-stride the moment the player exists. This is a starting
-   * position, not a value that tracks state.
+   * A ref callback rather than a prop because the order has to be in place *before* any
+   * rotation is written to this camera, including `Camera.tsx`'s first frame.
+   *
+   * The pose itself is not set here. `Camera.tsx` owns the rotation and `Player.tsx` owns
+   * the position, both starting from `CAMERA.spawn`, and both from the first frame — a
+   * declarative `position` prop would additionally teleport the visitor back to spawn on
+   * every re-render, which the orientation change below would trigger mid-stride.
    */
-  const applySpawnPose = useCallback((camera: ThreePerspectiveCamera | null) => {
+  const applyRotationOrder = useCallback((camera: ThreePerspectiveCamera | null) => {
     if (camera === null) return
-    // YXZ is the order that keeps yaw and pitch independent. Under the default XYZ,
-    // pitching rolls the horizon as you turn.
     camera.rotation.order = 'YXZ'
-    camera.rotation.set(
-      degToRad(CAMERA.spawn.pitchDeg),
-      yawToThreeRotationY(degToRad(CAMERA.spawn.yawDeg)),
-      0,
-    )
   }, [])
 
   return (
@@ -66,18 +65,20 @@ export default function World() {
       >
         {/* Declarative, so the §12.1 FOV split (62° landscape / 70° portrait) follows
             orientation on its own — drei re-runs updateProjectionMatrix on change. */}
-        <PerspectiveCamera
-          makeDefault
-          ref={applySpawnPose}
-          fov={fov}
-          near={CAMERA.near}
-          far={CAMERA.far}
-          position={v3(CAMERA.spawn.position)}
-        />
+        <PerspectiveCamera makeDefault ref={applyRotationOrder} fov={fov} near={CAMERA.near} far={CAMERA.far} />
+        {/* Camera before Player is documentation, not mechanism — the −2 / −1 frame
+            priorities are what guarantee look runs before walk. */}
+        <Camera />
+        <Player />
         <Atmosphere />
         <Alley />
         <Ground />
       </Canvas>
+
+      {/* §12.3 — 2D overlay, so it lives outside the Canvas. Being a sibling of the
+          canvas rather than a child is also what keeps a thumb on the stick away from
+          the look listener. */}
+      <TouchStick />
     </div>
   )
 }
