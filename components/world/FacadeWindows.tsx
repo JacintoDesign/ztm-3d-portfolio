@@ -77,7 +77,7 @@ const bayIndicesFor = (variant: number) =>
  * its V runs 0 → floors ÷ FLOORS_PER_TEXTURE, so a two-floor wall reads the bottom two
  * thirds of a three-floor image. Ground floor stays at the bottom of both.
  */
-function bayGeometry(floors: number): PlaneGeometry {
+export function bayGeometry(floors: number): PlaneGeometry {
   const geometry = new PlaneGeometry(bay.width, floors * floorHeight)
   if (floors === FLOORS_PER_TEXTURE) return geometry
 

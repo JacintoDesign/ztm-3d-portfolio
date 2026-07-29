@@ -105,7 +105,7 @@ Reads the contact channels from `CONTENT.md` (`contact@jacinto.design`) plus the
 | Alley width | 9.0 (`x ∈ [-4.5, +4.5]`) |
 | Facade height | 14.0 west, 12.5 east (asymmetry stops it reading as a corridor) |
 | **Wall thickness** | **1.00**, all facades and end walls, inner faces at `x = ±4.5`. Set by the 0.55 shopfront recess in §2.1 — a thinner wall leaves too little behind it. Outer faces are never seen. |
-| Ground | `y = 0`, single plane 60 × 60 (overscan hidden by fog) |
+| Ground | `y = 0`, single plane **70 × 70** (overscan hidden by fog, or by a wall). Was 60 × 60 until §3.6 put a road past the bend — see there |
 | Kerb | 0.12 high, 0.60 wide, both sides, inner edge at `x = ±3.90` |
 | Gutter channel | 0.22 wide at `x = ±3.72`, 0.03 deep — standing water, roughness 0.06. **Expressed through the puddle mask, not as overlay geometry — see below.** |
 | **Walkable clamp** | **`x ∈ [-3.60, +3.60]`, `z ∈ [-21.0, +21.4]`** (hard, in addition to AABBs) |
@@ -147,6 +147,7 @@ Placed as instanced geometry, reviewed as a diff, bounding boxes added as they g
 | Utility poles | 6 | yes |
 | Puddle decals | 18 | no |
 | Ripple emitters | 12 | no |
+| Cross-street vehicles (§3.6, past the bend) | 6 | no — unreachable |
 
 ### 3.3 The upper facade — window bays
 
@@ -280,6 +281,118 @@ The three banner wires hang a **3.20 × 0.62** cloth 0.50 beneath them, carrying
 
 **Every lever here is a value in this document**, which is why it is not quietly fixed: dropping the sign canvases to 64 × 256 saves 3.1 MB and costs the legibility that makes a projecting sign worth projecting; halving the puddle mask saves 4.2 MB and is the §6 turn-down ladder, which exists for frame time rather than for memory. §16 item 6 is the same problem arriving much harder — the screenshots do not fit at all — so **the budget itself is what should be revisited, once.**
 
+### 3.6 The cross street — what the bend opens onto
+
+§16 item 2 held this open: *"what remains open is the modelled form — the shuttered doors, and whatever the opening reveals past it."* This section answers the second half. §3.1's return wall crosses the end at 20°, its west end against the west wall, and its east end lands at `x = 1.14`, `z = 22.47` — so it leaves a **3.36 m opening** between itself and the east facade. Past that opening is a road, and there is traffic on it.
+
+**Traffic is not company.** §1 says nobody else is here and §3.4 keeps nine of fourteen shutters down to hold that. Cars do not break it, they sharpen it: the road is thirty metres away behind a wall, no vehicle stops, no occupant is visible, and nothing on the street can be walked to or clicked. The city goes on without you, which is a lonelier sentence than an empty road.
+
+| Value | | From |
+|---|---|---|
+| Carriageway | `z ∈ [26.20, 31.60]`, **5.40** wide | clears §6.1's reflector edge at `z = 26` — below |
+| Lanes | 2 × **2.70**, centres **27.55** (`+X`-bound) and **30.25** (`−X`-bound) | left-hand traffic — below |
+| Near pavement | `y ∈ [0, 0.12]`, `z ∈ [24.60, 26.20]`, `x ∈ [−40, 1.20]` and `[4.60, 40]` | §3's kerb height; the break is the alley mouth |
+| Far pavement | `y ∈ [0, 0.12]`, `z ∈ [31.60, 32.90]`, `x ∈ [−40, 40]` | the same |
+| Centre line | `z = 28.90`, dash **2.00** / gap **3.00**, 0.12 wide, `y = 0.024` | the carriageway's middle |
+| Far building | front face `z = 32.80`, 1.00 thick, **14.0** high, `x ∈ [−40, 40]` | §3's wall thickness; §3.1's end-wall rule |
+| Far ground band | `y ∈ [0, 4.60]`, 0.10 proud, `shutter` | §3.3's band base, the same line |
+| Far window bays | §3.3's bay verbatim — 8.00 × 8.55, 3 floors, **10 bays** | 80.0 ÷ 8.00 |
+| Far side boards | **22**, three size classes cycling — 1.10 × 2.60, 0.80 × 1.60, 1.30 × 3.20 — 0.02 proud, flush, gain **1.25**, no gap over 2.90 | the sightline — below |
+| **Ground plane** | **70 × 70**, was 60 × 60 | the opening reveals floor to `z = 32.9` — below |
+
+**The alley mouth is a dropped kerb.** The near pavement stops at `x = 1.20` and picks up again at `x = 4.60`, so the alley floor runs unbroken into the carriageway. A kerb across the mouth would put a 12 cm step in the one part of this street the visitor can actually see the ground of, and it would read as a wall the alley had grown rather than as the place two roads meet.
+
+**The ground plane grows, and it is the opening that grew it.** §3 sized it 60 × 60 for an alley closed at both ends, where the overscan only ever had to reach past a wall. The opening now shows floor out to the far pavement at `z = 32.90` and a 60 × 60 plane centred on the alley stops at 30. 70 × 70 covers it; the extra 5 m at the north end and at both sides is behind walls and is seen by nobody.
+
+**The street starts past `z = 26`, and that is §6.1's edge, not a round number.** The reflector strip ends at `z = 26`, and everything past it is plain matte asphalt. While that boundary sits in the unlit alley mouth nothing shows it; put a headlight pool across it and it becomes a visible line where the road changes material. The carriageway therefore begins at 26.20 and the seam stays in the dark.
+
+**The cross street is not reflective, and that is a decision rather than an omission.** Extending §6.1's strip to cover it would need it wider in `x` as well — the opening sees to `x ≈ −26` at grazing angles, against a strip that stops at `±6` — and §6.2's mask maps 1:1 onto the strip, so widening it stretches every puddle and the gutter bias with them. The alley keeps the mirror. The street gets what a road at 3am with no working streetlight actually has: **nothing lights it but the cars**, and the coloured pools they carry are the whole of its surface treatment.
+
+**Left-hand traffic.** Japan drives on the left, so the `+X`-bound lane is the near one at `z = 27.55` and `−X`-bound is the far one at 30.25. From the alley, facing `+Z`, `+X` is to the left: near-lane cars cross the opening right to left, far-lane cars left to right, and they pass each other. Getting this backwards is invisible to most visitors and wrong to everyone who would notice.
+
+**The far building closes the horizon, and it has to be lit from within to do it.** §1 and §3.1 allow no sky and no vanishing point; a road with an open far side would hand back both. But nothing in §7 reaches `z = 32.80` — the ten dynamic lights are all inside the alley with finite distance — so an unlit wall out there is a wall nobody can see, which is §3.5's banner problem at building scale. It therefore carries §3.3's window bays at §3.3's own rung, plus seven ground-floor panels. The bays cost **no texture memory at all**: they are the same three cached canvases the alley facades already painted.
+
+| Vehicle | | |
+|---|---|---|
+| Count | **6** — 3 per lane | below |
+| Variants | **3** — three glTF models from `public/` | §3.2's precedent, and §3.3's, and §3.4's |
+| Track | `x ∈ [−120, +120]`, loop **240.0** | below |
+| Speed | near lane **11.0 m/s**, far lane **9.0 m/s** | ≈ 40 and 32 km/h |
+| Gaps, near lane | **72 / 95 / 73** = 240 | below — min clearance 67.0 m |
+| Gaps, far lane | **88 / 66 / 86** = 240 | below — min clearance 61.0 m |
+| Hold positions | near car 0 at `x = +2.60`, far car 0 at `x = +3.40` | §13 — below |
+
+| Variant | Model in `public/` | Length | Measured W × H |
+|---|---|---|---|
+| `ae86` | Toyota AE86 | **4.18** | 1.82 × 1.30 |
+| `rx7` | Mazda RX-7 | **4.30** | 1.79 × 1.27 |
+| `rangeRover` | Range Rover | **4.97** | 1.93 × 2.23 |
+
+**The cars are glTF models, and only two things about each is authored.** Which file it is, and how long it is in world metres. Width, height, wheelbase, ride height and every proportion are **measured from the model at load** — writing them down a second time is how a number in this document ends up quietly disagreeing with the mesh it claims to describe. The widths and heights above are recorded as *observations*, not as settings.
+
+**`targetLength` is a normalisation, not a preference.** A glTF states no units, and everything in §3.6 is metres: lane centres 2.70 apart, gaps that must clear the longest car, lamps placed on a corner. A model arriving at a hundred times scale turns a 2.70 m lane into a car park. Each is scaled from its own measured length to the real car's, which puts all three on the same footing whatever they were exported in. **`yawOffset` is `+90°` for all three** — they are modelled nose-along-`−Z` and this world drives along `X`. There is nothing in a glTF that says which end of a car is the front, so it is looked at once and written down.
+
+**Merged per material, and that is what makes real models affordable.** The three files carry **18, 34 and 5 primitives**; mounted as authored that is 57 draw calls for six vehicles against §15's mobile budget of 90 with 80 already spent. Baked to world space and merged by material they are **nine** — six, two and one — and each of those nine is one `InstancedMesh` carrying both copies of its car. Without the merge this section could not ship on a phone.
+
+**Bounds are recomputed every frame, and that is not an optimisation but a correction.** Instance matrices are written with the vehicle at `x = 0` and then translated up to 120 m either way, so bounds computed at mount describe six cars stacked in the middle of the road and the street empties itself as you look at it. Turning culling *off* instead submits all **136 k triangles of car every frame**, including the ones behind the station wall. Recomputing the sphere from twelve instance matrices costs nothing and takes the peak to **110 k triangles and 45 draw calls** at the clamp, **80 calls at spawn**.
+
+**The lamps are still built here, and they are the only part of a vehicle this world can really see.** None of the three models carries an emissive light — the RX-7 has a material named for one, the other two have nothing at all — and through 40 m of §5's fog a dark body is a silhouette while the lamps are the whole event. They are placed from each model's **measured box**: headlights at **0.45** of its height, tail lamps at **0.50**, so a hatchback and a Range Rover each carry them at their own height rather than at one authored number that suits neither. Sizes came down to 0.26 × 0.14 × 0.20 and 0.22 × 0.12 × 0.16, standing **0.01** proud: against modelled bodywork the box-era dimensions read as a white brick glued to the bumper.
+
+**Nothing else is built.** No roof slab, no bumpers, no wheels, no cabin — the model brings all of it. **§8.1's taxi roof-sign rung is now carried by nothing**, because none of the three is a taxi; the rung stays on the ladder because it costs nothing to leave and inventing a roof light for a Range Rover would cost the world something.
+
+**Two of each, and they are not retinted.** `instanceColor` applies to a whole instance, so tinting the paint would tint the glass and the tyres with it. Six cars from three models at 30 m through fog do not read as duplicates, and the alternative is a per-material carve-out for a problem nobody has yet.
+
+**Uneven spacing, equal speed, and the second half is what makes the first half safe.** The gaps are drawn from no pattern and they sum to exactly the loop length, so the wrap point is a gap like any other and no car ever laps into the one ahead. Varying speed *within* a lane would look livelier for about a minute and then produce an overtake, and an overtake on a single-lane track is an overlap — the one thing this must not do. Between lanes the centres are 2.70 apart against a 1.93 widest vehicle, so the two directions clear each other by 0.77 m. The loop is 240 m against a widest sightline through the opening of about 32 m, so **every car appears and disappears far outside anything the visitor can see**, and the wrap is never witnessed.
+
+**Three per lane is a 3am number.** The gaps put a car across the opening every 6.5 to 9.8 seconds per lane, four seconds or so across both. Denser reads as rush hour, and this world has already sent the last train home.
+
+| Road glow | | |
+|---|---|---|
+| Underglow | `length × 1.45` by **2.30**, `y = 0.018`, opacity **0.70** | colour by §4's ratio over 6 → **3 / 2 / 1 / 0** |
+| Headlight pool | **6.20** long × **2.60** wide, from the nose forward, `y = 0.016`, opacity **0.58** | `signWhite` |
+| Tail smear | **2.40** × **2.00**, from the tail back, `y = 0.014`, opacity **0.38** | `lantern` |
+
+**The far side is lit as §8's neon tube, and both it and the opacities above are set against §5's fog rather than against how they look up close.** This is the one thing about §3.6 that cannot be judged from the far end of the alley, which is where it is most tempting to judge it. Everything on this street arrives at the *middle* of the alley through 42 to 47 m of fog — **0.21 transmittance at the near lane, 0.14 at the far wall** — and the visitor who first meets it is standing there, not at the clamp. Values chosen to look correct at twelve metres left the whole street invisible at forty, which is where the opening is a dark slot in the wall and the only question it raises is whether anything was built at all.
+
+**The boards are `meshBasicMaterial` — §8's neon tube — carrying a linear gain of 1.25 through `instanceColor`, which is a gain and not a fraction.** A basic material at colour tops out at white, and `FogExp2` mixes toward `fogColor`: at 0.14 transmittance the brightest board that material can hold still arrives as grey. **The ceiling was the problem, not the setting** — the far side kept vanishing from mid-alley however the fraction was tuned, and §3.5's own signs survive the same distance only because they are emissive *above* 1.0. `instanceColor` carries values over 1 perfectly well, which is what keeps twenty-two boards in twenty-two colours at one draw call.
+
+**1.25 is a fit between two viewing distances and it cannot satisfy both.** The same board is seen at 0.88 transmittance from the clamp and 0.14 from mid-alley — a sixfold range no single value covers. Tuned for the far view at 1.80, the boards arrive at the clamp as pastel: ACES flattens them and they lose the colour that made them worth painting. **Re-check when §9's bloom exists**, since a surface over the 0.90 knee behaves differently once something blooms it, and this look is currently being judged without one.
+
+**§17 is not at risk from it, and distance is why.** Six of the twenty-two are warm, and §17 reserves warmth for the three things you can touch. These are 30 m away, behind a 14 m wall, past §3's clamp, and cannot be walked to. Re-check that too when §2.1, §2.2 and §2.3 are lit, since none of the three exists yet to compare against.
+
+**Three size classes cycle by index** — §3.3's and §3.4's precedent — because twenty-two identical rectangles at an even stride is not signage, it is a colour chart mounted on a wall.
+
+**Twenty-two boards, and the count comes from the sightline.** The opening exposes only about **4.2 m of the far wall** from the middle of the alley, and *which* 4.2 m depends on where the visitor is standing — so a run spaced every five metres is a lit street from the clamp and bare wall from everywhere else. No gap in the run exceeds **2.90 m**: whatever the slot lands on, it lands on a sign. The same arithmetic is why the traffic is legible at all from spawn, where a single car crossing a 3.8 m window is the entire event.
+
+**Twenty-two is also where §4's blue finally rounds in.** The ratio over 22 gives **12 / 6 / 3 / 1**, and the one blue board is on the most distant lit surface in the world — which is what §4 means by *rare, distance signs only*, arrived at by the ratio rather than by an exception made for it. Every count before this one (14 sign boxes, 9 signs, 7, 6) rounded it away.
+
+**The light under the cars is painted, not lit, and §7 is why.** The hard cap is ten dynamic lights and all ten are spent inside the alley. Six cars with headlights, tail lamps and underglow would need eighteen more. They are alpha-blended quads on the road carrying a painted falloff, which is the same answer §3.3 gives for a hundred and fifty windows and §7 gives for every contact shadow in the world.
+
+**Alpha-blended, never additive, and fog is the reason.** Additive is the obvious blend for a glow and it breaks under `FogExp2`: three mixes the fragment toward `fogColor` before blending, so at this distance an additive quad adds roughly seven tenths of `#0A0F1A` across its whole rectangle and the glow arrives inside a visible dark-blue box. Alpha blending fogs the colour and leaves the alpha alone, so the quad has no edges. On a road this dark the two look identical everywhere it matters.
+
+**The centre line is painted at 0.22 of `signWhite` on a `meshBasicMaterial`**, above the glow quads at `y = 0.024`. A standard material out there is lit by a 0.35 hemisphere and nothing else, so a correctly-lit road marking is an invisible one; and drawn *under* the headlight pools it would be hidden exactly when a real one lights up. Painted, it is the brightest thing on the carriageway and it is what says *road* before any car arrives. Same trick as §8's neon tube, at a fifth of the value.
+
+**Four rungs on §8.1**, all of them 30 m out through fog at ≈ 0.9 transmittance from the far end and 0.14 from spawn:
+
+| Element | Emissive | |
+|---|---|---|
+| Vehicle headlight | **2.60** | yes — under the neon tubes at 3.20 |
+| Vehicle tail lamp | **1.55** | yes — soft |
+| Taxi roof sign | **1.20** | edge |
+| Far ground panel | painted at 0.55 of the token, `meshBasicMaterial` | no — dimmed below the knee deliberately |
+
+Headlights take **`signWhite`**, not `sodium`, and §17 decides it: *three things are lit warmer than everything else and they are the only three things you can touch*. Six pairs of warm headlights would be the fourth, fifth and sixth. `signWhite` is a white with a trace of pink in it and it stays out of that count.
+
+**Not solid, and no boxes.** The whole street lies past `z = 24.60` against §3's clamp at `z ≤ 21.40`, behind a 14 m wall that spans the rest of the end. §12.4's registry gets nothing here; unlike §3.4's storefronts there is not even a boundary to be inert against.
+
+**§13 — the traffic holds still.** Cars stop where they are, lights on, rather than slowing: a slower car reads as broken in the same way §13 says slower rain does. Peripheral motion glimpsed through a 3.36 m slot is close to the worst case reduced motion exists to remove, and nothing is lost by removing it, because there was never anything out there to reach. The hold positions above put one car in each lane inside the sightline from spawn, so what a reduced-motion visitor meets is stopped traffic rather than an empty road.
+
+**Measured, and both numbers are worth keeping.** Desktop peaks at **84 draw calls** of §15's 140, looking down the alley from spawn with the whole world in frame. **Mobile peaks at 80 of 90**, and that is the number to watch: §3.2 still owes eleven inventory lines, §2 owes three content surfaces and §9 owes a post-processing chain, against ten calls of headroom. The street is not where that gets paid back — it is eight calls for the envelope and eleven for six vehicles, all of them instanced — but it is where the ceiling became visible.
+
+**Nothing here is legible from spawn, and that is §5 rather than a fault in this section.** From the middle of the alley the carriageway is at **0.21 transmittance** and the far wall at **0.14**; from spawn the far wall is at **0.088**. The opening subtends about **4.6°** from there — roughly a sixtieth of the frame — and §7's lantern light at `z = +19` lays a saturated red pool directly beneath it. The street reads properly from about the last twelve metres of the alley and is a coloured glimmer before that. §3.1 already says the far end is *legible but never resolves*, and this is that sentence measured. **The only lever that would change it is §5's fog density**, which was derived twice and settled; §9's bloom will not do it either, since a fogged board lands well under the 0.90 knee.
+
+**Texture cost: two painted alphas.** A 128 × 128 radial ellipse for the underglow and tail smear, and a 128 × 128 forward beam for the headlight pool — 64 × 64 on mobile. **0.17 MB desktop**, taking §3.5's measured 14.66 to **14.84 against §15's 14 MB**. The window bays and the panels add nothing. This does not change the answer in §3.5: the budget is what wants revisiting, and it wants revisiting once, with §16 items 1 and 6.
+
 ---
 
 ## 4. Palette
@@ -371,7 +484,7 @@ The ground is two surfaces, not one.
 
 | | Value |
 |---|---|
-| Base plane | 60 × 60 at `y = 0`, plain material in `asphalt`, overscan hidden by fog (§3) |
+| Base plane | **70 × 70** at `y = 0`, plain material in `asphalt`, overscan hidden by fog (§3) — and, past the bend, carrying §3.6's cross street |
 | **Reflector strip** | **12 × 52** — `x ∈ [-6, 6]`, `z ∈ [-26, 26]` — at **`y = 0.004`** |
 
 **Reflections render at half the ground width only**; beyond `x = ±6` the fog has it anyway. Neither seam is ever in frame: the walls at `x = ±4.5` stand 1.5 m inside the x-edge, and the z-edge sits 3 m behind each end wall.
@@ -396,6 +509,12 @@ The ground is two surfaces, not one.
   **The placement weight needs a non-zero baseline** for the same reason: a weight that falls to nothing between the centre and the gutter bumps concentrates water into bands and saturates them, rather than biasing a floor that is wet throughout. Bias, not concentration.
 
 - **Normal map** — a tiling ripple, `normalScale = [0.15, 0.15]`, UV repeat 8, scrolling `+0.012 u/s` in `z`. Scroll off under reduced motion; the map itself stays.
+
+  **It runs across the whole floor, not only the strip.** The base plane carries the same map, and it has to: §3.6 put a road 6 m past the reflector's edge, and a mirror-smooth carriageway beside a rippled alley is the seam that shows. What the base plane gains is the *surface*, not the reflection — it is still a plain material, and §6.1's turn-down ladder is untouched.
+
+  **The two agree on world tile size, not on repeat count**, and this is the trap in it. `uvRepeat` 8 lands on a 12 × 52 strip, which is **1.5 m per tile across and 6.5 m along** — the map is already anisotropic where it started. Copying the *number* 8 onto a 70 × 70 plane puts 8.75 m tiles beside 1.5 m ones and draws a visible line down the edge of the reflector; copying the *metres* makes the boundary disappear. The base plane therefore reads `groundSize ÷ tile` on each axis, and its scroll offset is set equal to the strip's rather than advanced on its own — same tile size, same offset, same world speed, and no drift over the minutes a visitor might stand still.
+
+  **One texture on the GPU, not two.** The base plane's map is a `Texture.clone()` of the strip's: a clone keeps the same `Source`, and three caches uploads per source, so two repeats cost one image. §15's texture budget does not move.
 
   **Fine isotropic stipple**, no direction. 512², a height field summed from ~140 Gaussian dimples of 6–22 px radius wrapped toroidally so it tiles seamlessly, plus one faint low-frequency wave so the eye does not find the grid, then Sobel to normals. At repeat 8 across the 12 m strip each tile is 1.5 m, putting the dimples at 2–7 cm — raindrop scale. The §10 ripple emitters own the expanding rings; this is only the resting texture beneath them, and a second directional cue on top of the scroll would read as a texture sliding rather than water sitting.
 
@@ -453,12 +572,15 @@ Bloom's threshold is `0.90`. This ladder is what sits either side of it.
 | Element | Emissive intensity | Above threshold? |
 |---|---|---|
 | Neon tubes | **3.20** | yes — full bloom |
+| **Vehicle headlight** (§3.6) | **2.60** | yes |
 | Vertical signs | **2.40** | yes |
 | Selection buttons | 2.10 | yes |
 | Payphone lamp | 1.90 | yes |
 | Vending front panel | **1.60** | just — soft halo |
+| **Vehicle tail lamp** (§3.6) | **1.55** | yes — soft |
 | Lightbox surround strip | 1.40 | just |
 | Paper lanterns | 1.30 | edge |
+| **Taxi roof sign** (§3.6) | **1.20** | edge |
 | **Open-shutter spill** (§3.4) | **1.10** | yes — soft |
 | Station `終電` plate | 0.95 | edge, deliberately |
 | **Storefront sign box** (§3.4) | **0.85** | no — fourteen of them |
@@ -725,7 +847,7 @@ Orientation is the exception and *is* live, because the §12.1 FOV split has to 
 These need a decision before the code that depends on them is written, and the brief will be updated rather than the value invented:
 
 1. **Screenshot pre-processing** — whether the four JPGs get a build-step darken/desaturate pass, or the `#A6B2C6` tint in §8 does the whole job. Decide when the shopfront is first lit.
-2. **The bend geometry at `z = +23`** — the *orientation* is settled (§3.1: across the end, 20° off square) and thickness is 1.00 (§3), so the shell builds it as a bare box. What remains open is the modelled form — the shuttered doors, and whatever the opening reveals past it. Lands with the surroundings.
+2. **The bend geometry at `z = +23`** — the *orientation* is settled (§3.1: across the end, 20° off square) and thickness is 1.00 (§3), so the shell builds it as a bare box. **What the opening reveals is now settled too — §3.6, the cross street.** What remains open is the return wall's own modelled form: the shuttered doors on its face. Lands with the rest of the §3.2 inventory.
 3. **Font subsetting for the Japanese canvas faces** — currently system faces only; if a webfont ships, it must be subset to the fourteen strings in §11.4 and re-budgeted against §15.
 4. **Whether the door opens a real tab or a confirm step on mobile** — popup blockers treat a canvas click differently across browsers.
 5. **The gutter's 0.03 recess** — §3 resolves how the gutter *reads* (through the puddle mask) but not how it gets depth. It needs the floor to stop being a plane. Decide with the kerb and drain modelling.
@@ -763,6 +885,24 @@ All of §3.5. Free choices: the sign and banner dimensions, the projection range
 **A banner is backlit and a sign is not**, which is why §3.4's `void`-diffuse rule stops at the nine signs. There is no light within reach of `y = 6.90`.
 
 **Texture memory is over budget by 4.7% on desktop** and every lever is a value in this document. Open, and named in §3.5.
+
+### 16.6 Settled during the traffic build
+
+All of §3.6, which closes the second half of item 2 above. Free choices: the carriageway's width and lane split, both pavements, the centre-line dash, the far building's height band and panel count, the six vehicles' dimensions and the three variants, the 240 m loop with its gaps, the two speeds, and the three road-glow sizes and opacities. Derived: the street's near edge from §6.1's reflector seam, the ground plane's new size from the far pavement it now has to reach, the far building's 14.0 from §3.1's end-wall rule and its window bays from §3.3 verbatim, the underglow colours from §4's ratio, the four rungs from §8.1 against §17, the absence of collision from §3's clamp, and the hold-still behaviour from §13.
+
+**A road needed more than cars.** The ask was traffic; traffic needs a carriageway, a carriageway seen through the opening needs a far side or §1's *no horizon* goes with it, and a far side thirty metres past every light in §7 needs its own windows or it is a wall nobody can see. Each of those follows from the one before it, and none of them was optional. The street envelope is in scope for that reason and no other — nothing on it carries content, and nothing on it can be reached.
+
+**Uneven speed within a lane was considered and rejected.** It is the obvious way to make traffic look unscripted, and on a single-lane loop it guarantees the one failure that was named: a faster car eventually reaches the one ahead. Unequal *gaps* do the same job and cannot produce it. The two lanes run at different speeds, which is where the variety actually comes from.
+
+**The reflector was not extended to the cross street.** It would have to grow in `x` as well as `z`, and §6.2's mask maps 1:1 onto the strip — every puddle and the gutter bias with them stretch when it does. §3.6 says what the street gets instead.
+
+**Three faults were found by measurement rather than by reading the diff, and each was legal by every constraint written down at the time.** The headlight clusters were placed by their inset from the centreline, which buried all twelve of them inside their own bodywork — from the alley, which only ever sees this street broadside, the street had no lights on it at all. The far-side boards were spaced every five metres against a sightline that exposes 4.2 m of that wall, so the backdrop was built, lit, and statistically never in frame. And the boards were a fraction of their token on a `meshBasicMaterial`, which caps at white and therefore cannot survive a mix toward `fogColor` at 0.14 — the ceiling was the fault, not the setting. **All three passed lint, types and the build**, and none of them is visible in the numbers.
+
+**The vehicles became glTF models after the section was built**, and three things in §3.6 were rewritten rather than kept. The variant table stopped stating dimensions and started stating a file and a target length, because a model that is measured cannot disagree with a document that guesses. The per-material merge arrived with them — 57 primitives is not a shape this budget can hold. And the lamps stayed, which was the surprise: a real car model has no lights that light, and at this distance the lamps are the only part of a vehicle that is visible at all.
+
+**Frustum culling had been switched off, and that was the wrong fix.** The instance matrices are written with the car at the origin, so bounds computed at mount are wrong and the street empties itself as you look at it — turning culling off makes that stop, at the cost of submitting every triangle of every car every frame. Recomputing the sphere from the instance matrices costs nothing and fixes the cause instead of the symptom: peak drawn triangles fell from **136 k to 110 k**, and to **49 k** from spawn.
+
+**Left open.** Whether the street should be legible from spawn at all — §5's fog says no and §3.1 agrees, but the request that produced this section was made from the middle of the alley. The lever is §5's density and it is not this section's to pull. See §3.6.
 
 ---
 

@@ -6,7 +6,7 @@ import {
   LinearMipmapLinearFilter,
   SRGBColorSpace,
 } from 'three'
-import { CANVAS_PAINTER, PALETTE, type ColorToken, type Tier } from '@/lib/world'
+import { CANVAS_PAINTER, PALETTE, dimHex, type ColorToken, type Tier } from '@/lib/world'
 
 /**
  * §11 / §3.5 — the painted face of a neon sign, and the cloth of a banner.
@@ -36,15 +36,6 @@ export type Orientation = 'vertical' | 'horizontal'
 const GROUND_TINT = { sign: 0, banner: 0.16 } as const
 export type SignKind = keyof typeof GROUND_TINT
 
-function dim(hex: string, multiply: number): string {
-  const value = parseInt(hex.slice(1), 16)
-  const channel = (shift: number) =>
-    Math.round(((value >> shift) & 255) * multiply)
-      .toString(16)
-      .padStart(2, '0')
-  return `#${channel(16)}${channel(8)}${channel(0)}`
-}
-
 function paint(
   text: string,
   color: string,
@@ -61,7 +52,7 @@ function paint(
   if (ctx === null) return canvas
 
   const tint = GROUND_TINT[kind]
-  ctx.fillStyle = tint === 0 ? PALETTE.void : dim(color, tint)
+  ctx.fillStyle = tint === 0 ? PALETTE.void : dimHex(color, tint)
   ctx.fillRect(0, 0, width, height)
 
   const characters = [...text]

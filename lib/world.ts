@@ -41,6 +41,24 @@ export const v3 = (t: readonly [number, number, number]): [number, number, numbe
  */
 export const yawToThreeRotationY = (worldYawRad: number): number => worldYawRad + Math.PI
 
+/**
+ * A §4 token at a fraction of itself, in the sRGB channel values the palette is written
+ * in rather than in linear light.
+ *
+ * Used wherever the brief says *a fraction of the token* — §3.5's banner ground, §3.6's
+ * centre line at 0.22 of `signWhite` and its far-side panels at 0.55. One implementation,
+ * because the same phrase meaning two different things in two files is the kind of drift
+ * nobody finds by looking at either of them.
+ */
+export const dimHex = (hex: string, multiply: number): string => {
+  const value = parseInt(hex.slice(1), 16)
+  const channel = (shift: number) =>
+    Math.round(((value >> shift) & 255) * multiply)
+      .toString(16)
+      .padStart(2, '0')
+  return `#${channel(16)}${channel(8)}${channel(0)}`
+}
+
 /* ────────────────────────────────────────────────────────────────────────────
  * §4 — Palette
  * Every colour in the world comes from this table. Nothing else.
@@ -105,8 +123,14 @@ export const LAYOUT = {
   wallThickness: 1.0,
   ground: {
     y: 0,
-    /** Single plane; the overscan past the alley is hidden by fog. */
-    size: 60.0,
+    /**
+     * Single plane. The overscan past the alley is hidden by fog, or by a wall.
+     *
+     * 70, not §3's original 60: §3.6 puts a road past the bend and the opening shows
+     * floor out to the far pavement at z = 32.90, which a 60 × 60 plane centred on the
+     * alley stops 3 m short of. The extra 5 m at every other edge is behind a wall.
+     */
+    size: 70.0,
   },
   kerb: {
     height: 0.12,
@@ -363,6 +387,311 @@ export const OVERHEAD = {
     canvas: { desktop: [512, 128], mobile: [256, 64] },
   },
 } as const satisfies { color: ColorToken; [key: string]: unknown }
+
+/**
+ * §3.6 — the cross street the bend opens onto.
+ *
+ * §3.1's return wall crosses the end at 20° and lands at x = 1.14, leaving a 3.36 m gap
+ * between it and the east facade. This is what stands on the other side of it: a road,
+ * two pavements, and a building tall enough that §1's *no horizon* survives the opening.
+ *
+ * **Carries nothing and reaches nothing** (§2.4). Everything here lies past z = 24.60
+ * against §3's clamp at z ≤ 21.40, so §12.4's registry gets nothing — unlike §3.4's
+ * storefronts there is not even a boundary for a box to be inert against.
+ */
+export const CROSS_STREET = {
+  /** Starts past §6.1's reflector edge at z = 26, so no material seam lands under a light. */
+  carriageway: { z: [26.2, 31.6], width: 5.4 },
+  /**
+   * Japan drives on the left, so the +X-bound lane is the near one. From the alley,
+   * facing +Z, +X is to the left: near-lane cars cross the opening right to left.
+   */
+  lane: { width: 2.7, centreZ: [27.55, 30.25] },
+  pavement: {
+    /** §3's kerb height, the same 0.12. */
+    height: 0.12,
+    /**
+     * The break between the two near spans is the alley mouth — a dropped kerb, so the
+     * alley floor runs unbroken into the carriageway. A step there would read as a wall
+     * the alley had grown rather than as the place two roads meet.
+     */
+    near: {
+      z: [24.6, 26.2],
+      spans: [
+        [-40.0, 1.2],
+        [4.6, 40.0],
+      ],
+    },
+    far: { z: [31.6, 32.9], x: [-40.0, 40.0] },
+  },
+  /**
+   * Painted, not lit — `meshBasicMaterial` at a fifth of `signWhite`, the same trick as
+   * §8's neon tube. A standard material out here is lit by a 0.35 hemisphere and nothing
+   * else, so a correctly-lit road marking is an invisible one. It sits above the road
+   * glow at 0.024, because drawn under the headlight pools it would vanish exactly when
+   * a real marking lights up.
+   */
+  centreLine: {
+    z: 28.9,
+    dash: 2.0,
+    gap: 3.0,
+    width: 0.12,
+    y: 0.024,
+    color: 'signWhite',
+    paint: 0.22,
+    x: [-40.0, 40.0],
+  },
+  /**
+   * §3.1's end-wall rule — a cap never opens a strip of sky, so it takes the taller of
+   * the two facades. It carries §3.3's window bays because nothing in §7 reaches z = 32.8
+   * and an unlit wall out there is a wall nobody can see: §3.5's banner problem, at
+   * building scale. The bays cost no texture memory — same three cached canvases.
+   */
+  farBuilding: {
+    faceZ: 32.8,
+    thickness: 1.0,
+    height: 14.0,
+    x: [-40.0, 40.0],
+    color: 'facade',
+    /** §3.3's band base, held to the same line. */
+    groundBand: { height: 4.6, proud: 0.1, color: 'shutter' },
+    /** 80.0 ÷ §3.3's 8.00 bay. */
+    bays: 10,
+    /**
+     * §3.6 — a run of tall lit boards along the far side, at **full token colour** on a
+     * `meshBasicMaterial`: §8's neon tube, flush.
+     *
+     * Full, and §5's fog is what makes that safe rather than reckless. §17 keeps three
+     * things lit warmer than everything else, and nothing here can join them: the closest
+     * a visitor gets to this wall is about 12 m for 0.88 transmittance, and from the
+     * middle of the alley it is 0.14. A board at full `neonMagenta` arrives dimmer there
+     * than a §3.5 sign at 2.40 does from five metres. Painted at a fraction on top of
+     * that, the far side was invisible from everywhere except the last two metres of the
+     * alley — and an invisible backdrop is the one thing this wall cannot be, because
+     * the vehicles are dark and they are read as silhouettes against it.
+     *
+     * Flush rather than projecting, which is the opposite of §3.5's rule and right for
+     * the same reason it is wrong there: nobody ever walks along this wall, and it is
+     * only ever seen face-on across a road.
+     */
+    panels: {
+      /**
+       * §3.6 — 22, and the count is set by the sightline rather than by taste.
+       *
+       * The opening shows only about **4.2 m of this wall** from the middle of the alley,
+       * and which 4.2 m depends on where the visitor is standing. Boards every 5 m looked
+       * like a street from the clamp and showed the visitor bare wall from everywhere
+       * else — the far side was built, lit, and statistically never in frame. No gap here
+       * exceeds **2.90 m**, so whatever the slot lands on, it lands on a sign.
+       */
+      count: 22,
+      /**
+       * Three size classes cycling by index — §3.3's and §3.4's precedent, and here it
+       * is what stops the run reading as a picket fence. Twenty-two identical rectangles
+       * at an even stride is not signage; it is a colour chart mounted on a wall.
+       */
+      classes: [
+        { width: 1.1, height: 2.6, baseY: 1.1 },
+        { width: 0.8, height: 1.6, baseY: 1.9 },
+        { width: 1.3, height: 3.2, baseY: 0.95 },
+      ],
+      proud: 0.02,
+      /**
+       * §8.1 — 1.25, and it is a **linear gain on `instanceColor`**, not a fraction of
+       * the token.
+       *
+       * A `meshBasicMaterial` at colour tops out at white, and §5's fog is a mix toward
+       * `fogColor`: at 0.14 transmittance the brightest possible board arrives at 0.14 of
+       * itself and grey is the best it can do. That is why the far side kept vanishing
+       * from mid-alley however the fraction was tuned — the ceiling, not the setting, was
+       * the problem. §3.5's own signs survive the same distance because they are emissive
+       * *above* 1.0, and this is that, reached through `instanceColor` so twenty-two
+       * boards in twenty-two colours stay one draw call.
+       *
+       * **1.25 is a fit between two viewing distances, and it cannot satisfy both.** The
+       * board is seen at 0.88 transmittance from the clamp and 0.14 from mid-alley — a
+       * six-fold range that no single value covers. Tuned for the far view at 1.80 the
+       * boards arrive at the clamp as pastel: ACES flattens them and they lose the colour
+       * that made them worth painting. 1.25 keeps them saturated close up and still lands
+       * a legible patch at forty metres. **Re-check when §9's bloom exists**, since a
+       * surface over the 0.90 knee behaves differently once there is a pass that blooms
+       * it, and this is a look currently judged without one.
+       *
+       * **This is also the one place §3.6 leans on §17 rather than simply obeying it.**
+       * Six of the twenty-two are warm. They are 30 m away, behind a 14 m wall, past §3's
+       * clamp, and cannot be walked to — §17's sentence is that the three warm things are
+       * the three you can *touch*, and nothing here can be. Re-check that too when §2.1,
+       * §2.2 and §2.3 are lit, since none of the three exists yet to compare against.
+       */
+      gain: 1.25,
+      x: [
+        -28.35, -25.45, -22.55, -20.7, -17.8, -14.9, -13.05, -10.15, -7.25, -5.4, -2.5,
+        0.4, 2.25, 5.15, 8.05, 9.9, 12.8, 15.7, 17.55, 20.45, 23.35, 25.2,
+      ],
+    },
+  },
+} as const satisfies {
+  centreLine: { color: ColorToken; [key: string]: unknown }
+  farBuilding: {
+    color: ColorToken
+    groundBand: { color: ColorToken; [key: string]: unknown }
+    [key: string]: unknown
+  }
+  [key: string]: unknown
+}
+
+/**
+ * §3.6 — the traffic on it. Six vehicles, three per lane, on a 240 m loop.
+ *
+ * **Uneven gaps, equal speed within a lane, and the second half is what makes the first
+ * half safe.** The gaps sum to exactly the loop, so the wrap point is a gap like any
+ * other and no car can lap the one ahead. Varying speed inside a lane looks livelier for
+ * about a minute and then produces an overtake, which on a single-lane track is an
+ * overlap. The variety comes from the two lanes running at different speeds instead.
+ *
+ * The loop is 240 m against a widest sightline through the opening of about 32 m, so
+ * every car appears and disappears well outside anything the visitor can see.
+ */
+export const TRAFFIC = {
+  perLane: 3,
+  track: { x: [-120.0, 120.0], loop: 240.0 },
+  lanes: [
+    {
+      key: 'near',
+      centreZ: 27.55,
+      /** +1 travels toward +X. */
+      direction: 1,
+      speed: 11.0,
+      gaps: [72.0, 95.0, 73.0],
+      /** §13 — where car 0 holds under reduced motion: inside the sightline from spawn. */
+      holdX: 2.6,
+      variants: ['rx7', 'ae86', 'rangeRover'],
+    },
+    {
+      key: 'far',
+      centreZ: 30.25,
+      direction: -1,
+      speed: 9.0,
+      gaps: [88.0, 66.0, 86.0],
+      holdX: 3.4,
+      variants: ['rangeRover', 'rx7', 'ae86'],
+    },
+  ],
+  /**
+   * §3.6 — the three vehicles are **glTF models from `public/`**, not boxes.
+   *
+   * Only two things about a car are authored here: which file it is, and how long it is
+   * in world metres. Width, height, wheelbase, ride height and every proportion come from
+   * the model itself, measured at load — authoring them a second time is how a number in
+   * this document ends up quietly disagreeing with the mesh it claims to describe.
+   *
+   * `targetLength` is a **normalisation**, not a preference. A glTF carries whatever unit
+   * its author exported in, and §3.6's lane widths, gaps and clearances are all metres; a
+   * model that arrives at 100× turns a 2.70 m lane into a car park. Scaling to a stated
+   * length puts every model on the same footing whatever it was exported in, and these
+   * three lengths are the real cars'.
+   *
+   * `yawOffset` is which way the model faces before it is turned to drive. A glTF has no
+   * convention for a car's nose, so this is measured once per model by looking at it and
+   * then written down — there is nothing in the file that can be read to derive it.
+   */
+  models: {
+    ae86: {
+      file: '/Toyota AE86 by IvOfficial - ZEFWmOPSgh.glb',
+      targetLength: 4.18,
+      yawOffset: Math.PI / 2,
+    },
+    rx7: {
+      file: '/Mazda RX-7 by IvOfficial - SnIoWlh7S2.glb',
+      targetLength: 4.3,
+      yawOffset: Math.PI / 2,
+    },
+    rangeRover: {
+      file: '/Range Rover by IvOfficial - 8zk4o6nALW.glb',
+      targetLength: 4.97,
+      yawOffset: Math.PI / 2,
+    },
+  },
+  /**
+   * Where the lamps sit on a model whose dimensions are not known until it loads: as
+   * fractions of its own measured box, rather than as the absolute heights a box-built
+   * car could state. A hatchback and a Range Rover do not carry their lights at the same
+   * height off the road, and this is the only formulation that gets both right.
+   */
+  lampPlacement: { headlightYFraction: 0.45, tailLampYFraction: 0.5 },
+  /**
+   * §8.1 — 2.60, under the neon tubes at 3.20. `signWhite`, not `sodium`, and §17 decides
+   * it: three things are lit warmer than everything else and they are the only three you
+   * can touch. Six pairs of warm headlights would be the fourth, fifth and sixth.
+   */
+  headlight: {
+    lateral: 0.26,
+    height: 0.14,
+    /**
+     * §3.6 — the lamps wrap the corner, and this is the number that decides whether
+     * there are any lights on this street at all. A lamp inset from the centreline and
+     * 0.10 deep is a lamp buried inside its own bodywork: only the sliver past the nose
+     * escapes, and from the alley — which sees this street broadside and never from in
+     * front — that sliver is edge-on and invisible. 0.26 of depth against a face held
+     * just proud of the body side puts a lit patch on the corner that reads from either
+     * direction, which is what a real lamp cluster is.
+     */
+    depth: 0.2,
+    /**
+     * Barely proud — 1 cm, enough to clear the bodywork without z-fighting it. Against a
+     * modelled car anything more is a white brick glued to the bumper, and the numbers
+     * that mattered when the body was a box do not survive the body being a Mazda.
+     */
+    sideProud: 0.01,
+    noseProud: 0.01,
+    color: 'signWhite',
+    emissive: 2.6,
+  },
+  /** §8.1 — 1.55, over the knee but soft. Dimmer than the headlights, as they are. */
+  tailLamp: {
+    lateral: 0.22,
+    height: 0.12,
+    depth: 0.16,
+    sideProud: 0.01,
+    noseProud: 0.01,
+    color: 'lantern',
+    emissive: 1.55,
+  },
+  /**
+   * §8.1 — 1.20. **Nothing carries this rung now.** It belonged to the box-built taxi's
+   * 行灯, and none of the three models in `public/` is a taxi. Kept because the rung costs
+   * nothing to leave on the ladder and inventing a roof light for a Range Rover would.
+   */
+  roofSign: { depth: 0.2, lateral: 0.46, height: 0.18, color: 'sodium', emissive: 1.2 },
+  /**
+   * §3.6 — the light on the road is painted, not lit. §7's cap is ten dynamic lights and
+   * all ten are spent inside the alley; six vehicles would want eighteen more.
+   *
+   * **Alpha-blended, never additive.** Additive is the obvious blend for a glow and it
+   * breaks under `FogExp2`: three mixes the fragment toward `fogColor` before blending,
+   * so at this distance an additive quad adds most of `#0A0F1A` across its whole
+   * rectangle and the glow arrives inside a visible dark-blue box. Alpha blending fogs
+   * the colour and leaves the alpha alone, so the quad has no edges.
+   */
+  glow: {
+    under: { lengthScale: 1.45, width: 2.3, y: 0.018, opacity: 0.7 },
+    headlightPool: { length: 6.2, width: 2.6, y: 0.016, opacity: 0.58, color: 'signWhite' },
+    tailSmear: { length: 2.4, width: 2.0, y: 0.014, opacity: 0.38, color: 'lantern' },
+    canvas: { desktop: 128, mobile: 64 },
+  },
+} as const satisfies {
+  headlight: { color: ColorToken; [key: string]: unknown }
+  tailLamp: { color: ColorToken; [key: string]: unknown }
+  roofSign: { color: ColorToken; [key: string]: unknown }
+  glow: {
+    headlightPool: { color: ColorToken; [key: string]: unknown }
+    tailSmear: { color: ColorToken; [key: string]: unknown }
+    [key: string]: unknown
+  }
+  [key: string]: unknown
+}
+
+export type VehicleVariant = keyof typeof TRAFFIC.models
 
 /**
  * §3.3 — how many whole floors of window fit on a wall of this height. Whatever does

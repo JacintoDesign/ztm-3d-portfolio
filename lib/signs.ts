@@ -58,8 +58,12 @@ const lerp = (range: readonly [number, number], t: number) =>
  *
  * Largest remainder, so the four buckets sum to exactly nine rather than to whatever
  * independent rounding happens to produce.
+ *
+ * Exported because §3.4's sign boxes, §3.6's underglow and §3.6's far-side panels are
+ * the same rule applied to different counts. One implementation, so the ratio cannot
+ * quietly come out differently in three places.
  */
-function colorRun(total: number): ColorToken[] {
+export function colorRun(total: number): ColorToken[] {
   const shares = [NEON_RATIO.magentaPink, NEON_RATIO.sodiumLantern, NEON_RATIO.cyan, NEON_RATIO.blue]
   const exact = shares.map((share) => share * total)
   const counts = exact.map(Math.floor)

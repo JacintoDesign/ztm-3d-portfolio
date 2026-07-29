@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback } from 'react'
+import { Suspense, useCallback } from 'react'
 import { PerspectiveCamera } from '@react-three/drei'
 import { Canvas } from '@react-three/fiber'
 import type { PerspectiveCamera as ThreePerspectiveCamera } from 'three'
@@ -12,11 +12,13 @@ import { resolveTier, useIsPortrait } from '@/lib/device'
 import { ATMOSPHERE, BUDGET, CAMERA, GL } from '@/lib/world'
 import Alley from './Alley'
 import Atmosphere from './Atmosphere'
+import CrossStreet from './CrossStreet'
 import FacadeWindows from './FacadeWindows'
 import Ground from './Ground'
 import NeonSigns from './NeonSigns'
 import Overhead from './Overhead'
 import Storefronts from './Storefronts'
+import Traffic from './Traffic'
 
 /**
  * §5 — set explicitly rather than leaning on the renderer default. The brief names it,
@@ -81,6 +83,15 @@ export default function World() {
         <Storefronts />
         <NeonSigns />
         <Overhead />
+        {/* §3.6 — past the bend, and past §3's clamp. Nothing out here is reachable. */}
+        <CrossStreet />
+        {/* The vehicles are glTF files, so they suspend. The boundary is around Traffic
+            alone and not around the world: hoisted any higher, four megabytes of car
+            would hold the whole alley off the screen, and the one thing §3.6 is allowed
+            to be is late. An empty road for a moment is the correct fallback. */}
+        <Suspense fallback={null}>
+          <Traffic />
+        </Suspense>
         <Ground />
       </Canvas>
 

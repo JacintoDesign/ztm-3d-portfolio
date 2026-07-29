@@ -3,7 +3,7 @@
 import { useMemo } from 'react'
 import { MeshReflectorMaterial } from '@react-three/drei'
 import { useFrame } from '@react-three/fiber'
-import { BoxGeometry, EdgesGeometry, Vector2 } from 'three'
+import { BoxGeometry, EdgesGeometry, type Texture, Vector2 } from 'three'
 import { resolveTier } from '@/lib/device'
 import { prefersReducedMotion } from '@/lib/reducedMotion'
 import { puddleMask } from '@/lib/textures/puddleMask'
@@ -16,6 +16,7 @@ import {
   REFLECTOR,
   REFLECTOR_STRIP,
   RIPPLE_NORMAL,
+  type Tier,
   v2,
 } from '@/lib/world'
 
@@ -37,6 +38,39 @@ const SHOW_WALKABLE_BOUNDS = false
 
 /** Hoisted — a Vector2 built in a render body would be rebuilt on every render. */
 const NORMAL_SCALE = new Vector2(...v2(RIPPLE_NORMAL.normalScale))
+
+/**
+ * §6.2's ripple, sized for the base plane instead of for the strip.
+ *
+ * The two surfaces have to agree on **world tile size**, not on repeat count: §6.2's
+ * `uvRepeat` of 8 lands on a 12 × 52 strip, which is 1.5 m per tile across and 6.5 m
+ * along — the map is already anisotropic on the strip, and copying the number rather than
+ * the metres onto a 70 × 70 plane would put 8.75 m tiles beside 1.5 m ones and draw a
+ * line down the edge of the reflector.
+ *
+ * A clone rather than a second painting: `Texture.clone()` keeps the same `Source`, and
+ * three's renderer caches uploads per source, so the two repeats cost one texture on the
+ * GPU. §15's budget does not move.
+ */
+function baseRipple(tier: Tier): Texture | null {
+  const source = rippleNormal(tier)
+  if (source === null) return null
+
+  const cached = baseRippleCache.get(tier)
+  if (cached !== undefined) return cached
+
+  const tileX = REFLECTOR_STRIP.width / RIPPLE_NORMAL.uvRepeat
+  const tileZ = REFLECTOR_STRIP.length / RIPPLE_NORMAL.uvRepeat
+
+  const texture = source.clone()
+  texture.repeat.set(LAYOUT.ground.size / tileX, LAYOUT.ground.size / tileZ)
+  texture.needsUpdate = true
+
+  baseRippleCache.set(tier, texture)
+  return texture
+}
+
+const baseRippleCache = new Map<Tier, Texture>()
 
 function WalkableBounds() {
   const geometry = useMemo(() => {
@@ -63,6 +97,7 @@ export default function Ground() {
   // page, so wrapping them would add a hook and memoise nothing.
   const mask = puddleMask(tier)
   const normalMap = rippleNormal(tier)
+  const baseNormalMap = baseRipple(tier)
 
   useFrame((_, delta) => {
     if (normalMap === null) return
@@ -74,18 +109,30 @@ export default function Ground() {
     // means a rising offset carries the pattern toward +Z — the direction §6.2 asks for.
     // Wrapped to keep the value small; left to grow it loses float precision after hours.
     normalMap.offset.y = (normalMap.offset.y + RIPPLE_NORMAL.scrollUPerSec * delta) % 1
+
+    /* The base plane scrolls at the same rate, and because it was given the strip's own
+       world tile size that rate is the same *world* speed. Advancing it by anything else
+       would drift the two surfaces apart over minutes — the kind of fault that is
+       invisible on arrival and obvious to anyone who stands still. */
+    if (baseNormalMap !== null) baseNormalMap.offset.y = normalMap.offset.y
   })
 
   return (
     <>
-      {/* Base plane. Plain and matte — everything worth looking at happens on the strip
-          above it, and this only exists so the world has a floor out to the fog. */}
+      {/* Base plane. It carries §6.2's ripple normal at the strip's own world tile size
+          and scrolling in step with it, so the rain reads across the whole floor and not
+          only over the alley — §3.6 put a road out here and a mirror-smooth carriageway
+          beside a rippled alley is the seam that shows. It is not a reflector: what it
+          gains is the surface, not the reflection. */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, LAYOUT.ground.y, 0]}>
         <planeGeometry args={[LAYOUT.ground.size, LAYOUT.ground.size]} />
         <meshStandardMaterial
           color={PALETTE.asphalt}
           roughness={reflector.roughness}
           metalness={MATERIALS.wetAsphalt.metalness}
+          {...(baseNormalMap !== null
+            ? { normalMap: baseNormalMap, normalScale: NORMAL_SCALE }
+            : {})}
         />
       </mesh>
 
