@@ -5,6 +5,7 @@ import { useFrame } from '@react-three/fiber'
 import { boxCount, registerBoxes, resolveX, resolveZ } from '@/lib/collision'
 import { expose } from '@/lib/debug'
 import { attachKeyboard, hasMovementInput, readIntent } from '@/lib/input'
+import { poseActive, sampled } from '@/lib/pose'
 import { prefersReducedMotion } from '@/lib/reducedMotion'
 import { canControl } from '@/lib/store'
 import { BOUNDS, CAMERA, WALK } from '@/lib/world'
@@ -27,7 +28,12 @@ import { look } from './Camera'
    would take the literal type of the spawn coordinates and reject every later write. */
 const intent: { x: number; y: number } = { x: 0, y: 0 }
 const velocity: { x: number; z: number } = { x: 0, z: 0 }
-const position: { x: number; z: number } = {
+/**
+ * Exported for §12.5's interact manager and §2.1.1's locked view, which both need to know
+ * where the visitor is standing — the same way `Camera.tsx` exports `look` for this file's
+ * movement basis. A module read, never a subscription.
+ */
+export const position: { x: number; z: number } = {
   x: CAMERA.spawn.position[0],
   z: CAMERA.spawn.position[2],
 }
@@ -37,6 +43,34 @@ let bobPhase = 0
 
 /** Below this the visitor has stopped; letting it decay forever keeps the bob alive. */
 const REST_EPSILON = 1e-4
+
+/**
+ * §3 — the hard clamp, per axis. Clamping each axis independently is what lets the visitor
+ * slide along a bound instead of sticking to it, and zeroing only the offending component
+ * stops a phantom velocity firing them off when they turn away. The clamp is on the eye;
+ * the 0.32 player radius belongs to the §12.4 box pass.
+ *
+ * Lifted out of the frame body when §2.1.1's pose branch arrived, so that branch can keep
+ * the clamp while skipping collision — *"the clamp always has the last word"* has to hold
+ * on both paths or it is not a clamp.
+ */
+function clampToBounds(): void {
+  if (position.x < BOUNDS.x[0]) {
+    position.x = BOUNDS.x[0]
+    if (velocity.x < 0) velocity.x = 0
+  } else if (position.x > BOUNDS.x[1]) {
+    position.x = BOUNDS.x[1]
+    if (velocity.x > 0) velocity.x = 0
+  }
+
+  if (position.z < BOUNDS.z[0]) {
+    position.z = BOUNDS.z[0]
+    if (velocity.z < 0) velocity.z = 0
+  } else if (position.z > BOUNDS.z[1]) {
+    position.z = BOUNDS.z[1]
+    if (velocity.z > 0) velocity.z = 0
+  }
+}
 
 export default function Player(): null {
   useEffect(() => attachKeyboard(), [])
@@ -64,6 +98,29 @@ export default function Player(): null {
    * render loop.
    */
   useFrame((state, delta) => {
+    /**
+     * §2.1.1 — while a pose owns the camera, position comes from it. `Camera.tsx` advanced
+     * it at −2, so `sampled` is this frame's, not the last one's.
+     *
+     * **Collision is skipped and the §3 clamp is kept.** A pose resolving against an AABB
+     * would stall mid-ease against whatever it passed; the clamp costs nothing when the
+     * pose is legal and means a bad brief value still cannot walk the visitor out of the
+     * world. `intent` and `velocity` are zeroed rather than parked, so control returns
+     * without a lurch — the same reason the `canControl` branch below does it.
+     */
+    if (poseActive()) {
+      intent.x = 0
+      intent.y = 0
+      velocity.x = 0
+      velocity.z = 0
+      position.x = sampled.x
+      position.z = sampled.z
+      clampToBounds()
+      // No bob: the visitor is not walking, and §13 is not involved either way.
+      state.camera.position.set(position.x, CAMERA.eyeHeight, position.z)
+      return
+    }
+
     if (canControl()) {
       readIntent(intent)
     } else {
@@ -127,25 +184,7 @@ export default function Player(): null {
     position.z += velocity.z * delta
     resolveZ(position, velocity)
 
-    /* §3 — the hard clamp, per axis. Clamping each axis independently is what lets the
-       visitor slide along a bound instead of sticking to it, and zeroing only the
-       offending component stops a phantom velocity firing them off when they turn away.
-       The clamp is on the eye; the 0.32 player radius belongs to the §12.4 box pass. */
-    if (position.x < BOUNDS.x[0]) {
-      position.x = BOUNDS.x[0]
-      if (velocity.x < 0) velocity.x = 0
-    } else if (position.x > BOUNDS.x[1]) {
-      position.x = BOUNDS.x[1]
-      if (velocity.x > 0) velocity.x = 0
-    }
-
-    if (position.z < BOUNDS.z[0]) {
-      position.z = BOUNDS.z[0]
-      if (velocity.z < 0) velocity.z = 0
-    } else if (position.z > BOUNDS.z[1]) {
-      position.z = BOUNDS.z[1]
-      if (velocity.z > 0) velocity.z = 0
-    }
+    clampToBounds()
 
     let eyeY = CAMERA.eyeHeight
 

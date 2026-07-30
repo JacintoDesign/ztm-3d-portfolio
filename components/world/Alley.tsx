@@ -1,7 +1,10 @@
 'use client'
 
+import { useMemo } from 'react'
 import { BoxGeometry, MeshStandardMaterial } from 'three'
-import { LAYOUT, MATERIALS, PALETTE, degToRad } from '@/lib/world'
+import { resolveTier } from '@/lib/device'
+import { grainParams } from '@/lib/textures/surfaceGrain'
+import { BEND, LAYOUT, MATERIALS, PALETTE } from '@/lib/world'
 
 /**
  * §3 — the alley envelope: facades, end walls, kerbs.
@@ -27,26 +30,44 @@ import { LAYOUT, MATERIALS, PALETTE, degToRad } from '@/lib/world'
  */
 const UNIT_BOX = new BoxGeometry(1, 1, 1)
 
-const westFacadeMaterial = new MeshStandardMaterial({
-  color: PALETTE.facadeWarm,
-  roughness: MATERIALS.facade.roughness,
-  metalness: MATERIALS.facade.metalness,
-  envMapIntensity: MATERIALS.facade.envMapIntensity,
-})
+/**
+ * §3.4's surface grain, on the envelope as well as on the storefronts in front of it.
+ *
+ * The bare walls are the largest flat surfaces in the world and the ones a visitor stands
+ * closest to — the bend in particular, which §2.1's board is now mounted on and which is
+ * therefore looked at deliberately rather than walked past.
+ *
+ * **Built per tier rather than at module scope**, which is why these moved into the
+ * component: `resolveTier()` needs a document, and a material constructed on the module's
+ * first evaluation would take whichever tier the server did not have.
+ */
+function buildMaterials(tier: ReturnType<typeof resolveTier>) {
+  const facadeGrain = grainParams('facade', tier)
 
-const eastFacadeMaterial = new MeshStandardMaterial({
-  color: PALETTE.facade,
-  roughness: MATERIALS.facade.roughness,
-  metalness: MATERIALS.facade.metalness,
-  envMapIntensity: MATERIALS.facade.envMapIntensity,
-})
-
-const kerbMaterial = new MeshStandardMaterial({
-  color: PALETTE.concrete,
-  roughness: MATERIALS.concrete.roughness,
-  metalness: MATERIALS.concrete.metalness,
-  envMapIntensity: MATERIALS.concrete.envMapIntensity,
-})
+  return {
+    west: new MeshStandardMaterial({
+      color: PALETTE.facadeWarm,
+      roughness: MATERIALS.facade.roughness,
+      metalness: MATERIALS.facade.metalness,
+      envMapIntensity: MATERIALS.facade.envMapIntensity,
+      ...facadeGrain,
+    }),
+    east: new MeshStandardMaterial({
+      color: PALETTE.facade,
+      roughness: MATERIALS.facade.roughness,
+      metalness: MATERIALS.facade.metalness,
+      envMapIntensity: MATERIALS.facade.envMapIntensity,
+      ...facadeGrain,
+    }),
+    kerb: new MeshStandardMaterial({
+      color: PALETTE.concrete,
+      roughness: MATERIALS.concrete.roughness,
+      metalness: MATERIALS.concrete.metalness,
+      envMapIntensity: MATERIALS.concrete.envMapIntensity,
+      ...grainParams('concrete', tier),
+    }),
+  }
+}
 
 const { alley, facadeHeight, wallThickness, kerb, ends } = LAYOUT
 
@@ -58,25 +79,23 @@ const eastCentreX = alley.x[1] + halfThickness
 const facadeLength = alley.length + wallThickness * 2
 
 const northCentreZ = ends.north.z - halfThickness
-const southCentreZ = ends.south.z + halfThickness
 
 /** §3.1 — the taller of the two facades, so a cap never opens a strip of sky. */
 const endWallHeight = facadeHeight.west
 /** Spans the full alley plus both facade thicknesses. */
 const endWallWidth = alley.width + wallThickness * 2
 
-const southAngle = degToRad(ends.south.angleDeg)
-/** §3.1 — across the end, swung 20° off square, west end meeting the west wall. */
-const southCentreX = alley.x[0] + (ends.south.returnLength / 2) * Math.cos(southAngle)
-
 export default function Alley() {
+  const tier = resolveTier()
+  const material = useMemo(() => buildMaterials(tier), [tier])
+
   return (
     <>
       {/* West facade — 14.0, faintly warmer. The asymmetry with the east side is what
           stops the alley reading as a corridor. */}
       <mesh
         geometry={UNIT_BOX}
-        material={westFacadeMaterial}
+        material={material.west}
         position={[westCentreX, facadeHeight.west / 2, 0]}
         scale={[wallThickness, facadeHeight.west, facadeLength]}
       />
@@ -84,7 +103,7 @@ export default function Alley() {
       {/* East facade — 12.5. */}
       <mesh
         geometry={UNIT_BOX}
-        material={eastFacadeMaterial}
+        material={material.east}
         position={[eastCentreX, facadeHeight.east / 2, 0]}
         scale={[wallThickness, facadeHeight.east, facadeLength]}
       />
@@ -94,31 +113,33 @@ export default function Alley() {
           surroundings work. */}
       <mesh
         geometry={UNIT_BOX}
-        material={eastFacadeMaterial}
+        material={material.east}
         position={[0, endWallHeight / 2, northCentreZ]}
         scale={[endWallWidth, endWallHeight, wallThickness]}
       />
 
-      {/* §3.1 south — the bend. */}
+      {/* §3.1 south — the bend. Its frame is derived once in `lib/world.ts` as `BEND`,
+          because §2.1's board mounts on this same face and two derivations of one wall
+          drift silently. */}
       <mesh
         geometry={UNIT_BOX}
-        material={eastFacadeMaterial}
-        position={[southCentreX, endWallHeight / 2, southCentreZ]}
-        rotation={[0, southAngle, 0]}
-        scale={[ends.south.returnLength, endWallHeight, wallThickness]}
+        material={material.east}
+        position={[BEND.centre[0], endWallHeight / 2, BEND.centre[1]]}
+        rotation={[0, BEND.angleRad, 0]}
+        scale={[BEND.length, endWallHeight, wallThickness]}
       />
 
       {/* Kerbs — 0.12 high, 0.60 wide, inner edge at x = ±3.90, so the outer edge meets
           the wall. Both sit outside the §3 walkable clamp; the visitor never steps up. */}
       <mesh
         geometry={UNIT_BOX}
-        material={kerbMaterial}
+        material={material.kerb}
         position={[-(kerb.innerEdgeX + kerb.width / 2), kerb.height / 2, 0]}
         scale={[kerb.width, kerb.height, alley.length]}
       />
       <mesh
         geometry={UNIT_BOX}
-        material={kerbMaterial}
+        material={material.kerb}
         position={[kerb.innerEdgeX + kerb.width / 2, kerb.height / 2, 0]}
         scale={[kerb.width, kerb.height, alley.length]}
       />

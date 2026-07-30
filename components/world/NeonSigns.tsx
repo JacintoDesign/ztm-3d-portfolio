@@ -4,6 +4,7 @@ import { useCallback, useMemo } from 'react'
 import { useFrame } from '@react-three/fiber'
 import {
   BoxGeometry,
+  Color,
   type InstancedMesh,
   Matrix4,
   MeshBasicMaterial,
@@ -51,6 +52,20 @@ const BRACKET_MATERIAL = new MeshStandardMaterial({
   envMapIntensity: MATERIALS.paintedMetal.envMapIntensity,
 })
 
+/**
+ * §3.5 / §8 — one material for all nine tube rims, with the colour carried per instance.
+ *
+ * The rims were nine `MeshBasicMaterial`s differing in **nothing but `color`**, on nine
+ * meshes sharing one geometry. They are static — §11.3's flicker is on `face.emissiveIntensity`
+ * and never touches the rim — so there is nothing about them that needs nine draw calls.
+ * `instanceColor` carries the difference and one call draws them all: **−8**, which is what
+ * pays for §2.1's board on a mobile tier that was already one over §15's cap.
+ *
+ * White here, because `instanceColor` **multiplies** into it — any other base would tint
+ * all nine.
+ */
+const RIM_MATERIAL = new MeshBasicMaterial({ color: 0xffffff })
+
 /* Hoisted scratch for composing the bracket matrices once at mount. Not a frame loop, but
    the same rule applies for the same reason: these are built inside a loop. */
 const TMP_POSITION = new Vector3()
@@ -63,10 +78,12 @@ const FLICKER_PHASE: Record<number, number> = NEON_FLICKER.phase.decorativeSign
 type Built = {
   sign: NeonSign
   face: MeshStandardMaterial
-  rim: MeshBasicMaterial
   /** Panel extents on the world axes: thickness runs along X, out from the wall. */
   panel: { x: number; y: number; height: number; depth: number; bracketLength: number }
 }
+
+/** Allocated once at module scope; `setColorAt` copies out of it. §3.6's idiom. */
+const rimTint = new Color()
 
 function build(tier: ReturnType<typeof resolveTier>): Built[] {
   return NEON_SIGN_LIST.map((sign) => {
@@ -99,10 +116,6 @@ function build(tier: ReturnType<typeof resolveTier>): Built[] {
         roughness: MATERIALS.neonTube.roughness,
         metalness: MATERIALS.neonTube.metalness,
       }),
-      /* §8 — the tube is `meshBasicMaterial`, colour at full. It is not lit by anything;
-         it *is* the light, and §9's bloom is what gives it the halo that §8's 0.03 shell
-         would otherwise have to fake. See §3.5. */
-      rim: new MeshBasicMaterial({ color: PALETTE[sign.color] }),
       panel: {
         x: panelX,
         y: panelY,
@@ -196,31 +209,62 @@ export default function NeonSigns() {
     [bracketMatrices],
   )
 
-  return (
-    <>
-      {signs.map(({ sign, face, rim, panel }) => (
-        <group key={sign.index} name={`neon:${sign.index}`}>
-          {/* The tube rim: larger on the two long axes, thinner across, so the painted
-              face stands out through it on both sides and the rim reads as the frame. */}
-          <mesh
-            geometry={UNIT_BOX}
-            material={rim}
-            position={[panel.x, panel.y, sign.z]}
-            scale={[
+  /**
+   * §3.5 / §8 — the nine tube rims, as one `InstancedMesh` with the colour per instance.
+   *
+   * The rim is larger on the two long axes and thinner across, so the painted face stands
+   * out through it on both sides and the rim reads as the frame. Static: §11.3's flicker is
+   * on the face's `emissiveIntensity` and never touches these.
+   */
+  const attachRims = useCallback(
+    (mesh: InstancedMesh | null) => {
+      if (mesh === null) return
+      signs.forEach(({ sign, panel }, i) => {
+        mesh.setMatrixAt(
+          i,
+          new Matrix4().compose(
+            TMP_POSITION.set(panel.x, panel.y, sign.z),
+            TMP_QUATERNION,
+            TMP_SCALE.set(
               NEON_SIGNS.thickness * 0.94,
               panel.height + NEON_SIGNS.rim * 2,
               panel.depth + NEON_SIGNS.rim * 2,
-            ]}
-          />
-          <mesh
-            name={`neon:face:${sign.index}`}
-            geometry={UNIT_BOX}
-            material={face}
-            position={[panel.x, panel.y, sign.z]}
-            scale={[NEON_SIGNS.thickness, panel.height, panel.depth]}
-          />
-        </group>
+            ),
+          ),
+        )
+        /* §8 — the tube is basic-material at full colour. It is not lit by anything; it
+           *is* the light, and §9's bloom gives it the halo §8's 0.03 shell would otherwise
+           fake. `Color.set` on a hex string converts sRGB → linear under §5's colour
+           management, which is what `instanceColor` wants. */
+        mesh.setColorAt(i, rimTint.set(PALETTE[sign.color]))
+      })
+      mesh.instanceMatrix.needsUpdate = true
+      if (mesh.instanceColor !== null) mesh.instanceColor.needsUpdate = true
+      mesh.computeBoundingSphere()
+    },
+    [signs],
+  )
+
+  return (
+    <>
+      {/* The faces stay one mesh each: nine different textures cannot share a material. */}
+      {signs.map(({ sign, face, panel }) => (
+        <mesh
+          key={sign.index}
+          name={`neon:face:${sign.index}`}
+          geometry={UNIT_BOX}
+          material={face}
+          position={[panel.x, panel.y, sign.z]}
+          scale={[NEON_SIGNS.thickness, panel.height, panel.depth]}
+        />
       ))}
+
+      {/* §3.5 — all nine tube rims, one call. */}
+      <instancedMesh
+        name="neon:rims"
+        ref={attachRims}
+        args={[UNIT_BOX, RIM_MATERIAL, signs.length]}
+      />
 
       {/* §3.5 — all fifteen brackets, one call. */}
       <instancedMesh

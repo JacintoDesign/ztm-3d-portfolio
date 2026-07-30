@@ -228,30 +228,6 @@ function foodCartParts(): Part[] {
   return parts
 }
 
-/** §3.2's line, redrawn — five solids that read as one object where a bicycle read as none. */
-function scooterParts(): Part[] {
-  const { floorpan, cowl, legShield, seat, wheel, bar } = PROPS.scooter
-
-  const span = (y: readonly [number, number]) => y[1] - y[0]
-  const mid = (y: readonly [number, number]) => y[0] + span(y) / 2
-
-  return [
-    box('metalDark', [0, mid(floorpan.y), 0], [floorpan.length, span(floorpan.y), floorpan.depth]),
-    box('shutter', [-0.28, mid(cowl.y), 0], [cowl.length, span(cowl.y), cowl.depth]),
-    box('shutter', [0.48, mid(legShield.y), 0], [legShield.length, span(legShield.y), legShield.depth]),
-    box('void', [-0.26, mid(seat.y), 0], [seat.length, span(seat.y), seat.depth]),
-    cyl('metalDark', [0.52, bar.y, 0], [bar.radius * 2, bar.length, bar.radius * 2], [Math.PI / 2, 0, 0]),
-    // Axles along the scooter's width — about X, for the reason given on the cart.
-    ...([-1, 1] as const).map((s) =>
-      cyl('void', [s * (wheel.spacing / 2), wheel.radius, 0], [
-        wheel.radius * 2,
-        wheel.width,
-        wheel.radius * 2,
-      ], [Math.PI / 2, 0, 0]),
-    ),
-  ]
-}
-
 /**
  * A stack of 2 to 4, each crate turned a little off square and pushed a little off centre.
  *
@@ -433,13 +409,20 @@ function guardrailParts(): Part[] {
 
 type WallPlacement = { side: Side; z: number }
 
-/** §3.2 — five, all dark. Sides alternate so neither wall becomes the machine wall. */
+/**
+ * §3.2 — four, all dark. Sides alternate so neither wall becomes the machine wall.
+ *
+ * **It was five, and the fifth stood at west `z = 20.3`.** That is 2.7 m from §3.1's bend,
+ * and §2.1's screen is now 5.20 m of wall directly behind it: the machine and its neighbour's
+ * awning were the two things standing between the visitor and the one content surface in the
+ * world. Scenery in front of content loses — §2.4 gives the surroundings everything *except*
+ * the three places content lives, and that has to include the air in front of them.
+ */
 const VENDING: readonly WallPlacement[] = [
   { side: 'east', z: -17.6 },
   { side: 'west', z: -13.6 },
   { side: 'east', z: 2.4 },
   { side: 'west', z: 7.4 },
-  { side: 'west', z: 20.3 },
 ]
 
 /**
@@ -451,13 +434,27 @@ const VENDING: readonly WallPlacement[] = [
  */
 const CART: WallPlacement = { side: 'east', z: 19.0 }
 
-/** Lean sign: −1 tips the scooter toward the wall, +1 into the alley. */
-const SCOOTERS: readonly (WallPlacement & { tip: -1 | 1 })[] = [
-  { side: 'west', z: -18.3, tip: -1 },
-  { side: 'east', z: -10.6, tip: 1 },
-  { side: 'east', z: 8.4, tip: -1 },
-  { side: 'west', z: 18.0, tip: 1 },
+/**
+ * Lean sign: −1 tips the scooter toward the wall, +1 into the alley.
+ *
+ * **`lamp` is two of the four, and which two is the whole point.** A parked vehicle is
+ * scenery; a parked vehicle with its light still on is somebody who has just stepped
+ * inside. One sits 1.2 m from §12.1's spawn so the visitor meets it in the opening beat,
+ * and one is mid-alley on the opposite wall, so the pair reads as *a couple of them* and
+ * not as a rule about scooters. The other two stay dark — four lit headlamps in
+ * forty-four metres is a car park.
+ */
+const SCOOTERS: readonly (WallPlacement & { tip: -1 | 1; lamp: boolean })[] = [
+  { side: 'west', z: -18.3, tip: -1, lamp: true },
+  { side: 'east', z: -10.6, tip: 1, lamp: false },
+  { side: 'east', z: 8.4, tip: -1, lamp: true },
+  { side: 'west', z: 18.0, tip: 1, lamp: false },
 ]
+
+/** Which scooters have their headlamp on, by `lib/props.ts` key. §3.7. */
+export const LIT_SCOOTERS: ReadonlySet<string> = new Set(
+  SCOOTERS.flatMap(({ lamp }, i) => (lamp ? [`scooter:${i}`] : [])),
+)
 
 /**
  * §3.2's nine, in stacks of 2 to 4.
@@ -505,19 +502,39 @@ const RUBBISH: readonly WallPlacement[] = [
 ]
 
 /**
- * §3.2's six, on §3's gutter line.
+ * §3.7's utility poles, on §3's gutter line. **Six became two, over four passes.**
  *
- * None of these z values may fall inside an awninged unit on its own wall — the awnings
- * reach `|x| = 3.25` and a pole at 3.72 would pass straight through one. `audit()` checks
- * it; these six were placed against it.
+ * A pole is the only prop that reaches above 2.60, and a lit sign is the only thing on the
+ * wall at that height — so where their `z` ranges meet, the pole runs down the middle of the
+ * one thing on that wall anybody is looking at. `audit()` covered `pole-through-awning` from
+ * the day this file was written and never covered this, because awnings *project* and sign
+ * boxes are flush, so the two never looked like the same fault.
+ *
+ * What happened, in order, because the shape of it is the lesson:
+ *
+ * 1. Two poles were standing in front of §3.4 lit boxes. Found in a screenshot, not in a rule.
+ * 2. Moving them put two under unit 12's awning — `pole-through-awning` fired twice on one
+ *    edit, having never fired before, because excluding the bend from §3.4's awning draw had
+ *    silently reshuffled which units got them.
+ * 3. Moving *those* left the last east pole clearing §3.5's sign 1 by 0.72 m and passing every
+ *    numeric check — and still visibly crossing it, because **a `z` gap is the wrong test**:
+ *    the pole stands at `|x| = 3.72` and the sign projects to `|x| = 3.78`, so they share the
+ *    same depth and the parallax crosses them from anywhere but square-on.
+ * 4. The two positions that satisfied *that* landed on `rubbish:0` and `scooter:1`.
+ *
+ * **Four `audit()` failures on four consecutive edits is the wall saying it has no room**, and
+ * the honest response is to take the count down rather than keep fitting. A prop shuffled five
+ * times to satisfy rules it keeps breaking was never placed, only fitted.
+ *
+ * The lesson belongs to the audit rather than to the poles. `pole-through-sign-box` sat in this
+ * comment as a full derivation for two passes while the fault it describes shipped twice; every
+ * rule in `audit()` that is actually *code* has caught something nobody was looking for. **A
+ * placement rule that only lives in a comment is a rule that has not been checked.** It is code
+ * now — see `audit()` — and §3.7 carries the 1.30 m derivation.
  */
 const POLES: readonly WallPlacement[] = [
   { side: 'west', z: -16.1 },
-  { side: 'east', z: -14.99 },
   { side: 'east', z: -9.05 },
-  { side: 'west', z: 1.9 },
-  { side: 'east', z: 12.0 },
-  { side: 'east', z: 17.55 },
 ]
 
 /**
@@ -631,7 +648,6 @@ function build(): Prop[] {
     })
   }
 
-  const scooterParts_ = scooterParts()
   SCOOTERS.forEach(({ side, z, tip }, i) => {
     const [length, depth, height] = PROPS.scooter.size
     const lean = (PROPS.scooter.leanDeg * Math.PI) / 180
@@ -641,7 +657,11 @@ function build(): Prop[] {
       position: [wallX(side, depth), 0, z],
       yaw: yawFor(side),
       lean: tip * lean,
-      parts: scooterParts_,
+      /* §3.7 — **no parts, and that is the point.** The scooter is a glTF model now, and
+         `Props.tsx` draws it from `PROPS.scooter.model` rather than from this list. What
+         stays here is everything about *where it stands*, which is this file's job and is
+         the same whether the mesh is five boxes or 1 665 triangles. */
+      parts: [],
       // The lean lays the scooter over, so its footprint grows by the height it loses.
       footprint: [length, depth + height * Math.sin(lean)],
       solid: true,
@@ -798,7 +818,7 @@ export type AuditFinding = { rule: string; detail: string }
  * *"Make sure that there are no collisions"* — stated as a list of findings rather than
  * as a claim.
  *
- * Four rules, each of which has a failure that is invisible in a diff and obvious once
+ * Six rules, each of which has a failure that is invisible in a diff and obvious once
  * you walk into it:
  *
  * 1. **No two props overlap.** Two AABBs sharing space is one prop growing out of another.
@@ -808,6 +828,11 @@ export type AuditFinding = { rule: string; detail: string }
  *    and nothing may be parked in front of one.
  * 4. **No utility pole stands in front of an awning.** The poles are the only prop that
  *    reaches above 2.60, and the awnings are the only thing out there at that height.
+ * 5. **No utility pole stands within `signClearance` of a lit sign.** The same clash
+ *    against the other thing up there — see §3.7, and see `POLES` for what it cost to
+ *    leave this one as a comment for two passes.
+ * 6. **No lantern hangs in front of a §3.5 sign or a lit §3.4 box.** Occlusion rather
+ *    than intersection: nothing touches and the shade blanks the middle of a painted face.
  *
  * Runs at module load in development. Empty is the pass.
  */
@@ -884,6 +909,49 @@ export function audit(): AuditFinding[] {
           detail: `${prop.key} at z ${prop.position[2]} passes through unit ${unit.index}'s awning`,
         })
       }
+    }
+  }
+
+  /**
+   * §3.7 — **no pole within `signClearance` of a lit sign's edge, on the same wall.**
+   *
+   * The rule that spent two passes as prose above `POLES` while the fault it describes was
+   * on screen. It is deliberately *not* an intersection test: a pole at `|x| = 3.72` and a
+   * §3.4 sign box facing `|x| = 4.01` never touch, and from anywhere but square-on the
+   * 0.29 m between them is nothing — the pole is simply drawn down the middle of the sign.
+   * §3.5's signs are the harder case and would fail an intersection test *too*, since they
+   * project to `|x| = 3.78`, inside the pole's own diameter.
+   *
+   * **Lit signs only**, both here and in the brief: an unlit §3.4 box is `shutter` with no
+   * emissive term, and a pole in front of a dark slab on a dark wall cannot be seen.
+   */
+  const poleRadius = PROPS.utilityPole.radius
+  const litSignsOn = (side: Side): { z: number; halfWidth: number; what: string }[] => [
+    ...STOREFRONT_UNITS.filter(
+      (unit) => unit.wall === side && unit.signBox && unit.signColor !== null,
+    ).map((unit) => ({
+      z: doorwayZ(unit),
+      halfWidth: STOREFRONT.signBox.width / 2,
+      what: `unit ${unit.index}'s lit box`,
+    })),
+    ...NEON_SIGN_LIST.filter((sign) => sign.wall === side).map((sign) => ({
+      z: sign.z,
+      halfWidth: (sign.size[0] as number) / 2,
+      what: `§3.5 sign ${sign.index}`,
+    })),
+  ]
+
+  for (const prop of STREET_PROPS) {
+    if (prop.kind !== 'utilityPole') continue
+    const side: Side = prop.position[0] < 0 ? 'west' : 'east'
+
+    for (const sign of litSignsOn(side)) {
+      const gap = Math.abs(sign.z - prop.position[2]) - sign.halfWidth - poleRadius
+      if (gap >= PROPS.utilityPole.signClearance) continue
+      findings.push({
+        rule: 'pole-through-sign-box',
+        detail: `${prop.key} at z ${prop.position[2]} leaves ${gap.toFixed(2)} m of air beside ${sign.what} at ${sign.z.toFixed(2)} — wants ${PROPS.utilityPole.signClearance}`,
+      })
     }
   }
 

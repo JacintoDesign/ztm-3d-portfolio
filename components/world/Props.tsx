@@ -1,6 +1,7 @@
 'use client'
 
-import { useCallback, useEffect, useMemo } from 'react'
+import { Suspense, useCallback, useEffect, useMemo } from 'react'
+import { useGLTF } from '@react-three/drei'
 import {
   BoxGeometry,
   type BufferGeometry,
@@ -15,11 +16,14 @@ import {
   Object3D,
   PlaneGeometry,
 } from 'three'
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
+import { prepareCar } from '@/lib/carModels'
 import { registerBoxes } from '@/lib/collision'
 import { expose } from '@/lib/debug'
 import { resolveTier } from '@/lib/device'
 import {
   CONE_TAPERS,
+  LIT_SCOOTERS,
   PROP_BOXES,
   STREET_PROPS,
   type Part,
@@ -136,6 +140,167 @@ const SURFACE: Record<SurfaceKey, Material> = {
 
 /** Lies flat, so the decal quad is one shared geometry with no per-instance rotation. */
 const DECAL_GEOMETRY = new PlaneGeometry(1, 1).rotateX(-Math.PI / 2)
+
+/* ────────────────────────────────────────────────────────────────────────────
+ * §3.7 — the scooters, which are a glTF model rather than a part list
+ * ──────────────────────────────────────────────────────────────────────────── */
+
+// Fetching starts with the module rather than with the first render. §3.6's precedent.
+useGLTF.preload(PROPS.scooter.model.file)
+
+/**
+ * The model's five authored materials, folded onto §4's three.
+ *
+ * It ships a light body, a near-black, a dark grey, an 8-triangle gold and a 12-triangle
+ * chrome. The last two are a headlamp lens and a mirror on a bike parked at 3am with
+ * nobody on it, so they go to the frame — **and what comes out is exactly the three
+ * tokens `PROPS.scooter` has declared since it was five boxes.** Not by design: a scooter
+ * has a body, tyres and a frame whichever way it is built.
+ *
+ * Keyed on the model's own material names, so a swapped model announces itself by coming
+ * out entirely in `metalColor` rather than by silently keeping its own colours.
+ */
+type ScooterToken = 'bodyColor' | 'darkColor' | 'metalColor' | 'lamp'
+
+const SCOOTER_TOKEN: Record<string, ScooterToken> = {
+  'Material.001': 'bodyColor',
+  'Material.002': 'darkColor',
+  'Material.003': 'metalColor',
+  /* §3.7 — the headlamp lens, which was folded into the frame when it was always off. */
+  [PROPS.scooter.lamp.material]: 'lamp',
+  'Material.005': 'metalColor',
+}
+
+const SCOOTER_SURFACE: Record<ScooterToken, Material> = {
+  bodyColor: standard(PALETTE[PROPS.scooter.bodyColor], {
+    roughness: MATERIALS.paintedMetal.roughness,
+    metalness: MATERIALS.paintedMetal.metalness,
+    envMapIntensity: MATERIALS.paintedMetal.envMapIntensity,
+  }),
+  darkColor: standard(PALETTE[PROPS.scooter.darkColor], { roughness: 0.95, metalness: 0.0 }),
+  metalColor: standard(PALETTE[PROPS.scooter.metalColor], {
+    roughness: MATERIALS.paintedMetal.roughness,
+    metalness: MATERIALS.paintedMetal.metalness,
+    envMapIntensity: MATERIALS.paintedMetal.envMapIntensity,
+  }),
+  /* §3.4's rule, which every emissive surface in this world obeys: the diffuse stays
+     `void` and the colour lives in the emissive term alone. In both would stack a fully
+     lit surface under the glow and arrive at roughly twice §8.1's figure. */
+  lamp: standard(PALETTE.void, {
+    emissive: PALETTE[PROPS.scooter.lamp.color],
+    emissiveIntensity: PROPS.scooter.lamp.emissive,
+    roughness: MATERIALS.neonTube.roughness,
+    metalness: MATERIALS.neonTube.metalness,
+  }),
+}
+
+/**
+ * Four parked scooters, as one `InstancedMesh` per merged material.
+ *
+ * `lib/carModels.ts` does the work — node transforms baked into the vertices, merged by
+ * material, scaled to `targetLength` with the nose turned to `+X`, then measured. **That
+ * file was written for §3.6 with one caller and took this one with no changes**, which is
+ * the only real test of whether the split between *what a model is* and *where it stands*
+ * was drawn in the right place.
+ *
+ * The three merged parts land in three draw calls carrying four instances each. Mounted as
+ * authored it would be twenty; drawn per scooter from the box vocabulary it was free, so
+ * this genuinely costs three rather than trading them — see §3.7 and §15.
+ */
+function Scooters() {
+  const { scene } = useGLTF(PROPS.scooter.model.file)
+
+  const parts = useMemo(() => {
+    const { targetLength, yawOffset } = PROPS.scooter.model
+    const prepared = prepareCar(scene, targetLength, yawOffset)
+
+    /* §3.7 — the footprint in `lib/props.ts` is authored, because §12.4's boxes are built
+       at module load and no glTF has loaded by then. This is the only place the authored
+       figure can be checked against the mesh it stands in for, so it is checked here
+       rather than trusted. */
+    if (process.env.NODE_ENV !== 'production') {
+      const [length, depth, height] = PROPS.scooter.size
+      const drift = Math.max(
+        Math.abs(prepared.size.length - length),
+        Math.abs(prepared.size.width - depth),
+        Math.abs(prepared.size.height - height),
+      )
+      if (drift > 0.05) {
+        console.warn(
+          `[props] PROPS.scooter.size ${[length, depth, height].join(' × ')} has drifted from the model's ` +
+            `${prepared.size.length.toFixed(2)} × ${prepared.size.width.toFixed(2)} × ${prepared.size.height.toFixed(2)} — ` +
+            'the §12.4 collision box no longer describes the mesh.',
+        )
+      }
+    }
+
+    /* Re-materialled onto §4 and merged **again**, by token this time, so a scooter is
+       three draw calls whatever the model's own material count happens to be. `prepareCar`
+       merges by the model's materials and returns five parts; two of those weigh 8 and 12
+       triangles and have no business being draw calls of their own. */
+    const byToken = new Map<string, BufferGeometry[]>()
+    for (const part of prepared.parts) {
+      const token = SCOOTER_TOKEN[part.material.name] ?? 'metalColor'
+      const bucket = byToken.get(token)
+      if (bucket === undefined) byToken.set(token, [part.geometry])
+      else bucket.push(part.geometry)
+    }
+
+    return [...byToken.entries()].flatMap(([token, geometries]) => {
+      const merged = geometries.length === 1 ? geometries[0] : mergeGeometries(geometries, false)
+      if (merged === null || merged === undefined) return []
+      return [{
+        key: token,
+        geometry: merged,
+        material: SCOOTER_SURFACE[token as keyof typeof SCOOTER_SURFACE],
+      }]
+    })
+  }, [scene])
+
+  /**
+   * One matrix per scooter, composed exactly as `buildBuckets` composes a prop's own
+   * transform — `YXZ`, so the lean is taken about the *yawed* X axis, which is the
+   * scooter's length. Under three's default `XYZ` a leaning scooter pulls a wheelie.
+   */
+  /**
+   * One matrix per scooter, composed exactly as `buildBuckets` composes a prop's own
+   * transform — `YXZ`, so the lean is taken about the *yawed* X axis. Split into all
+   * four and the two §3.7 leaves switched on, because the lamp lens is the one part
+   * that is not the same on every scooter and an `InstancedMesh` has no way to say so
+   * per instance.
+   */
+  const { all, lit } = useMemo(() => {
+    const all: Matrix4[] = []
+    const lit: Matrix4[] = []
+    for (const prop of STREET_PROPS) {
+      if (prop.kind !== 'scooter') continue
+      root.position.set(prop.position[0], prop.position[1], prop.position[2])
+      root.rotation.set(prop.lean, prop.yaw, 0, 'YXZ')
+      root.updateMatrix()
+      const matrix = root.matrix.clone()
+      all.push(matrix)
+      if (LIT_SCOOTERS.has(prop.key)) lit.push(matrix)
+    }
+    return { all, lit }
+  }, [])
+
+  return (
+    <>
+      {parts.map((part) => (
+        <Instanced
+          key={part.key}
+          name={`prop:scooter:${part.key}`}
+          geometry={part.geometry}
+          material={part.material}
+          /* The dark scooters simply have no lens. Eight triangles of unlit acrylic on a
+             near-black bike at 3am is nothing to look at, and drawing them would cost a
+             second instanced mesh to render what cannot be seen. */
+          matrices={part.key === 'lamp' ? lit : all}
+        />
+      ))}
+    </>
+  )
+}
 
 type Bucket = { key: string; primitive: PrimitiveKey; surface: SurfaceKey; matrices: Matrix4[] }
 
@@ -309,6 +474,16 @@ export default function Props() {
           matrices={decals}
         />
       ) : null}
+
+      {/* §3.7 — the scooters are a glTF file, so they suspend. The boundary is around them
+          alone, exactly as `World.tsx` does for §3.6's traffic: everything else in this
+          section is static geometry that has no reason to wait for a download, and the
+          collision registry above must not be torn down and re-registered while it does.
+          `null` is the honest fallback — four scooters missing from an alley, and nothing
+          else about the world different. */}
+      <Suspense fallback={null}>
+        <Scooters />
+      </Suspense>
     </>
   )
 }

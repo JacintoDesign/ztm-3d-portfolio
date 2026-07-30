@@ -47,8 +47,13 @@ const BAY_HEIGHT = FLOORS_PER_TEXTURE * FACADE_WINDOWS.floorHeight
  * A window sits high in its floor: 0.95 of spandrel below, 0.55 of header above the
  * 1.35 opening. Real buildings put the glass near the ceiling, and the difference is
  * visible from below — which is the only angle this wall is ever seen from.
+ *
+ * **Exported, because §3.3's reveal grid has to land on exactly these lines.** The piers
+ * and spandrels that stand proud of this panel are the *sides* of the openings painted
+ * here; if the two disagree by a centimetre, the wall grows a hairline of painted window
+ * peeking out from under a pier and there is nothing in either file to point at.
  */
-const SILL_ABOVE_FLOOR = 0.95
+export const SILL_ABOVE_FLOOR = 0.95
 
 const SEED = 0x0facade
 

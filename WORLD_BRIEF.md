@@ -10,7 +10,7 @@ Units are **metres** and **radians unless a degree sign is present**. Colours ar
 
 ## 1. The world in one paragraph
 
-A single back alley off a Shinjuku side street, forty-six metres end to end, nine metres wide, walled at both ends. Behind you, the station ticket gate with its shutter down — you missed it. Ahead, the alley bends into fog and never resolves. It has been raining for an hour and has just stopped; the asphalt is a mirror and every sign in the alley is in it, upside down and softer. There is no sky: fourteen-metre facades on both sides, a mat of overhead cable, and fog that closes the last fifteen metres. Nobody else is here. Three things in the alley are lit warmer than the rest — a shopfront, a vending machine, a payphone — and those three are the portfolio.
+A single back alley off a Shinjuku side street, forty-six metres end to end, nine metres wide, walled at both ends. Behind you, the station ticket gate with its shutter down — you missed it. Ahead, the alley bends into fog and never resolves. It has been raining for an hour and has just stopped; the asphalt is a mirror and every sign in the alley is in it, upside down and softer. There is no sky: fourteen-metre facades on both sides, a mat of overhead cable, and fog that closes the last fifteen metres. Nobody else is here. Three things in the alley are lit warmer than the rest — a board at the bend, a vending machine, a payphone — and those three are the portfolio.
 
 **Crossable in under a minute:** 46 m at 2.6 m/s ≈ 18 seconds end to end.
 
@@ -20,33 +20,106 @@ A single back alley off a Shinjuku side street, forty-six metres end to end, nin
 
 | Role | Object | Where |
 |---|---|---|
-| **Showcase surface** | **The shopfront** — a recessed lightbox window with a vertical neon sign above it and a noren-curtained door beside it | West wall, `z = -4.0` |
+| **Showcase surface** | **The board** — a lit board on the bend, screenshot over text, with a vertical neon sign above it and two door plates on it | The bend, `t = 0.00` |
 | **Bio station** | **The vending machine** — a lit drinks machine glowing warm in a dark stretch | East wall, `z = +6.0` |
 | **Contact station** | **The payphone** — a green NTT box under a small awning | West wall, `z = +14.0` |
 | **Surroundings** | The alley. **Carries nothing.** | Everywhere else |
 
-The zigzag is deliberate: showcase left, bio right, contact left, each one visible from the previous, none visible from spawn until you turn.
+The zigzag is deliberate: bio right, contact left, showcase straight ahead at the end — the first two visible from each other, the third closing the alley and visible from spawn.
 
-### 2.1 The shopfront (showcase surface)
+### 2.1 The board (showcase surface)
 
-One shopfront. One project shown at a time. Everything on it is generated from `CONTENT.md`.
+One board. One project shown at a time. Everything on it is generated from `CONTENT.md`.
 
-| Part | Value |
+**It is on the bend, and that resolves §16 item 8.** This surface was authored against the west wall at `z = -4.0` from the shell onward, and §16 item 8 has stood open the whole time asking whether it should move to the bend instead. It moves. The bend is the one sightline every visitor faces from spawn; §3.1 built the return wall specifically to close it; and it is the only wall in the world nothing else can be given, because §2.4 forbids putting content in the surroundings and anything decorative placed there could not be relabelled afterwards. The west slot becomes a deliberate gap — see §16.12.
+
+**Everything below is authored in the bend's own frame**, §3.1's `t` along the face with the board's local `+X` to the visitor's right and `+Y` up. No coordinate here is a world coordinate, and none may become one: the frame is derived from `LAYOUT.ends.south` in one place and a world coordinate written beside it drifts silently the moment the angle changes.
+
+**Four separate objects on the wall, not one board.** The screen, the title sign, the info panel and the door each stand proud of §3.1's bend face on their own, the way every other lit object in this alley does. A single carcass with everything painted on its face was tried, and at the size the screen needs it stopped being a board and became a wall covered in one texture.
+
+Positions are `x` in the assembly's local frame — `+X` is the visitor's right — and `baseY` in world metres, because the door has to reach the ground and everything else stacks off it.
+
+| Part | Size | Local `x` | World `y` |
+|---|---|---|---|
+| **The screen** | **4.40 × 2.3375** (= 4.40 × 8.5/16, so the 16:8.5 screenshots are not cropped), 0.16 deep, in a **0.10 lit bezel** | 0 | `[3.05, 5.3875]` |
+| **Title sign** | **Horizontal**, 2.60 × 0.62 × 0.14 — carries the **project name** | 0 | `[2.20, 2.82]` |
+| **Info panel** | 3.20 × 1.55 × 0.10 — the blurb (up to **5** wrapped lines at 1.45 line height) and the tags | −0.75 | `[0.45, 2.00]` |
+| **Door** | **A literal door, 1.00 × 2.05 × 0.08**, in a 0.13 lit reveal, with a vision panel and a handle. **Opens the project's live URL in a new tab.** | +1.80 | `[0, 2.05]` |
+| Paging, position, open, GitHub | **Not on the wall — see §2.1.2.** Also `←`/`→`, `[`/`]`, and horizontal swipe | | |
+
+**The assembly sits at `t = 0.70`, not centred, and that is the door's doing.** §3.1's visible face is 5.82 m and the screen with its bezel is 4.60, so there is 0.60 m of slack; this spends all of it toward the alley mouth. Centred, the door landed in the corner where the bend meets the west facade, with §3.4's last storefront unit standing in front of it — half a door, occluded, from the one pose §2.1.1 puts you in. **Sliding the assembly rather than mirroring it is what keeps the arrangement** (screen, title, text left, door right) while getting the door clear, and it moves the locked pose 0.66 m further from §3.7's rubbish stop as well.
+
+**The bezel is geometry, not a painted strip**, and that is the fix for a fault worth recording: a `strokeRect` around the screenshot on a shared emissive canvas is *one intensity for the whole face*, so the strip arrived at the same rung as the prose beside it and read as two lit white bars lying across the wall. A bezel is a frame the screen sits in, and a frame is an object.
+
+**The door needed light to read as a door.** `shutter` on `void` at 7.3 m against an unlit wall is not a door, it is a shadow. It gets §8.1's `openShutterSpill` rung on the reveal behind the leaf — a lit outline, which is light from inside — plus a vision panel in the leaf's upper half at the same rung, and a `neonCyan` handle. The reveal alone was a glowing rectangle around a dark patch; **what makes a shape read as a door is light coming through it.**
+
+**The title sign is below the screen, not above it.** Above, it was a landmark competing with the thing it labels; below the image it is a caption, which is what a title is.
+
+**The screenshot is the largest thing on the board, and everything else is sized around it.** It is 2.90 m across a 3.20 m board — 90% of the width and 36% of the height — because it is the only part of this surface that is *the work* rather than a description of it. The title is a sign above the board rather than a line of type on it, for the reason every other shop in this alley has a sign: at forty metres a name on a lit board is unreadable and a lit sign is a landmark.
+
+**The door is a literal door and that is the point.** §2.1's earlier plate was a legend on a panel. A 1.00 × 2.05 door standing on the ground is the same dimensions as §3.4's fourteen ordinary shopfront doorways — the world already contains this object, and the one that opens is the one project you can walk into.
+
+**The width is derived and could not have been chosen.** §3's clamp stops the eye at `z = 21.4`, so the reading distance is fixed by where a visitor can physically stand. The locked pose below sits **5.627 m** from the board; at §12.1's portrait FOV of 70° vertical on a 390 × 844 screen the horizontal half-angle is 17.92°, so the frame is 3.641 m wide there, and a board turned 5.61° off the view direction fits **3.35 m** inside it. Take 3.20, which leaves the margin at 5%.
+
+**The standoff is what the board's size actually costs.** A 2.00 m board fits at 3.43 m; a 3.20 m one needs 5.60, which is a metre and a half further than the clamp's own limit at the wall — so the lock now pulls the visitor *back* rather than forward, and §12.5's radius has to contain the pose it moves to.
+
+**`t = 0.00` is the centre of the face for two independent reasons.** It is the middle of what can be seen — the wall's west 0.183 m is buried inside the west facade box, so the visible span is `t ∈ [-2.8175, +3.000]` — and it is the deepest point of the wall from the alley, which is the furthest a visitor can get back from it. It also clears §3.7's mouth guardrail, which closes the opening at `x ∈ [0.90, 4.15]`: a board toward `t = +3` would have stood behind a railing.
+
+**The title sign is horizontal and it is inside the frame.** It sits §3.5's own 0.25 m clearance above the board top, spanning `y ∈ [4.55, 5.10]`, and the locked view's vertical span reaches 31.3° — so unlike a 3.40 m vertical sign it is part of the composition rather than a separate landmark above it. A vertical stack was tried and it was the wrong object twice over: at 3.40 m it dominated a board it was supposed to label, and stacked Latin capitals with the spaces dropped read as a word with something wrong with it.
+
+**Paging.** Manual: the two arrow plates, `←`/`→`, `[`/`]`, horizontal swipe. **Automatic: 10 000 ms dwell, wrapping from the last project back to the first.** The first manual page or door click **stops the automatic paging for the session** — a carousel that keeps moving under someone who has taken the wheel is the thing people dislike about carousels. Reduced motion: see §13.
+
+**Transition between projects:** the aperture cuts to black over 140 ms, holds 90 ms, fades up over 260 ms; the neon sign flickers on with the sequence in §11.3. Reduced motion: hard cut, no flicker, 0 ms.
+
+**The screenshot glows, and it still never blooms.** These are not in tension and the distinction is the whole rule. The image plane was `meshBasicMaterial` at emissive **0** — which does not merely stop it blooming, it stops it being *lit*, and a dark rectangle of UI on a dark board at 3am reads as a photograph of a screen rather than as a screen. It is now an emissive map at **§8.1's 0.78 rung**: under the 0.90 knee, so §9's bloom never touches it, and the tint goes to **0.82** since the emissive term now carries the brightness the multiply used to have to fake.
+
+**The ceiling is what matters, not the material.** *Peak luminance must land below the bloom threshold of 0.90* is the sentence that protects the scene, and it is unchanged. What changed is that a surface can be lit and sub-knee at the same time — which is exactly what §8.1's other four sub-knee rungs already are. A screenshot at 0.78 is on the same side of the knee as fourteen storefront sign boxes at 0.85 and a hundred and fifty facade windows at 0.55.
+
+The glow *around* the aperture is still the surround's job, not the image's: a 0.05 emissive border strip at §8.1's rung and the `rectAreaLight` in §7.
+
+The screenshots are **1024 × 544 desktop, 512 × 272 mobile**, downscaled at runtime from the source JPEGs — see §16.1 and §16.6, both resolved here. Three are resident at a time (`prev`, `current`, `next`), which is §15's constraint and also §17's: a resident set that grows with the project count would put a fifth project over budget as well as requiring a component edit.
+
+**Failure is quiet, and it is the default rather than a fallback.** The aperture's material is *built* flat `#0E121A` with no map, with the ripple-glass normal still catching the neon. A screenshot that loads replaces it; a screenshot that 404s, fails to decode, or is missing from `CONTENT.md` simply never replaces it. There is no spinner, no error, no white plane, and no branch — the failure path is the path not taken. The door still works.
+
+### 2.1.1 The locked view
+
+Walking up to the board and pressing `E` pulls the camera to a fixed reading pose. **Authored in the board's own local frame**, never as a world coordinate:
+
+| | Value |
 |---|---|
-| Facade recess | 3.80 w × 4.60 h × 0.55 deep, west wall, centre `z = -4.0` |
-| **Lightbox window** | **3.20 × 1.70** (16:8.5 — matches the 1920×1020 screenshots exactly, no crop), sill at `y = 1.02`, glass 0.06 in front of the image plane |
-| Vertical neon sign | 0.52 w × 3.40 h, mounted at `x = -4.06`, `z = -4.0`, base at `y = 4.30` — carries the **project name** |
-| Info panel | 1.10 × 0.62, right of the window at `z = -5.9`, sill `y = 1.15` — carries **description + tech**, dim backlit, not emissive |
-| **Door** | Doorway 1.00 × 2.05 at `z = -2.3`, noren curtain over it. **Opens the project's live URL in a new tab.** |
-| Secondary door | A small enamel plate beside the doorframe at `y = 1.45` — **opens the GitHub URL** in a new tab |
-| Advance control | Two arrow plates, 0.24 × 0.24, flanking the window at `x = -4.28`, `y = 1.90`, `z = -2.35` and `z = -5.65`. Also `←`/`→`, `[`/`]`, and horizontal swipe when in range |
-| Position indicator | N dots, 0.05 dia, 0.12 apart, centred under the sill at `y = 0.88` — N read from `CONTENT.md`, never hardcoded |
+| Standoff | **5.60** along the face normal |
+| Lateral | **+0.55** along the face — offset, not head-on |
+| Eye height | §12.1's 1.68, unchanged |
+| Distance | **5.627** — what §2.1's board width was derived against |
+| Yaw | **derived**: `BEND.yawDeg − atan(lateral / standoff)` = 20° − 5.61° = **+14.39°** |
+| Pitch | **derived**: **+6.19°**, the centre of the board's *angular* extent from the pose, which is not its geometric centre because most of the board stands above eye height |
+| Ease | `easeInOutCubic` over **600 ms** |
+| Release | `Escape`, any movement input, the on-screen close control, or a click that hits nothing |
 
-**Transition between projects:** the lightbox cuts to black over 140 ms, holds 90 ms, fades up over 260 ms; the neon sign flickers on with the sequence in §11.3. Reduced motion: hard cut, no flicker, 0 ms.
+**The lock now pulls the visitor back, not forward, and that is a consequence of the board's size.** §3's clamp lets the eye reach 0.645 m from this wall; a 3.20 m board needs 5.60. So the pose is *further* from the board than a walking visitor can get on their own, and §12.5's radius has to be large enough to contain it — see §12.5.
 
-**Brightness of the screenshot — the rule that protects the whole scene.** The image plane is `meshBasicMaterial`, **not emissive**, tinted `#A6B2C6` (a 0.68 multiply) and `toneMapped: true`. Peak luminance must land **below the bloom threshold of 0.90**. The glow around the window comes from the *surround*, not the image: a 0.04 emissive border strip at intensity 1.40 and the RectAreaLight in §7.
+**The lateral offset is not styling.** Head-on at 5.60 the eye lands at `x = -3.767`, outside §3's clamp at `-3.60` entirely. Offset to `+0.55` the pose lands at `(-3.250, 1.68, 17.578)` — inside `BOUNDS`, and **0.13 m clear** of the stop §3.7's rubbish point imposes at `x = -3.38`. Both bounds are live here: one more decimetre of standoff and there is no legal lateral that satisfies them together.
 
-**Failure is quiet.** No spinner, no error, no white plane. A screenshot that fails to load leaves the lightbox showing its resting state: flat `#0E121A` with the ripple-glass normal map still catching the neon. The door still works.
+**Pitch is derived from the extent, not the centre.** From eye height at 5.627 m the board's bottom edge sits at −16.61° and its top at +28.99°; the centre of that span is **+6.19°**, while aiming at the board's geometric centre would give +7.29°. The difference is small and the reason is not: a surface that is mostly above eye height is not angularly centred on its middle, and taking the easy number would leave the top edge nearer the frame edge than the bottom.
+
+**The primitive is general, because §12.6 needs the same one.** A locked view is a target pose, an ease and a release; the guided path is four of them in sequence with a control point. One implementation, and the lock is its first consumer rather than its only one.
+
+### 2.1.2 The controls are on the screen, not on the board
+
+Paging, the position indicator and *open* live in a **2D overlay drawn over the world**, present only while §2.1.1's locked view is held. Nothing about them is painted on the board.
+
+| Control | |
+|---|---|
+| Previous / next | `‹` and `›`, either side of the indicator |
+| Position indicator | **N numbered stops**, the current one filled — N read from `CONTENT.md`, never hardcoded |
+| Open | Opens the project's live URL. The same action as §2.1's door, reachable without aiming at it |
+| Close | Releases the locked view — §12.5's required touch path |
+
+**They came off the board and the reason is legibility rather than taste.** Painted on the face they were 0.20 m plates carrying 0.038 m type, read at 5.6 m: about six device pixels a glyph on a phone. As DOM they are screen-space, so they are the same size at every distance and on every device, and they get real hit targets, real focus rings and real hover states — none of which a canvas texture on a quad has.
+
+**The board keeps its door, and that is the division.** The door is *in the world* and opens by being walked up to and clicked; the overlay is *over the world* and opens the same URL by being tapped. One is the thing, the other is the control panel for it, and a visitor who never locks the view still has a door.
+
+**This does not become the top nav.** §12.7's nav is always present after the gate; this appears with the lock and goes with it, so `Escape` closing the lock also closes these — one thing on screen, one way out.
 
 ### 2.2 The vending machine (bio station)
 
@@ -78,7 +151,7 @@ Reads the contact channels from `CONTENT.md` (`contact@jacinto.design`) plus the
 
 ### 2.4 What the surroundings carry
 
-**Nothing, with one named exception.** No project names on scenery. Nothing in the backdrop is clickable, hoverable, or raycast against. **The exception is the studio's own name, once, on §3.6's far building** — and it is written as an exception rather than smuggled in as a thirty-first string, because §11.4's list is *"never project-related"* and this is the one thing in the world that is. It extends the precedent §3.1 already sets: `終電` is there because *"it is the only place in the world that says it"*, and the piece is allowed to be signed. Two places where the world names itself, both deliberate, both recorded. Everything else in §2.4 stands: nothing in the backdrop is clickable, nothing is raycast against, and no *project* name appears on scenery — the projects still live only on §2.1's shopfront.
+**Nothing, with one named exception.** No project names on scenery. Nothing in the backdrop is clickable, hoverable, or raycast against. **The exception is the studio's own name, once, on §3.6's far building** — and it is written as an exception rather than smuggled in as a thirty-first string, because §11.4's list is *"never project-related"* and this is the one thing in the world that is. It extends the precedent §3.1 already sets: `終電` is there because *"it is the only place in the world that says it"*, and the piece is allowed to be signed. Two places where the world names itself, both deliberate, both recorded. Everything else in §2.4 stands: nothing in the backdrop is clickable, nothing is raycast against, and no *project* name appears on scenery — the projects still live only on §2.1's board.
 
 Decorative Japanese signage is drawn from the fixed list in §11.4 and is atmosphere only — if a string in the world is not from `CONTENT.md` and not from that list, it does not exist.
 
@@ -106,7 +179,7 @@ Decorative Japanese signage is drawn from the fixed list in §11.4 and is atmosp
 | Alley length | 46.0 (`z ∈ [-23, +23]`) |
 | Alley width | 9.0 (`x ∈ [-4.5, +4.5]`) |
 | Facade height | 14.0 west, 12.5 east (asymmetry stops it reading as a corridor) |
-| **Wall thickness** | **1.00**, all facades and end walls, inner faces at `x = ±4.5`. Set by the 0.55 shopfront recess in §2.1 — a thinner wall leaves too little behind it. Outer faces are never seen. |
+| **Wall thickness** | **1.00**, all facades and end walls, inner faces at `x = ±4.5`. Outer faces are never seen. |
 | Ground | `y = 0`, single plane **70 × 70** (overscan hidden by fog, or by a wall). Was 60 × 60 until §3.6 put a road past the bend — see there |
 | Kerb | 0.12 high, 0.60 wide, both sides, inner edge at `x = ±3.90` |
 | Gutter channel | 0.22 wide at `x = ±3.72`, 0.03 deep — standing water, roughness 0.06. **Expressed through the puddle mask, not as overlay geometry — see below.** |
@@ -158,6 +231,19 @@ Decorative Japanese signage is drawn from the fixed list in §11.4 and is atmosp
 
 **End wall height — 14.0, both ends.** This document gives heights for the two facades and none for the caps. They take the taller of the two, because a cap shorter than its neighbours opens a strip of sky in a world whose whole premise is that there is none. Derived from the constraint, not chosen.
 
+**The bend's face frame is derived once, because §2.1's board now mounts on it.** Everything below follows from `LAYOUT.ends.south` and §3's wall thickness — nothing here is authored, and nothing may be. A second derivation of this wall written next to the first is exactly §7.1's fault: change `angleDeg` or `returnLength` and the board slides off the wall it is bolted to, silently, with nothing in the diff wrong.
+
+| | Value |
+|---|---|
+| Box centre | `(−1.6809, 23.5000)` — `alley.x[0] + (returnLength ÷ 2)·cos 20°`, and `ends.south.z + wallThickness ÷ 2` |
+| **Face centre** | **`(−1.8520, 23.0302)`** — half a thickness inboard along the box's own local `+Z` |
+| Along | `(+0.9397, −0.3420)` — the face's length direction. `t` is metres along this from the face centre |
+| **Inward normal** | **`(−0.3420, −0.9397)`** — from the face into the alley, the direction a visitor stands in |
+| **Visible span** | **`t ∈ [−2.8175, +3.000]`** — the west 0.183 m of face is buried inside the west facade box and never renders |
+| Standoff at the clamp | **0.645 m minimum**, at `(0.75, 21.4)`, right at the panel's near edge; 2.21 m at `(0, 20)`, 4.09 m at `(0, 18)` |
+
+**The clamp is a rectangle and this wall is at 20°, so the standoff varies by nearly two metres across it.** That is why §2.1's reading distance is a *locked pose* rather than wherever the visitor happens to stop: the closest legal standing point to the face is under two thirds of a metre, which is not a distance anything can be read at.
+
 **"20° to the axis" means across the end, not along it.** The phrase admits two readings, and only one does the job the same sentence asks for: a wall swung 20° off the *long* axis runs nearly parallel to the alley and blocks nothing, while a wall across the end swung 20° off square hides the vanishing point. **The second reading is the one that holds.** Its west end meets the west wall and it opens toward `+X` — the visitor's left when facing `+Z`, which is the direction the alley is stated to bend. What lies past the opening is §16.2 and still unmodelled; at 42 m from spawn the fog is at ~0.21 transmittance and closes it unaided.
 
 **Facades run `z ∈ [-24, +24]`** — the alley length plus a wall thickness at each end, so the facades meet the outer faces of both caps and no corner shows a seam.
@@ -169,7 +255,7 @@ Placed as instanced geometry, reviewed as a diff, bounding boxes added as they g
 | Item | Count | Solid? |
 |---|---|---|
 | Shuttered storefronts (3 shutter variants) | 14 | yes |
-| Dead vending machines (unlit, dark) | 5 | yes |
+| Dead vending machines (unlit, dark) | **4** | yes |
 | Red paper lanterns on brackets | 11 | no |
 | Vertical neon signs (decorative, §11.4) | 9 | no |
 | Air-con condensers on brackets | 16 | no |
@@ -179,7 +265,7 @@ Placed as instanced geometry, reviewed as a diff, bounding boxes added as they g
 | Traffic cone + barrier | 3 | yes |
 | Steam vents (grates) | 3 | no |
 | Overhead cable spans | 34 | no |
-| Utility poles | 6 | yes |
+| Utility poles | **2** | yes |
 | Puddle decals | 18 | no |
 | Ripple emitters | 12 | no |
 | Cross-street vehicles (§3.6, past the bend) | 6 | no — unreachable |
@@ -189,6 +275,10 @@ Placed as instanced geometry, reviewed as a diff, bounding boxes added as they g
 
 **Scooters, not bicycles.** This line read *bicycles leaning* until §3.7 built it, and the change is technical before it is anything else. Everything in this world is boxes and cylinders (§3.4), and a bicycle at that vocabulary is two wire wheels and a lattice of thin tubes — it reads as a mess at any distance the alley offers. A scooter is a floorboard, a cowl, a leg shield, a seat and two fat wheels: five primitives that read as one object at 20 m and still hold up at 2 m. It is the same object in the same place doing the same job, drawn in a vocabulary this world already has.
 
+**And then five primitives were not enough, so the scooter became a model.** The paragraph above is right about a bicycle and it was wrong about how far a box scooter carries: at 20 m it reads as one object, and at 2 m — which is where three of the four actually stand, on the walkable band beside a wall the visitor is walking along — it reads as a stack of crates with two discs beside it. **The vocabulary rule was never about boxes; it was about not putting one object in the alley at a fidelity nothing around it shares** (§3.4, §3.7), and §3.6 already broke the letter of it for exactly that reason: the cross-street vehicles are glTF models because a box car at 40 m through fog is a box. The scooter is the same argument at 2 m instead of 40. See §3.7 for what it costs and where the model came from.
+
+**Two counts in this table moved and are recorded rather than quietly corrected.** The vending machines went 5 → 4 when §2.1 took the bend and the fifth was standing in front of the one content surface in the world; the utility poles went 6 → 2 across three passes of `audit()` failures and one thing a screenshot showed that no numeric rule was checking. Both are argued where they happened, in §3.7.
+
 ### 3.3 The upper facade — window bays
 
 Above the shopfront line both facades are flat colour across 48 m, and it is the surface a visitor looking up actually meets. It carries a **window grid painted to a canvas and used as both `map` and `emissiveMap`** — the same pixels in both, so a window cannot be lit in colour and dark in glow.
@@ -197,7 +287,7 @@ Above the shopfront line both facades are flat colour across 48 m, and it is the
 
 | Value | | From |
 |---|---|---|
-| Band base | `y = 4.60` | top of the §2.1 shopfront recess — the tallest ground-floor feature |
+| Band base | `y = 4.60` | §3.4's fascia line — see the note below |
 | **Floor height** | **2.85** | free |
 | Floors | `floor((facadeHeight − 4.60) ÷ 2.85)` → **3 west, 2 east** | the wall's own height |
 | Band | west `y ∈ [4.60, 13.15]`, east `y ∈ [4.60, 10.30]` | the above |
@@ -210,9 +300,11 @@ Above the shopfront line both facades are flat colour across 48 m, and it is the
 | Emissive | **0.55** | below the 0.90 bloom threshold — below |
 | Panel offset | 0.004 in front of the wall face | §6.1's depth arithmetic, unchanged |
 
+**The band base was derived from something that no longer exists, and it stays anyway.** `y = 4.60` was the top of §2.1's shopfront recess, *"the tallest ground-floor feature"*. §2.1 moved to the bend and the recess is gone. The number is kept and its provenance re-stated as §3.4's fascia line, because 4.60 is now load-bearing in the other direction: §3.3's floor counts, §3.4's band top, every sign `z` resolved against that band, and the five §7.1 lights seated on those signs all derive from it. Re-deriving it would redraw both facades to move a line nothing is asking to move. **A value whose reason has expired is not automatically a value that is wrong** — but it has to be re-justified in place rather than left pointing at a deleted section.
+
 **Lit windows are cool, and that is a constraint rather than a taste.** §17: *three things are lit warmer than everything else and they are the only three things you can touch.* A hundred and fifty warm windows break that sentence outright. `rain` is the only cool unsaturated token in §4 not already spoken for by a light or a content surface.
 
-**Emissive 0.55, under the knee.** §8.1's dimmest rung that still touches bloom is the station plate at 0.95, against a threshold of 0.90. Windows are the most numerous emissive thing in the world by an order of magnitude; put them anywhere on the bloom side and two 48 m walls flare brighter than the shopfront. 0.55 sits between the info panel backlight at 0.70 and the screenshot at 0 — lit, never flaring.
+**Emissive 0.55, under the knee.** §8.1's dimmest rung that still touches bloom is the station plate at 0.95, against a threshold of 0.90. Windows are the most numerous emissive thing in the world by an order of magnitude; put them anywhere on the bloom side and two 48 m walls flare brighter than the board. 0.55 sits between the surround strip and the screenshot at 0 — lit, never flaring.
 
 **They light nothing, and they do not reach the floor.** An emissive material in three.js illuminates nothing but itself, and §7's ten dynamic lights are all allocated with none spent here — so the windows never fall on the alley. §1's *every sign in the alley is in it, upside down and softer* does **not** extend to them either: measured on the built wall, a lit window leaves no trace in the reflection, and forcing the emissive to 12 — twenty-two times the shipped value — changes it no further. Between the §6 blur of 420 × 100 at `mixBlur` 0.85 and a source that starts 4.6 m up, nothing of this size survives the pass. This is stated because it is the tempting fix in the wrong direction: **a wall of windows can never be brightened into the floor**, and any attempt to get them there by climbing §8.1's ladder buys a blown facade and no reflection.
 
@@ -226,7 +318,23 @@ Above the shopfront line both facades are flat colour across 48 m, and it is the
 
 **512, not the §11.1 painter scale.** §11.1's 4 device-px per world cm is a signage figure; applied to an 8 m bay it asks for 3200 px and spends §15's whole 14 MB texture budget on one wall. 512 across 8.00 m is 64 px/m, and the closest a visitor gets to any window is about 4.5 m — from the walkable clamp the §12.2 pitch stop of 62° cannot reach the band base on the near wall at all, so that grid only opens up as you step away from it.
 
-**No collision.** The bays sit flush on walls at `x = ±4.5` and §3's hard clamp already stops the eye at `±3.60`. Bounding boxes are for what protrudes into the alley — the §3.2 standpipes, crates and poles.
+**The windows are recessed, and the recess is geometry.** A painted grid on a flat quad is a decal of a building, and it read as one: from the alley floor the whole upper facade was a single unbroken plane with rectangles printed on it, which is the one thing on both walls that never catches a highlight or turns a corner. The fix is §3.4's own trick — **the recess is faked by standing everything else proud** — applied one band higher.
+
+| Value | | From |
+|---|---|---|
+| Pier width | **0.65** interior, **0.325** at the bay edge | the window pitch: `(1.60 − 0.95) ÷ 2` each side, so two neighbours make one 0.65 pier and two bays butt into one |
+| Pier depth | **0.12** proud of the panel | free — the jamb reveal |
+| Spandrel height | `0.95` below the first sill, **1.50** between floors, the remainder at the parapet | the sill and head lines already in this table |
+| Spandrel depth | **0.09** proud of the panel | below — it is not 0.12 |
+| Count | **114** — 10 per west bay, 9 per east | 6 piers + one spandrel per floor gap, × 6 bays × 2 walls |
+| Draw calls | **1** | one `InstancedMesh` of scaled unit boxes |
+| Colour | `facade` — the panel's own base | it is the same wall, not a frame on it |
+
+**The spandrels are 0.09 and the piers 0.12, and the 0.03 is the whole reason it works.** Piers run the full band height and spandrels the full bay width, so every one of the thirty crossings has two boxes meeting — and at equal depth their front faces are **coplanar**, which is z-fighting across the entire facade at exactly the distance where it flickers worst. Setting them 0.03 apart makes the piers win every crossing, so they read as continuous verticals with the spandrels infilling between: a concrete-frame facade, which is what these buildings are. The alternative — cutting the piers into per-floor segments so nothing overlaps — is 342 instances instead of 114 to avoid a problem one number solves.
+
+**No shadow map is involved and none is needed.** §15 has them off and §7's ten lights are all spent in the alley. What makes the recess read is that a reveal is a *surface facing sideways*: the jamb and head faces take §7's grazing light and §5.1's lightformers at a different angle from the wall in front of them, so they come out darker without anything being darkened. **Depth in this world is normals, not shadows** — the same reason §3.4's shopfronts work at all.
+
+**No collision.** The bays sit flush on walls at `x = ±4.5` and §3's hard clamp already stops the eye at `±3.60`. Bounding boxes are for what protrudes into the alley — the §3.2 standpipes, crates and poles. The 0.12 the piers now stand proud does not change that: it reaches `x = ±4.376` and the clamp is 0.78 m in front of it.
 
 **West loses its warmth above 4.60.** One texture for both walls means one base colour, `facade` `#10141D`; the west wall's `facadeWarm` `#151119` stays on the box below the band and behind it. The two differ by about 1% of a channel, and the step falls at 4.6 m through fog.
 
@@ -243,7 +351,7 @@ The §3.2 inventory line, built out: **14 shuttered storefronts, 7 per wall, 3 s
 | Aperture | full unit width less 0.30 each side, `y ∈ [0.10, 2.55]`, recessed **0.35** | free |
 | Shutter | slats **0.09** pitch, instanced boxes — see below | free |
 | Shutter roll | cylinder r 0.16, at the aperture head | free |
-| Doorway | **0.90 × 2.05**, recessed **0.45**, at one end of the unit, side alternating | height from §2.1's door, which this is the ordinary version of |
+| Doorway | **0.90 × 2.05**, recessed **0.45**, at one end of the unit, side alternating | 2.05 is an ordinary door — see §16.12 on where the number came from |
 | Sign box | **1.30 × 0.70** at `y = 2.85`, standing 0.14 proud, **centred over the doorway** | free |
 | Fascia | `y ∈ [2.55, 4.00]`, flush | the remainder |
 | **Awning** | 5 of 14, depth **1.25**, underside `y = 2.60`, front bar cylinder r 0.05 | clears the 2.55 head, stops under the 2.85 sign box |
@@ -255,12 +363,36 @@ The §3.2 inventory line, built out: **14 shuttered storefronts, 7 per wall, 3 s
 
 **Colour, and the §4 ratio.** Sign boxes carry the alley's accent, and the ratio in §4 is what assigns them: 55% magenta/pink, 30% sodium/lantern, 12% cyan, 3% blue. **It is measured over the seven *lit* boxes, not over all fourteen** — an unlit box carries no colour at all, so counting it would make the ratio describe something nobody can see. Seven gives **4 / 2 / 1 / 0**; blue rounds away, which is correct for one alley when §4 calls it *rare, distance signs only*. Within a bucket the two tokens alternate. Everything not a sign box or a spill is `shutter`, `concrete`, `metalDark` or `facade`.
 
+**Every flat surface in the alley was one uniform value, and that is what made it read as plastic.** A `MeshStandardMaterial` with a single `color` and a single `roughness` has, by construction, the same response at every point on it — so a 6 m fascia and a 0.20 m plinth return exactly the same highlight, and §6's wet ground beside them is the only surface in frame that is not perfectly even. It is not a lighting problem and no amount of §7 fixes it. **The wall needs to vary, and the cheapest place to vary it is the material, not the geometry.**
+
+**One height field, two maps, and it costs no draw calls.**
+
+| Value | | From |
+|---|---|---|
+| Grain canvas | **512²** desktop / **256²** mobile | §3.3's precedent — a wall does not get §11.1's signage scale |
+| Slots | `map` **and** `roughnessMap`, one texture | below — they cannot disagree, for §3.3's reason |
+| Normal canvas | **512²** / **256²**, Sobel of the same field | below |
+| Applied to | §3.1's facade boxes and kerbs, §3.4's plinth · pier · fascia · awning, §3.3's piers and spandrels | the large flat surfaces, and only those — see below for the one that could not take it |
+| Repeat | `concrete` **3 × 3**, `facade` **2 × 2**, awning fabric **4 × 4** | below — UV space, not world space |
+| `normalScale` | `concrete` **0.60**, `facade` **0.45**, awning **0.35** | free |
+| Cost | **0** draw calls, **+2.80 MB** desktop / **+0.70 MB** mobile | §15 |
+
+**White is the material as §4 and §8 authored it, and everything below white is damp.** That is the whole rule, and it is what lets one greyscale canvas fill both slots. `map` multiplies the §4 token, so darker texels darken it; `roughnessMap` multiplies the §8 roughness, so the same texels make it **glossier**. Those two together are exactly what a damp patch on concrete is in the rain this world is made of — darker and shinier — which is why the polarity that would be wrong on a dry wall is right on this one. And because both are multiplies, the map can only ever take a surface *away* from its authored value in one direction: **nothing in this canvas can make a surface rougher or lighter than §8 says it is.** There is no path from here to a wall that has drifted off the palette.
+
+**Not two textures for the two slots.** §3.3 already argues this for its window bays — one image cannot disagree with itself, where two let a surface be dirty in colour and clean in gloss, which is a fault nobody finds by looking because the wall simply reads slightly wrong. The one thing worth recording is that three decodes `map` from sRGB and reads `roughnessMap` raw, so the roughness excursion arrives compressed against the albedo one. That is left alone: it is the safe direction, and correcting it would mean two textures.
+
+**The speckle is fine on purpose, because the UVs are stretched and nothing can stop that.** Everything here is a unit box scaled per instance, so a 6.20 m fascia and a 0.30 m pier sample the same 0 → 1 UV and the texture arrives stretched by whatever that instance's aspect happens to be — up to about 4:1. A blotch or a streak stretched 4:1 reads as a smear and gives the game away instantly; **isotropic speckle stretched 4:1 is still speckle.** So the field is aggregate-scale grain with broad soft damp patches over it, and the repeat is set high enough that the features are small in UV space. This is a real constraint of instancing and it is answered by choosing the right kind of noise rather than by fighting it.
+
+**The shutters and the small metal parts get nothing.** Slats are already geometry at a fixed 0.09 pitch — this section spends draw calls on that specifically so the shutters do not need a map — and a jamb, a lintel or a shutter roll is too small on screen to resolve a 512² texture at any distance the alley offers. Mapping them would cost the same and buy nothing.
+
+**§3.3's window bay panel cannot take it, and the reason is worth stating rather than working around.** That material already carries a painted image in `map` *and* `emissiveMap`; the grain would have to take the `map` slot from it, which is a wall of windows with no windows in it. **The frame in front is the right place anyway** — it is the part that is actually concrete, and now that it stands proud it is the part catching §7's light at an angle. The one surface that could not have the treatment is the one that did not need it.
+
 **Two new rungs on §8.1**, both placed against §17's rule that the only three things lit warmer than the rest are the three you can touch:
 
 | Element | Emissive | |
 |---|---|---|
 | Open-shutter spill | **1.10** | above the knee, so it glows — but under the paper lanterns at 1.30 and every content surface |
-| Storefront sign box | **0.85** | under the 0.90 threshold. Fourteen of these; on the bloom side they would out-glow the shopfront |
+| Storefront sign box | **0.85** | under the 0.90 threshold. Fourteen of these; on the bloom side they would out-glow the board |
 
 **Seven sign boxes are lit** — the five non-closed units and two of the nine closed. An unlit box is `shutter` and not emissive at all, which is what a shut shop's sign looks like. A unit whose box is suppressed by a §3.5 neon sign is excluded before the seven are dealt, so the count survives the suppression.
 
@@ -274,7 +406,7 @@ The §3.2 inventory line, built out: **14 shuttered storefronts, 7 per wall, 3 s
 
 **The spill is a 0.55 band on the shop floor, not the whole opening.** Filling an open aperture makes a 2.55 × 2.30 slab of flat `sodium` — a billboard that beat every content surface in the alley before any of them had been built. Ajar shows nearly all of its 0.62 slot, which is the point of that state; open shows 0.55 of lit floor beneath 1.75 of dark interior, which is what a lit room behind a raised shutter looks like from the street.
 
-**Layout is generated, not placed.** Three slots are reserved for the content surfaces and no unit may enter them: west `z ∈ [−6.60, −1.40]` for §2.1's shopfront, west `[12.90, 15.10]` for §2.3's payphone, east `[5.10, 6.90]` for §2.2's vending machine. What is left is five segments; the seven units per wall are apportioned across them by length (largest remainder), widths are drawn to fit with no two neighbours equal, and the slack is spread evenly as joints. One designated joint per wall widens to the 1.80 service gap.
+**Layout is generated, not placed.** Three slots are reserved for the content surfaces and no unit may enter them: west `z ∈ [−6.60, −1.40]` — **now a deliberate gap, since §2.1 moved to the bend; see §16.12** — west `[12.90, 15.10]` for §2.3's payphone, east `[5.10, 6.90]` for §2.2's vending machine. What is left is five segments; the seven units per wall are apportioned across them by length (largest remainder), widths are drawn to fit with no two neighbours equal, and the slack is spread evenly as joints. One designated joint per wall widens to the 1.80 service gap.
 
 **Each width aims at its fair share of what is left, not at the largest that fits, and this is not a detail.** Taking the largest feasible size is legal at every step and still wrong: one 6.20 early in a 14.30 m segment leaves nothing but the narrowest size for the two behind it, and the first generated wall came out **eight of fourteen at 3.60** with two adjacent pairs identical. Aiming at `remaining ÷ slots left` and taking a coin between the two nearest sizes spreads them across all five. Five sizes exist so the wall does not read as one shape repeated; a greedy pick defeats them while satisfying every constraint that was actually written down.
 
@@ -449,6 +581,10 @@ Headlights take **`signWhite`**, not `sodium`, and §17 decides it: *three thing
 
 **Not solid, and no boxes.** The whole street lies past `z = 24.60` against §3's clamp at `z ≤ 21.40`, behind a 14 m wall that spans the rest of the end. §12.4's registry gets nothing here; unlike §3.4's storefronts there is not even a boundary to be inert against.
 
+**The carriageway is wet, and it was the only ground in the world that was not.** §6.1's reflector stopped at `z = 26.0` and this road starts at 26.2 — a deliberate 0.2 m gap so no material seam landed under a light — with the consequence that looking out of the alley mouth you saw forty metres of mirror end in a flat dark band exactly where the traffic is. **A boundary chosen to hide a seam produced a much louder one**: the road read as a different substance rather than as the far side of a junction.
+
+The strip now runs to `z = 33.0` and takes the whole carriageway with it, so the far building's lit panels, §3.6's own headlights and the cars themselves land in the road under them. **It costs no extra render pass**, which is why it is the answer rather than a second reflector: `MeshReflectorMaterial` renders the scene once from a mirrored camera into a fixed-size target, and that target does not grow with the plane. What it costs is **resolution spread** — the same texels over 13% more length, so every reflection in the world is 13% coarser. A second reflector would have kept the alley sharp and doubled §15's most expensive pass to do it, for a road seen through a 3.36 m slot at 30 m through §5's fog. **That is the wrong trade and it is worth naming, because *add another one* is always the first idea.**
+
 **§13 — the traffic holds still.** Cars stop where they are, lights on, rather than slowing: a slower car reads as broken in the same way §13 says slower rain does. Peripheral motion glimpsed through a 3.36 m slot is close to the worst case reduced motion exists to remove, and nothing is lost by removing it, because there was never anything out there to reach. The hold positions above put one car in each lane inside the sightline from spawn, so what a reduced-motion visitor meets is stopped traffic rather than an empty road.
 
 **Measured, and both numbers are worth keeping.** Desktop peaks at **84 draw calls** of §15's 140, looking down the alley from spawn with the whole world in frame. **Mobile peaks at 80 of 90**, and that is the number to watch: §3.2 still owes eleven inventory lines, §2 owes three content surfaces and §9 owes a post-processing chain, against ten calls of headroom. The street is not where that gets paid back — it is eight calls for the envelope and eleven for six vehicles, all of them instanced — but it is where the ceiling became visible.
@@ -459,7 +595,7 @@ Headlights take **`signWhite`**, not `sodium`, and §17 decides it: *three thing
 
 ### 3.7 Street props — the band you walk through
 
-The rest of the §3.2 inventory that stands on the ground: **5 dead vending machines, 4 scooters, 9 crate stacks, 2 cones and a barrier, 22 standpipes, 6 utility poles, 11 paper lanterns**, plus three things this section adds — **a food cart, 2 rubbish points and the guardrail across the alley mouth**.
+The rest of the §3.2 inventory that stands on the ground: **4 dead vending machines, 4 scooters, 9 crate stacks, 2 cones and a barrier, 22 standpipes, 2 utility poles, 11 paper lanterns**, plus three things this section adds — **a food cart, 2 rubbish points and the guardrail across the alley mouth**.
 
 §3.4 built the wall and §3.5 built everything above head height. This is the layer between them, and it is the only one the visitor can walk into. **Everything here is boxes and cylinders**, the §3.4 vocabulary, for the reason §3.4 gives: sculpted geometry in this alley would be one object at a fidelity nothing around it shares.
 
@@ -467,15 +603,15 @@ The rest of the §3.2 inventory that stands on the ground: **5 dead vending mach
 
 | Object | Count | Size (along alley × deep × high) | Solid |
 |---|---|---|---|
-| Dead vending machine | 5 | **1.12 × 0.82 × 1.94** — §2.2's body verbatim | yes |
+| Dead vending machine | 4 | **1.12 × 0.82 × 1.94** — §2.2's body verbatim | yes |
 | Food cart | 1 | **2.10 × 1.00 × 2.10** | yes |
-| Scooter | 4 | **1.75 × 0.62 × 1.08**, leaning **8°** on a side stand | yes |
+| Scooter | 4 | **glTF model**, scaled to **1.75** long → 0.66 × 1.28, leaning **8°** on a side stand | yes |
 | Crate | 9 stacks of 2–4 | **0.52 × 0.36 × 0.31** each | yes |
 | Traffic cone | 2 | base r **0.17**, top r **0.035**, **0.56** high, on a 0.36 foot | yes |
 | Barrier | 1 | board **1.20 × 0.20** at `y ∈ [0.56, 0.76]`, legs splayed 10° | yes |
 | Rubbish point | 2 | drum r **0.30** × **0.74** high, lid r 0.32, two sacks beside it | yes |
 | Standpipe | 22 | r **0.055**, from `y = 0.10` to 2.60 or 4.00, two clamps each | 12 of them |
-| Utility pole | 6 | r **0.11**, **8.40** high, crossarms at `y = 6.40` and `7.10` | yes |
+| Utility pole | **2** | r **0.11**, **8.40** high, crossarms at `y = 6.40` and `7.10` | yes |
 | Paper lantern | 11 | shade r **0.135** × **0.36**, on a 0.34 bracket arm at `y = 3.46`, **painted paper** | no |
 | Mouth guardrail | 1 | 5 posts 0.07², two rails at `y = 0.84` and `0.52` | yes |
 
@@ -485,7 +621,39 @@ The rest of the §3.2 inventory that stands on the ground: **5 dead vending mach
 
 **Utility poles stand at `|x| = 3.72`, on the gutter line, not against the wall.** §3.4's fascia projects 0.35 across the full width of every unit from `y = 2.55` up, so an 8.4 m pole anywhere behind `|x| = 4.15` is buried in the fascia for three quarters of its length. The gutter centre is the line §3 already draws down the alley, and a pole on it clears everything — at the cost of standing 0.11 m inside the walkable band, which is what a utility pole in a Tokyo alley actually does. **No pole stands in front of an awninged unit**: the awnings reach `|x| = 3.25` at `y ∈ [2.60, 2.67]`, so those five z spans are closed to poles on that wall.
 
+**No pole stands within 1.30 m of a lit sign, and this took four passes and three screenshots to write down.** It is the same fault every time: a pole reaches 8.40 m and is the only prop that goes above 2.60, and a lit sign box at `y ∈ [2.85, 3.55]` or a §3.5 sign at 3.00 – 3.36 is the only thing on the wall up there — so where their `z` ranges meet, the pole runs down the middle of the one thing on that wall anybody is looking at.
+
+**A `z` gap is not the test, and believing it was is what let this recur.** A pole stands at `|x| = 3.72` and a §3.4 sign box faces `|x| = 4.01`, so there is **0.29 m** of depth between them; a §3.5 sign projects to `|x| = 3.78`, which is *inside* the pole's own 0.22 m diameter and therefore an intersection rather than an occlusion. At 0.29 m of separation the two are effectively coplanar, and every clearance that matters is the one along the wall.
+
+**1.30 m, derived rather than eyeballed.** A visitor on the centre line sees the pole's silhouette land not on the pole's own `z` but at `z_pole + (M − 1)(z_pole − z_eye)`, where `M = d_sign ÷ d_pole = 4.01 ÷ 3.72 = 1.078`. Walking the length of the alley, that term swings ±3.3 m, which would put every pole in the world inside some sign's exclusion zone — and it is over-strict, because at 20 m through §5's fog a 0.22 m pole across a 1.30 m sign reads as depth, not as a fault. Scoped to the range where a sign is actually legible and dominant, **±8 m**, the requirement is `Δ > (halfWidth + poleRadius·M + 0.078·8) ÷ 1.078` = **1.29**. The figure a screenshot gave was 1.2. Taking 1.30.
+
+**Held as 0.55 m of clear air between the two edges rather than as 1.30 centre-to-centre**, because a §3.4 sign box is 1.30 wide and a §3.5 sign is 0.70, and one centre distance applied to both is two different rules wearing one number. `0.55 + 0.65 + 0.11` returns the 1.31 the derivation asked for on a sign box, and the same constant means the same thing on a sign that is half the width.
+
+**It applies to lit signs only, and that is not laziness.** An unlit sign box is `shutter` with no emissive term — a dark slab on a dark wall — and a pole in front of one is invisible from any angle. Extending the rule to all fourteen would close most of both walls to poles in order to protect something nobody can see.
+
+**The count went 6 → 2, and `audit()` moved every one of them.** Two poles were standing in front of lit sign boxes and it took a screenshot to notice. The first move put two of them under an awning — `pole-through-awning`, a rule that had been in this file since §3.7 and had never once fired, firing twice on a single edit. The remaining east pole then failed a `z`-gap check that was measuring the wrong thing, and the two placements that satisfied *that* landed on a rubbish point and a scooter. **Four `audit()` failures on four consecutive edits is the wall saying it has no room**, and the honest response is to accept it: the east wall between `z = −15` and `−9` carries an awning, a lit box, §3.5's sign 1, a rubbish point and a scooter, and a prop that has to be shuffled five times to satisfy rules it keeps breaking was never placed, only fitted.
+
+**The lesson belongs to the audit, not to the poles: a placement rule that only lives in a comment is a rule that has not been checked.** `pole-through-sign-box` existed as a paragraph in `lib/props.ts` for two passes while the fault it describes shipped twice. It is a real rule now, alongside the five that were already catching things nobody was looking for.
+
 **Standpipes run at `|x| = 4.09`, in front of the fascia rather than behind it**, for the same arithmetic one line up — 4.15 less the pipe radius. Their z positions are the §3.4 joints, which is where a downpipe between two buildings goes, and which are uneven for free because §3.4 generated them.
+
+**The scooter is a glTF model, and it is the second time this world has bought one.** §3.2 argued that five primitives read as one object at 20 m, which is true, and irrelevant to where three of the four actually stand: on the walkable band beside a wall the visitor walks along, at about 2 m. At 2 m a floorboard, a cowl, a leg shield, a seat and two discs read as a stack of crates. **The vocabulary rule was never "boxes and cylinders"; it was "nothing at a fidelity nothing around it shares"** — and §3.6 spent that argument in the other direction for the cross-street cars, because a box car at 40 m is a box. This is the same sentence at 2 m.
+
+| Value | | From |
+|---|---|---|
+| Model | `public/vespa.glb` — Quaternius, CC0, via poly.pizza | the same source and licence as §3.6's three cars |
+| Weight | **88 kB**, 1 665 triangles, no embedded textures | measured |
+| Target length | **1.75**, nose to `+X` | §3.2's own figure, unchanged — the model is scaled to the world, never the reverse |
+| Measured after scaling | **1.75 × 0.66 × 1.28** | §3.6's rule: normalise, then *measure*, never predict |
+| Materials | its 5 → §4's **3**: `shutter` body, `void` tyres, `metalDark` frame | below |
+| Draw calls | **+3** — one `InstancedMesh` per merged material, four scooters in each | below |
+| Triangles | **+6 660** across all four | 1 665 × 4 |
+
+**Its five materials collapse to three, and they are the three §3.2 already named.** The model ships a light body, a near-black, a dark grey, an 8-triangle gold and a 12-triangle chrome; the last two are a headlamp lens and a mirror on a scooter that is parked at 3am with nobody on it, so they fold into the frame. What comes out is `bodyColor` `shutter`, `darkColor` `void` and `metalColor` `metalDark` — **the exact three tokens `PROPS.scooter` has declared since it was five boxes.** The mapping was not designed to land there; it landed there because a scooter has a body, tyres and a frame either way.
+
+**Merged per material, then instanced — `lib/carModels.ts` already does this and is reused verbatim.** Mounted as authored the model is five primitives per scooter, twenty draw calls for four parked bikes. Baked to world space, merged by material and mounted as one `InstancedMesh` per merged part, it is three for all four. That file was written for §3.6 with one caller; this is the second, and it needed no changes — which is the test of whether the split between *what a model is* and *where it stands* was drawn in the right place.
+
+**It leaves §3.7's twelve buckets alone.** The box scooter's parts shared `InstancedMesh`es with the crates, the vending machines and the cart — they were free at the margin, so this genuinely costs three calls rather than trading them. §15's mobile column is over cap and this makes it worse; see there.
 
 **Nothing is evenly spaced, and the positions are authored rather than generated.** §3.5's nine signs and §3.6's six vehicles set the precedent: a list this short is better read than run. The lists live in `lib/props.ts`, not here — this section gives the sizes, the counts and the rules, the way §3.5 gives them for the signs. What is *derived* is the **standpipe** anchors, which come off §3.4's generated joints.
 
@@ -499,7 +667,19 @@ The rest of the §3.2 inventory that stands on the ground: **5 dead vending mach
 
 **One canvas for eleven, and the instancing is why.** §15 already lists lanterns among the instanced meshes; sharing the material is a precondition of that, so the texture cannot vary per lantern. It costs **0.35 MB** and buys the identity of the most-repeated warm object in the alley.
 
-**One thing lights up, and it is not on the ladder twice.** The food cart's canopy is lit from underneath at **`sodium`, emissive 1.10** — §8.1's open-shutter rung, reused rather than extended, because it is the same phenomenon: warm light falling out of a place with nobody in it. The paper lanterns go to **1.50 authored / 2.22 raised**, up from 1.30: eleven of them are the warm spine of this alley and they were reading as dull red shapes rather than as lit paper. Nothing else here is emissive. The cones' bands, the vending fronts and the guardrail are lit by §7 or they are not lit at all, which at 3am is the honest answer for all three.
+**Two things light up, and neither is on the ladder twice.** The food cart's canopy is lit from underneath at **`sodium`, emissive 1.10** — §8.1's open-shutter rung, reused rather than extended, because it is the same phenomenon: warm light falling out of a place with nobody in it. The paper lanterns go to **1.75 authored / 2.77 raised**, up from 1.30 and then 1.50: eleven of them are the warm spine of this alley and they were reading as dull red shapes rather than as lit paper. The cones' bands, the vending fronts and the guardrail are lit by §7 or they are not lit at all, which at 3am is the honest answer for all three.
+
+**And two of the four scooters have their headlamp on**, which is the one thing a parked vehicle can do to stop reading as scenery. The model's `Material.004` is 8 triangles at the nose — narrow, high, forward — which is a headlamp lens and nothing else; it was folded into `metalColor` when the model landed because it was too small to earn a draw call, and switched on it earns one.
+
+| Value | | From |
+|---|---|---|
+| Lit | **2 of 4** — `scooter:0` at west `z = −18.3`, `scooter:2` at east `z = +8.4` | below |
+| Colour | **`signWhite`**, emissive **§8.1's `vehicleHeadlight` rung** | §3.6's car headlights, verbatim — same object, same job |
+| Cost | **+1** draw call | the lens leaves `metalColor` and becomes its own instanced mesh over the lit two |
+
+**Which two is the point, not how many.** One sits 1.2 m from §12.1's spawn so the visitor meets it in the opening beat; one is mid-alley on the opposite wall. The pair reads as *a couple of them* rather than as a rule about scooters, and four lit headlamps in forty-four metres is a car park. **The dark two have no lens at all** — eight triangles of unlit acrylic on a near-black bike at 3am is nothing to look at, and drawing them would cost a second instanced mesh to render what cannot be seen.
+
+**`signWhite` and not a warm token, and §17 decides that** exactly as it decided §3.6's cars: *three things are lit warmer than everything else and they are the only three you can touch.* A warm headlamp two metres from the visitor would be the fourth.
 
 **§17 survives the food cart, and the lanterns are the proof.** *Three things are lit warmer than everything else and they are the only three things you can touch.* Eleven paper lanterns at 1.30 already sit **above** the cart's 1.10 and were always in §3.2 — if eleven of those do not break the sentence, one cart does not. It also carries **no dynamic light**: §7's cap of ten is fully spent, and what actually makes the three content surfaces dominant is that each has a light of its own (§7 #2, #4, #5). An emissive material illuminates nothing but itself. The cart sits on the east wall at the far end, past the payphone, so it is the last thing before the bend and the first warm thing that is not a destination.
 
@@ -517,10 +697,12 @@ The rest of the §3.2 inventory that stands on the ground: **5 dead vending mach
 
 | Measured | | |
 |---|---|---|
-| Desktop peak | **99** of §15's 140 | at spawn, whole alley in frame |
-| **Mobile peak** | **93 of 90** | at spawn, and identical from the north clamp |
-| Triangles | 117 k desktop / 54 k mobile | of 350 k / 220 k — not close |
-| Collision boxes | 43, of which **30 can fire** | see below |
+| Desktop peak | **101** of §15's 140 | at spawn, whole alley in frame |
+| **Mobile peak** | **95 of 90** | at spawn, and identical from the north clamp |
+| Triangles | 157 k desktop / 89 k mobile | of 350 k / 220 k — not close |
+| Collision boxes | 38 prop boxes of 66 in the world, of which **25 can fire** | see below |
+
+*(Re-measured after the §2.1 board, the scooter model and its headlamp, and §3.3's reveal grid. It was 99 / 93 with 43 boxes when this section shipped; the board and its neighbours account for the rest. Taken as the frame **maximum** through a wrapped `gl.render`, because §9's composer calls it about 24 times a frame and `renderer.info` resets on every one of them.)*
 
 **§15's mobile draw-call budget is now exceeded, and this is the section that crossed it.** §3.6 measured 80 of 90 and named the ceiling as the number to watch; §3.7 costs thirteen and lands at **93**. Everything about the props is already instanced, so the ladder's *instance harder before deleting anything* has been spent. **The lever that remains is merging by material rather than by (geometry, material)** — folding `box + cylinder` of one surface into a single merged geometry takes the twelve buckets to eight and the peak to **89**. It costs nothing visually and it is the same technique §3.6 used for the vehicles.
 
@@ -543,11 +725,11 @@ Every colour in the world comes from this table. Nothing else.
 | `void` | `#04060B` | scene background, deepest shadow |
 | `asphalt` | `#0A0E15` | dry road base |
 | `asphaltWet` | `#070A11` | wet road base |
-| `facade` | `#10141D` | building walls |
-| `facadeWarm` | `#151119` | west facade, faintly warmer |
-| `shutter` | `#161B24` | roller shutters |
-| `concrete` | `#1A1F28` | kerbs, plinths, poles |
-| `metalDark` | `#1E242E` | brackets, condensers, railings |
+| `facade` | `#1C2333` | building walls |
+| `facadeWarm` | `#251E2C` | west facade, faintly warmer |
+| `shutter` | `#272F3F` | roller shutters |
+| `concrete` | `#2E3646` | kerbs, plinths, poles |
+| `metalDark` | `#353F51` | brackets, condensers, railings |
 | `neonMagenta` | `#FF2E6A` | primary neon, the alley's signature |
 | `neonPink` | `#FF6FA5` | secondary neon, softer signs |
 | `neonCyan` | `#3BD9FF` | counter-accent, awning underside |
@@ -564,6 +746,28 @@ Every colour in the world comes from this table. Nothing else.
 | `uiDim` | `#7C879B` | 2D overlay secondary text |
 
 **Neon ratio across the alley — hold this, it is what makes it read as Tokyo and not as a generic cyberpunk street:** magenta/pink **55%**, sodium/lantern **30%**, cyan **12%**, blue **3%**. Warm outnumbers cool. Cyan is a spice.
+
+### 4.1 The five structural darks were albedos, and they were authored as screen colours
+
+**The props could not be seen, and no amount of light was ever going to fix it.** Measured: `facade` **0.82%** reflectance, `shutter` **1.22%**, `concrete` **1.51%**, `metalDark` **1.93%** — all in linear, all darker than charcoal, which is about 4%. Real aged concrete is 20–30%; a painted steel shutter is 15–30%. **These five tokens were three to twenty times darker than the materials they are named after.**
+
+That is what a colour picked by looking at a dark render will always be, and it is a category error worth naming: **a hex in this table is an albedo, not a pixel.** It says what fraction of light a surface returns, and the darkness of the scene is supposed to come from §7 having almost no light in it and §5 eating what is left. Authoring both — a dark scene *and* surfaces that return 1% — multiplies the two, and the product is black.
+
+**The proof was in the failed fix.** Raising §7's hemisphere eight-fold and the five alley lights three and a half times changed the wall barely at all; lifting these five tokens changed it completely at the *authored* light intensities. 1.2% of a large number is still a small number. The lights were never the problem.
+
+| Token | Was | Now | |
+|---|---|---|---|
+| `facade` | `#10141D` | **`#1C2333`** | 0.82% → 3.1% |
+| `facadeWarm` | `#151119` | **`#251E2C`** | — |
+| `shutter` | `#161B24` | **`#272F3F`** | 1.22% → 4.7% |
+| `concrete` | `#1A1F28` | **`#2E3646`** | 1.51% → 5.8% |
+| `metalDark` | `#1E242E` | **`#353F51`** | 1.93% → 7.4% |
+
+**One factor, applied to all five: ×1.75 on each sRGB channel, which is ×3.83 in linear.** Scaling rather than re-picking is what keeps §4's hues and the relationships between them exactly as they were — the five stay in the same order, the same distance apart, and the same blue-grey. **A palette is a set of relations; re-choosing five colours by eye would have changed all of them to fix one.** They are still dark: 3–7% is a *dim* wall, well under the real materials, which is right for a world where §6 wants the ground to win.
+
+**`void`, `asphalt` and `asphaltWet` are deliberately not in this list.** `void` is the reference black — the background, the shutter backings, the doorway panels, the tyres — and lifting it would turn every hole in this world into a grey patch. The two road tokens are §6's, and §6 measured them against a reflector across an entire section; the ground was never the surface that could not be seen.
+
+**Checked against §17 rather than assumed.** At spawn, mean frame luminance by region: **ground 53.9**, west wall 27.0, east wall 20.5, upper facade 5.4, out of 255. The ground is still roughly twice the brighter wall, which is *the ground is the brightest thing in the frame* holding with room to spare — and it is now true because the ground is bright rather than because everything else was invisible.
 
 ---
 
@@ -694,13 +898,15 @@ The ground is two surfaces, not one.
 
   **One texture on the GPU, not two.** The base plane's map is a `Texture.clone()` of the strip's: a clone keeps the same `Source`, and three caches uploads per source, so two repeats cost one image. §15's texture budget does not move.
 
-  **Fine isotropic stipple**, no direction. 512², a height field summed from ~140 Gaussian dimples of 6–22 px radius wrapped toroidally so it tiles seamlessly, plus one faint low-frequency wave so the eye does not find the grid, then Sobel to normals. At repeat 8 across the 12 m strip each tile is 1.5 m, putting the dimples at 2–7 cm — raindrop scale. The §10 ripple emitters own the expanding rings; this is only the resting texture beneath them, and a second directional cue on top of the scroll would read as a texture sliding rather than water sitting.
+  **Fine isotropic stipple**, no direction. **512² desktop, 256² mobile**, a height field summed from ~140 Gaussian dimples of 6–22 px radius wrapped toroidally so it tiles seamlessly, plus one faint low-frequency wave so the eye does not find the grid, then Sobel to normals. At repeat 8 across the 12 m strip each tile is 1.5 m, putting the dimples at 2–7 cm — raindrop scale. The §10 ripple emitters own the expanding rings; this is only the resting texture beneath them, and a second directional cue on top of the scroll would read as a texture sliding rather than water sitting.
 
   **Height-to-normal slope: 1.1.** This is the map's own strength, before `normalScale` scales it, and it matters more than it looks like it should. At the grazing angles a 1.68 m eye height gives across a 46 m alley, a small normal perturbation swings the reflected ray a long way, so this value decides how far a reflection breaks up. Authored at 2.4 it shredded every reflection edge into long torn slivers; 1.1 keeps the break-up at the scale of rain on a film of water, which is the wet-pavement look §1 is describing. Neon on wet asphalt genuinely does shatter — the dial sets how much.
 
 Both maps are deterministic — no `Math.random()`, identical on every load.
 
 **Turn-down order under budget pressure:** resolution 1024 → 512 → 256, then `blur` halves, then `distortion` → 0, then the reflector becomes a plain rough material with the env map. Never delete the puddles.
+
+**That ladder was always understood to be about the reflector target, and it applies to this map too — which nobody had noticed.** The ripple normal was **the only painter in the world with no tier split**: every other canvas in §11 halves on mobile and this one shipped at 512² on both. Found while budgeting §2.1, where mobile had no room for the board. At 256² the dimples are 4–14 px rather than 6–22, which at the same 1.5 m tile is still raindrop scale on a screen a fifth the size, and it returns **1.05 MB** — more than §2.1's whole board face costs there. A map that is the same size on both tiers is not a decision that was taken, it is one that was skipped.
 
 ---
 
@@ -714,17 +920,17 @@ There is no sun at 3am. **No `directionalLight` anywhere. Shadow maps are off** 
 
 | # | Type | Colour | Intensity | Position | Distance / decay |
 |---|---|---|---|---|---|
-| 1 | `hemisphereLight` | sky `#121A2B` / ground `#060A10` | **0.35** | — | — |
-| 2 | `rectAreaLight` 3.2 × 1.7 | `signWhite` | **4.0** | `(-4.28, 1.87, -4.0)` facing `+X` | — |
-| 3 | `pointLight` | `neonMagenta` | **6.0** | `(-3.90, 6.0, -4.0)` | 9.0 / 2 |
+| 1 | `hemisphereLight` | sky `#121A2B` / ground `#060A10` | **0.70** | — | — |
+| 2 | `rectAreaLight` **= §2.1's aperture** | `signWhite` | **70** cd/m², **desktop only** | §2.1's aperture centre, facing the alley | — (see below) |
+| 3 | `pointLight` | `neonMagenta` | **264** | §2.1's neon sign panel centre | 9.0 / 2 |
 | 4 | `rectAreaLight` 0.96 × 1.42 | `vendGlow` | **5.0** | `(+3.98, 1.15, 6.0)` facing `-X` | — |
 | 5 | `pointLight` | `phoneGreen` | **2.5** | `(-4.00, 1.60, 14.0)` | 5.0 / 2 |
-| 6 | `pointLight` | *its sign's* | **150** | §3.5 sign **1** | 12.0 / 2 |
-| 7 | `pointLight` | *its sign's* | **130** | §3.5 sign **4** | 11.0 / 2 |
-| 8 | `pointLight` | *its sign's* | **95** | §3.5 sign **6** | 10.0 / 2 |
-| 9 | `pointLight` | *its sign's* | **115** | §3.5 sign **8** | 9.0 / 2 |
-| 10 | `pointLight` | *its sign's* | **80** | §3.5 sign **0** | 8.0 / 2 |
-| 11 | `pointLight` | `signWhite` | **70** | §3.1's `終電` plate | 9.0 / 2 |
+| 6 | `pointLight` | *its sign's* | **150** | §3.5 sign **1** | **18.0 / 1.45** |
+| 7 | `pointLight` | *its sign's* | **130** | §3.5 sign **4** | **16.5 / 1.45** |
+| 8 | `pointLight` | *its sign's* | **95** | §3.5 sign **6** | **15.0 / 1.45** |
+| 9 | `pointLight` | *its sign's* | **115** | §3.5 sign **8** | **13.5 / 1.45** |
+| 10 | `pointLight` | *its sign's* | **80** | §3.5 sign **0** | **12.0 / 1.45** |
+| 11 | `pointLight` | `signWhite` | **70** | §3.1's `終電` plate | **13.5 / 1.45** |
 
 Lights 2 to 5 belong to the three content surfaces and arrive with them. **Lights 6 to 10 are the alley's own, and each one now sits on a sign that exists** — position and colour both taken from it rather than authored beside it. §7.1.
 
@@ -732,13 +938,35 @@ Lights 2 to 5 belong to the three content surfaces and arrive with them. **Light
 
 These are candela, and 150 cd is still **conservative**: a neon sign of about a square metre at a real sign's luminance radiates well over a thousand. Measured, ×44 takes the west facade from 97% near-black to 36%, and leaves the road where §6 wants it — mean 25 of 255 at 9 m, 7 at the visitor's feet.
 
-**Lights 3 and 5 are in the same units and are wrong by the same argument; 2 and 4 are not.** 3 and 5 are `pointLight`s at 6.0 and 2.5 cd and will need the same order of magnitude. 2 and 4 are `rectAreaLight`s, whose intensity is **luminance in cd/m², not luminous intensity in cd** — a different quantity that this correction says nothing about. All four belong to §2's unbuilt surfaces, so none of them can be *verified* yet and none is changed here; §16 carries it.
+**Lights 3 and 5 are in the same units and are wrong by the same argument; 2 and 4 are not.** 3 and 5 are `pointLight`s at 6.0 and 2.5 cd and will need the same order of magnitude. 2 and 4 are `rectAreaLight`s, whose intensity is **luminance in cd/m², not luminous intensity in cd** — a different quantity that this correction says nothing about.
+
+**Lights 2 and 3 are now set, with §2.1's board. Lights 4 and 5 are not, and §16.9 still carries them.** A light cannot be set against a surface that does not exist, and §2.2 and §2.3 do not.
+
+**Light 3 takes §7.1's own factor rather than a fresh number: 6.0 × 44 = 264 cd.** §16.9 said 3 and 5 are wrong *by the same argument* as 6–10, and the honest way to act on that is to apply the recorded correction, not to pick something new that happens to look right. It lands as the brightest dynamic light in the world, which is what §17 asks for — it sits on §2.1's vertical neon sign, and that sign is §8.1's top rung. §7's own note that 150 cd is *"still conservative"* for a square metre of neon applies here at 1.77 m².
+
+**Light 2 could not be corrected that way, and had to be derived.** A `rectAreaLight`'s intensity is luminance, so the quantity comparable to the alley's candela is **luminance × area**: at 70 cd/m² over §2.1's 1.80 × 0.9563 aperture that is **120.5 cd equivalent**, seating it between §7.1's light 9 at 115 and light 7 at 130. The size is not authored at all — it *is* the aperture, read from §2.1, for §7.1's reason: a lightbox light that is not the size of its lightbox is a light that has drifted off its emitter.
+
+**A `rectAreaLight` has no `distance` and no `decay`.** §7's dash in that column is a property of the type, not a value left blank — three.js gives this light no falloff cutoff, so its reach is unbounded and has to be *measured* rather than bounded by a number. That is the second reason it is desktop-only.
+
+**Light 2 is desktop-only, and that is a §15.1 tier split rather than a surrender.** `rectAreaLight` is the most expensive light type three.js has: it needs `RectAreaLightUniformsLib`'s two 64² float LTC tables and a shader permutation, and it is unbounded. Mobile gets light 3 and §2.1's own emissive surfaces, which are doing most of the work anyway — the board's face is lit material, not lit geometry. Same precedent as §16.10's desktop-only painted detail.
 
 **Light 11 lights the wall you turn round to see, and it is seated on the plate like §7.1's five.** §3.1 puts a `終電` plate at 4.2 m over the shuttered gate, and §17's first line is *you turn round and the shutter is down; you understand what happened without being told* — which cannot happen on an unlit wall. The plate is the only thing up there that emits, so it is the source, and the light takes its position from the plate rather than from a coordinate for the reason §7.1 gives: a light 2 m from its emitter still looks like a light, so the drift is silent.
 
 **It is `signWhite`, and that is the one cool light in the alley.** §17 reserves warmth for the three things you can touch and §4 makes cyan a spice; a station gate is fluorescent, municipal and unwelcoming, which is the note this end of the street is supposed to play against forty metres of neon. At **70 cd over 9 m** it washes the gate and the three dead machines and reaches nothing else — the nearest sign light is 2.5 m away at `z = −20.65`.
 
-**Mobile keeps at most seven, which is §15's cap and not a preference.** The three that go are 8, 9 and 10, and they go *when the count reaches ten* — while §2's four are unbuilt there are six lights in the world, six is inside the cap, and all six are kept. Lights 6 and 7 are halved on mobile either way. The old wording dropped three of six and left a phone with two lit points in forty-four metres of alley, on the strength of an arithmetic that was only ever about hitting seven.
+**`decay` went from 2 to 1.45, and that is a modelling correction rather than a cheat.** Physical inverse-square is what a `pointLight` gives you and it is the wrong law here: **every one of these seven lights stands in for an area emitter** — a square metre of neon, a lit acrylic panel, a backlit plate — and an area source only falls off as `1/d²` in the far field. Close to a panel the falloff is nearer linear, and *"close"* means anywhere inside a few multiples of its own size, which in a 9 m alley is everywhere the visitor can stand. A point light at decay 2 puts almost all of its output within a metre of a sign nobody can get to and nothing at knee height six metres away.
+
+**Measured, and the numbers are the whole argument.** A prop at knee height on the west wall at `z = 14` was receiving **3.4 lux** from light 8 and 1.9 from light 9 — against a shutter that returned 1.2% of it (§4.1). At decay 1.45 the same light delivers **8.0 lux** at that point and holds it across the stretch instead of collapsing over it. Nothing about the source changed: same position, same colour, same candela.
+
+**Distances went up by half with it**, 8–12 → 12–18. `distance` in three.js is not a reach, it is a *windowing cutoff* that forces the falloff to zero at the boundary — so a prop at 8.7 m from a light with `distance: 10` was being crushed toward black by the window rather than by the physics, at exactly the range where the pools were supposed to be overlapping. §7.1's five pools were continuous on paper and dark in the middle. **A light's falloff and a light's cutoff are two different numbers and only one of them is physical.**
+
+**Mobile keeps at most seven, which is §15's cap and not a preference.** Lights 6 and 7 are halved on mobile either way.
+
+**The surrender order was `[10, 9, 8]` and it was wrong — highest-id-first is a proxy that stopped tracking importance.** Two things had drifted under it. Mobile was described as holding *"six lights in the world"*; it has held **seven** since §16.10 added the gate light, so it has been exactly full rather than comfortable, and the order was one build away from firing without ever having been re-read. And §2.1's light 3 takes it to eight, so it fires now. Under `[10, 9, 8]` a phone would lose **light 10 — the one 1.15 m from spawn**, by §7.1's own measurement — to keep a light on a sign at the far end.
+
+**The order is now `[9, 8, 7, 6]`: nearest the board first, and never 10 or 11.** Light 9 goes first because §2.1's board arrives on the wall it lights and makes it the one genuinely redundant source in the alley — it was *"the only light on the showcase wall"* right up until the showcase brought two of its own. After that the order works back down the alley. **Light 10 and light 11 are not in the list at all**, because one is the light the visitor spawns inside and the other is §17's opening beat, and a surrender order that can reach either is not a budget, it is a bug waiting for a phone.
+
+The arithmetic: mobile holds 7 today (hemisphere + 11 + the five alley lights), §2.1's light 3 makes 8, and light 2 is not on this tier at all — so **exactly one is surrendered, and it is light 9**. Mobile keeps hemisphere, 11, 10, 8, 7, 6 and 3: **7 of 7**. Desktop takes both and sits at **8 of 11**.
 
 ### 7.1 What a source is, and why four lightformers could never have one
 
@@ -795,11 +1023,16 @@ So the replacement is two things, not one. **§5.1's uniform fill takes the ambi
 | Roller shutter | 0.55 | 0.35 | corrugated normal, repeat 24 × 1 |
 | Painted metal (poles, brackets) | 0.62 | 0.55 | `envMapIntensity` 1.0 |
 | Condenser grille | 0.68 | 0.70 | alpha-mapped grille, no geometry |
-| **Glass** (shopfront, payphone) | 0.08 | 0.0 | `transparent`, `opacity 0.22`, **no `transmission`** — transmission costs a render pass per frame and buys nothing at this exposure |
+| **Board case** (§2.1) | **0.78** | **0.12** | `envMapIntensity` **0.35** — see below |
+| **Glass** (board aperture, payphone) | 0.08 | 0.0 | `transparent`, `opacity 0.22`, **no `transmission`** — transmission costs a render pass per frame and buys nothing at this exposure |
 | Noren fabric | 0.92 | 0.0 | `side: DoubleSide`, no transmission |
-| Paper lantern | 0.90 | 0.0 | emissive `lantern` @ 1.30, `side: DoubleSide` |
+| Paper lantern | 0.90 | 0.0 | emissive `lantern` @ 1.75, `side: DoubleSide` |
 | Neon tube | 0.30 | 0.0 | `meshBasicMaterial`, colour at full, plus a 0.03 emissive halo shell at 0.6 |
 | Screenshot plane | — | — | `meshBasicMaterial`, tint `#A6B2C6`, **no emissive** |
+
+**§2.1's case is not `paintedMetal`, and the difference is area rather than taste.** It was built on that row and came back with a cyan wash across it. Every other `paintedMetal` object in the world is a bracket, a railing or a condenser measured in centimetres; §2.1's board and sign cases are **6.2 m² of continuous panel**. At that size `paintedMetal`'s metalness 0.55 and `envMapIntensity` 1.0 — the highest environment response in this table, and the same 1.0 §6 records as having made the road read as snow — turn the case into a mirror for whichever dynamic light is nearest. At the bend that is §7.1's light 9: `neonCyan`, 115 cd, 3.4 m away. The case was brighter than the project on it.
+
+**A material is a decision about a surface, and a surface has a size.** Everything a visitor is meant to see on this object is painted on it, so a case contributing light of its own is a case competing with what it carries. Rough, barely metallic and dark is what painted sheet that has been outdoors looks like, and it is also what leaves the board's own emissive rungs doing all the work.
 
 ### 8.1 Emissive intensity ladder
 
@@ -807,7 +1040,9 @@ Bloom's threshold is `0.90`. This ladder is what sits either side of it.
 
 **Everything above the knee was raised by ×2.2 of its distance from the knee, not of its value.** The rule is `new = 0.90 + (old − 0.90) × 2.2`, and the choice of transformation is the whole point. §8.1 is not a list of brightnesses, it is a set of decisions about *which side of 0.90 each thing sits on and by how much* — "just", "edge", "deliberately". Multiplying the values by 2.2 would have moved the station plate from 1.06× the knee to 2.3× it, turning a rung whose entire annotation is "edge, deliberately" into one that plainly blooms, and the ladder's shape would have been destroyed while every number went up. Anchoring at the knee raises the top of the ladder and leaves the bottom of it exactly where it was authored.
 
-**The three sub-knee rungs are held, and that is not an oversight.** They are under 0.90 *because* they are lit rather than glowing — fourteen storefront sign boxes crossing the threshold would bloom the whole lower facade, and §2.1's screenshot must never bloom at all. The knee is a design boundary; a raise moves things further in the direction they were already going, and nothing across it.
+**The sub-knee rungs are held, and that is not an oversight.** They are under 0.90 *because* they are lit rather than glowing — fourteen storefront sign boxes crossing the threshold would bloom the whole lower facade, and §2.1's screenshot must never bloom at all. The knee is a design boundary; a raise moves things further in the direction they were already going, and nothing across it.
+
+**The screenshot went from 0 to 0.78 and it is still the rung that can never cross.** Emissive 0 did not merely stop it blooming; it stopped it being *lit*, and a dark rectangle of interface on a dark board at 3am reads as a photograph of a screen rather than as a screen. 0.78 is a screen that is switched on. **Nothing about the protection changed** — *peak luminance must land below the bloom threshold* is the sentence that guards the scene, and 0.78 is on the same side of 0.90 as fourteen storefront sign boxes at 0.85 and a hundred and fifty facade windows at 0.55. A surface can be lit and sub-knee at once; four other rungs on this ladder already are. The tint moved 0.68 → 0.82 at the same time, because the multiply had been carrying brightness the emissive term now supplies, and leaving it would have double-counted in the dark direction.
 
 | Element | Emissive intensity | Was | Above threshold? |
 |---|---|---|---|
@@ -818,18 +1053,18 @@ Bloom's threshold is `0.90`. This ladder is what sits either side of it.
 | Payphone lamp | **3.10** | 1.90 | yes |
 | Vending front panel | **2.44** | 1.60 | yes — soft halo |
 | **Vehicle tail lamp** (§3.6) | **2.33** | 1.55 | yes — soft |
-| Paper lanterns | **2.22** | 1.50 | yes |
-| Lightbox surround strip | **2.00** | 1.40 | yes |
+| Paper lanterns | **2.77** | 1.75 | yes |
+| Aperture surround strip (§2.1) | **2.00** | 1.40 | yes |
 | Overhead banner (§3.5) | **1.78** | 1.30 | yes |
 | **Taxi roof sign** (§3.6) | **1.56** | 1.20 | yes |
 | **Open-shutter spill** (§3.4) | **1.34** | 1.10 | yes — soft |
 | Station `終電` plate | **1.01** | 0.95 | edge, deliberately |
 | **Storefront sign box** (§3.4) | **0.85** | — | no — fourteen of them |
-| Info panel backlight | 0.70 | — | no |
+| **Project screenshot** (§2.1) | **0.78** (tinted 0.82) | 0 | **no — and never** |
+| **Board face** (§2.1) | **0.70** | — | no |
 | Facade window bays (§3.3) | **0.55** | — | no — lit rooms, not signs |
-| **Project screenshot** | **0 (basic, tinted 0.68)** | — | **no — never** |
 
-**Two authored figures moved, and the banner overtook the plate it used to share a rung with.** Paper lanterns **1.30 → 1.50** and banners **0.95 → 1.30**. These are changes to the *authored* column; `raise()` then carries them to 2.22 and 1.78 as it does every other rung, so the knee-anchoring above still holds and nothing sub-knee moved.
+**Two authored figures moved, and the banner overtook the plate it used to share a rung with.** Paper lanterns **1.30 → 1.50 → 1.75** and banners **0.95 → 1.30**. The lanterns moved a second time with §4.1: a rung chosen against near-black walls is a rung chosen against a different picture, and lifting every surface around them left them looking flatter than before. These are changes to the *authored* column; `raise()` then carries them to 2.22 and 1.78 as it does every other rung, so the knee-anchoring above still holds and nothing sub-knee moved.
 
 The banner's old 0.95 was chosen to match the station plate — *"the same rung as the station plate: they are read-through cloth, not tube"* — and that comparison was about **material**, not about visibility. It put three 3.20 m banners, the largest lit surfaces above eye level and the only content on the overhead layer, one hundredth of a step over the bloom knee. The plate stays at 0.95 because it genuinely is meant to be barely-there: §3.1 calls it *a dark backlit plate*, and §17's beat is that you notice it only when you turn round. **A banner is read from forty metres away and a plate from four**, which is the distinction the shared rung was hiding.
 
@@ -1027,11 +1262,19 @@ Draw calls, at the peak, which is looking the length of the alley from §12.1's 
 
 | Where | Height in world | Tracking |
 |---|---|---|
-| Neon sign — project name | 0.26 cap height, vertical stack | +0.08 em |
-| Info panel — description | 0.045 | +0.02 em |
-| Info panel — tech list | 0.032, `uiDim` | +0.10 em, uppercase |
-| Door plate — "OPEN" / "GITHUB" | 0.038 | +0.14 em |
+| **Title sign — project name** | **0.30 cap height max, horizontal, shrink-to-fit** | +0.10 em |
+| **Board — blurb** | **0.075**, wrapped, max **4** lines at 1.45 line height | +0.02 em |
+| **Board — tags** | **0.055**, `uiDim` | +0.12 em, uppercase |
+| Door plate — "GITHUB" | 0.038 | +0.14 em |
 | Station plate — `終電` | 0.55 | — |
+
+**The 0.30 is a *maximum*, not a size, and that is what the shrink-to-fit is for.** §17 requires a longer project name to work *with no component edited*, and a cap height authored as a fixed number is a name length authored as a fixed number.
+
+**The blurb is 0.075 and not 0.045, because the reading distance moved.** §2.1.1's pose went from 3.43 m to 5.63 m when the board grew, and at 5.63 m §12.1's portrait frame is 3.641 m across — about **107 device pixels per world metre** on a 390 px screen. 0.045 would arrive at under five pixels a glyph. At 0.075 it is eight, which a 1.5 DPR cap turns into twelve, and four lines of it in a 1.85 m column hold about 165 characters — enough for every description in `CONTENT.md` without truncating. **Type size on a surface in a world is a function of where the visitor stands**, and this is the one place in the document where that is written down rather than assumed.
+
+**Nothing here sizes a control any more.** The arrow glyphs and the position dots are gone from this table because §2.1.2 moved them to the screen, where they are measured in pixels and not in metres.
+
+**The tech list is gone, and it is recorded rather than deleted quietly.** §2.1 used to carry *description + tech* on an info panel; the board carries **title, blurb and tags**. `CONTENT.md`'s `Tech` field is now data with no surface. It stays in the content file — it is true, and §2.2's About material may want it — but nothing renders it, and that is a decision rather than an oversight. An orphaned type size left in this table would look like a surface someone forgot to build.
 
 ### 11.3 Neon flicker
 
@@ -1086,7 +1329,7 @@ Any string not on this list and not from `CONTENT.md` does not go in the world.
 | Near / far | 0.10 / 90.0 |
 | Spawn | position `(0, 1.68, -19.5)`, yaw `0` (facing `+Z`), pitch `-4°` |
 
-**This document's yaw is not three's, and the difference is exactly π.** Yaw `0` here faces `+Z`; a three.js camera at `rotation.y = 0` looks down `−Z`. For a world yaw ψ, three's rotation is **ψ + π**, giving a view direction of `(sin ψ, 0, cos ψ)`. Checked against the §12.6 stops rather than taken on trust: ψ = 0° → `+Z`, the alley ahead at spawn; ψ = −90° → `−X`, the west wall, where the shopfront and payphone are; ψ = +90° → `+X`, the east wall and the vending machine. All three agree. **Convert once, at the point a camera is posed** — never by sprinkling `+ Math.PI` through the navigation code, where one missing conversion faces the visitor at a wall for reasons that look like a layout bug.
+**This document's yaw is not three's, and the difference is exactly π.** Yaw `0` here faces `+Z`; a three.js camera at `rotation.y = 0` looks down `−Z`. For a world yaw ψ, three's rotation is **ψ + π**, giving a view direction of `(sin ψ, 0, cos ψ)`. Checked against the §12.6 stops rather than taken on trust: ψ = 0° → `+Z`, the alley ahead at spawn; ψ = −90° → `−X`, the west wall, where the payphone is; ψ = +90° → `+X`, the east wall and the vending machine. All three agree. **§2.1's board adds a fourth check and it is the one that matters**, because it is the only pose in the world that is neither axial nor authored: a group at ψ = +20° puts its local `+Z` on `(−0.342, 0, −0.940)`, which is §3.1's inward face normal, and its local `+X` on `(−0.940, 0, +0.342)`, which is the visitor's right at that same yaw. **The board's facing and the locked view's yaw are therefore one number through one helper** — get the convention wrong and the board faces into the wall, which looks like a layout bug and is not. **Convert once, at the point a camera is posed** — never by sprinkling `+ Math.PI` through the navigation code, where one missing conversion faces the visitor at a wall for reasons that look like a layout bug.
 
 **Rotation order is `YXZ`.** Under three's default `XYZ`, pitching rolls the horizon as you turn. `YXZ` is what keeps yaw and pitch independent, and it must be set *before* the rotation values or the same three numbers describe a different orientation.
 
@@ -1143,22 +1386,36 @@ One owner of the key. Stations register `{ position, radius, open() }` on mount;
 
 | Station | Radius | Prompt |
 |---|---|---|
-| Shopfront | 3.00 | `E — view project` / tap |
+| Board | **6.50** | `E — view project` / tap |
 | Vending machine | 2.20 | `E — about` / tap |
 | Payphone | 2.00 | `E — contact` / tap |
 
 Prompt fades in over 180 ms at the radius edge. `Escape` closes whatever is open, and **nothing else claims `Escape`**.
 
+**The board's radius went 3.00 → 6.50, in two steps and for two different reasons.** A radius is measured from the station, and this station is on a wall the clamp cannot approach squarely: at 3.00 the in-range region inside `BOUNDS` was a sliver about 3.2 m wide and 1.4 m deep pinned against the `z = 21.4` clamp. Then §2.1's board grew to 3.20 m and its locked pose moved out to **5.627 m** to fit it in frame.
+
+**A radius that does not contain its own locked pose is a lock you cannot enter from where it puts you** — press `E`, get pulled to 5.6 m, and the prompt that got you there is now out of range. 6.50 contains the pose with most of a metre to spare, and the board stays the widest of the three radii, which is the ordering §12.5 already had. It is large in absolute terms because the object is: 3.20 × 4.80 m is the biggest thing in the alley a visitor can touch.
+
+**`Escape` has exactly one owner and it is not any of these.** Overlays, the locked view and anything else that can be dismissed register with a single stack; the top-most registration wins. This is written here rather than left to convention because `Escape` is the one key three different features will each feel entitled to.
+
+**Movement input releases the locked view, and that needs one line elsewhere.** §12.3's key handler is gated on `canControl()`, so in `'locked'` mode a `W` never reaches it and "any movement input releases" would silently never fire. The gate stays — it is what stops a visitor walking while typing in a form — and a monotonic counter is bumped *above* it instead, which the locked view watches and nothing else does. **Only while locked**: the same counter ticks when someone types `w` into §2.3's contact form, and a consumer that watched it in `'overlay'` mode would close the form under them.
+
+**Touch has to be able to release too, and that does not fall out of anything.** §12.3's on-screen stick is itself gated on `canControl()`, so on a phone a locked view freezes the one control that was supposed to escape it. The lock therefore carries **a visible close control for as long as it is held** — plus a tap on empty space, which R3F reports separately from a look-drag. This is the §17 stranger-on-a-phone test applied to the one state in the world that can trap them.
+
 ### 12.6 The guided path
 
-For a visitor who does not want to walk. Reuses the locked-view camera (target pose, ease, release) — keep that general.
+For a visitor who does not want to walk. Reuses the locked-view camera (target pose, ease, release) — keep that general. **§2.1.1 builds that primitive and is its first consumer**, so this section inherits it rather than specifying it again.
 
 | Stop | Camera position | Yaw | Pitch |
 |---|---|---|---|
 | 0 — spawn | `(0, 1.68, -19.5)` | `0°` | `-4°` |
-| 1 — shopfront | `(-1.60, 1.68, -4.0)` | `-90°` | `-2°` |
-| 2 — vending | `(+1.90, 1.68, +6.0)` | `+90°` | `-6°` |
-| 3 — payphone | `(-1.80, 1.68, +14.0)` | `-90°` | `-8°` |
+| 1 — vending | `(+1.90, 1.68, +6.0)` | `+90°` | `-6°` |
+| 2 — payphone | `(-1.80, 1.68, +14.0)` | `-90°` | `-8°` |
+| 3 — board | §2.1.1's locked pose — `(-2.592, 1.68, +19.681)` | `+12.461°` | `+6.34°` |
+
+**The order changed with §2.1's position, and the old one would have been absurd.** It ran spawn → shopfront → vending → payphone: with the showcase now at `z = +19.7`, that is a **39 m** first leg followed by two reversals back down the alley. Monotonic in `z` — spawn, vending, payphone, board — is the order a person would actually walk, and it ends on the surface the whole piece is for. **`legDurationSec` is unchanged at 2.6 because the legs are now 26 m, 8 m and 7 m** rather than 39; the old first leg would have moved the visitor at 15 m/s, six times §12.3's top speed.
+
+**Stop 3 is not authored here.** It reads §2.1.1's pose, for the reason §7.1 gives about lights: a stop written as its own coordinate beside the thing it is a stop for drifts the moment that thing moves, and it drifts silently because a camera 2 m off still looks like a camera.
 
 - Ease `easeInOutCubic`, **2.6 s** per leg, path is a quadratic through the alley centre so you never clip a wall.
 - Control returns on arrival, or immediately on any movement input (the visitor always wins).
@@ -1181,7 +1438,9 @@ Always present after the gate, on every device: **Work · About · Contact · Ne
 | Camera easing on look | off — direct |
 | Entry sweep at the gate | off — cut straight to control |
 | Guided path | jumps with a 180 ms fade |
+| **Locked view** (§2.1.1) | **linear, same 600 ms** — moves without acceleration rather than jumping |
 | Project transition | hard cut, 0 ms |
+| **Project auto-advance** (§2.1) | **off** — see below |
 | Neon flicker | constant on |
 | Ground normal scroll | frozen |
 | Ripples | off — **removed, not stilled**, and §10.0 has why: a ring's radius is its only state, so a frozen one is a bullseye painted on the road |
@@ -1189,6 +1448,10 @@ Always present after the gate, on every device: **Work · About · Contact · Ne
 | Rain | opacity **0.22**, count **× 0.5**, speed unchanged (slower rain reads as broken, not as calm) |
 | Chromatic aberration, noise | off |
 | Bloom, vignette, fog, reflections | **unchanged** — they are not motion |
+
+**The locked view moves rather than jumping, and that is the one place this table chooses the gentler of §13's two options.** §13 permits *"without acceleration, or jump"*. A jump is right for §12.6's guided path, which teleports the visitor to a stop they asked for. It is wrong here, because the lock starts from wherever the visitor happens to be standing and a cut would give them no way to tell whether they moved or the world did. Linear over the same 600 ms keeps the causal link and removes the easing, which is what the rule is actually asking for.
+
+**Auto-advance comes off entirely, and this is the row that is about someone other than a games player.** Ten seconds of self-advancing content is motion under any reading, and content that updates on its own for more than five seconds is squarely what WCAG 2.2.2 is about. §2.1's *"stops on the first manual page"* is a real stop mechanism, but it only helps a visitor who has already touched something — a stranger who touches nothing still gets a board changing under them. Under reduced motion the board shows the first project and waits; the arrow plates, the keys and the swipe all still work, so **nothing becomes unreachable, it only stops happening by itself.** That is §13's whole rule applied to the one piece of the world that moves without being asked.
 
 ---
 
@@ -1232,7 +1495,7 @@ Appears 900 ms after the gate, bottom-centre, fades after **6 s** or on first in
 | **Device pixel ratio** | capped at **1.5** | capped at **1.5** |
 | Draw calls | ≤ **140** | ≤ **90** |
 | Triangles | ≤ **350 k** | ≤ **220 k** |
-| Texture memory | ≤ **18 MB** | ≤ **9 MB** |
+| Texture memory | ≤ **34 MB** | ≤ **9 MB** |
 | Dynamic lights | **11** | 7 |
 | Engine chunk (gzip) | ≤ **600 kB**, split so it caches independently of app code | same |
 | Time to first frame after gate | ≤ **1.5 s** on a warm cache | ≤ 2.5 s |
@@ -1242,6 +1505,33 @@ Appears 900 ms after the gate, bottom-centre, fades after **6 s** or on first in
 **Desktop texture memory went 14 → 18 MB, and mobile did not move.** §3.5 flagged the overrun and ruled that *"the budget itself is what should be revisited, once"*; this is that once. The world stands at **16.94 MB** and every lever §3.5 listed was worse than the cap: dropping the sign canvases costs the legibility that makes a projecting sign worth projecting, and halving the puddle mask is §6's turn-down ladder, which exists for frame time and not for memory — and §10.0 has now given that mask a second job, so shrinking it degrades the ripples too.
 
 **The number is 18 and not 17 on purpose.** A ceiling set to today's total has to be raised again by the next thing that arrives, and §16 item 6 — the project screenshots — is known not to fit at all. **Mobile stays at 9** and lands near 5.3, because every painter is tier-scaled; the two columns exist because they are two different machines, and 18 MB of texture is not what constrains a desktop GPU. **Mobile is the number that means something**, and it did not need to change.
+
+**Desktop then went 18 → 34 with §2.1's board, which is the raise the paragraph above said was coming.** §16 item 6 predicted the screenshots would not fit and it was right; what it under-counted was the board's own painted face, which is a 1024² canvas and costs more than any single screenshot.
+
+| Consumer | Desktop | Mobile |
+|---|---|---|
+| Everything before §2.1 | 17.61 | ~5.30 |
+| §2.1 screenshots, 3 resident at 1024 × 544 / 512 × 272 | +8.91 | +2.13 |
+| §2.1 board face, one canvas repainted per project | +5.59 | +1.40 |
+| §2.1 project neon sign, 128 × 1024 / 64 × 512 | +0.70 | +0.17 |
+| §6.2 ripple normal, now tier-split | — | **−1.05** |
+| §3.4 surface grain — one canvas, `map` + `roughnessMap` | +1.40 | +0.35 |
+| §3.4 surface normal — Sobel of the same field | +1.40 | +0.35 |
+| **Total** | **35.61 of 34** | **8.65 of 9** |
+
+**Desktop is 1.61 MB over and is being left over, deliberately and with the reason recorded.** §3.4's grain is the one thing in this world that answers *the walls look like plastic*, which is a complaint about the surface the visitor spends the whole session two metres from; the cap is a number chosen in §3.5 and raised once already. **Neither is a reason to fix this by picking whichever is easier to move.** What is not acceptable is fixing it silently — so it is written here as a breach rather than as a new ceiling, and it stays that way until the pass that measures the whole world at once (§16) decides between three levers that all exist and none of which has been tried: the grain canvases at 384² instead of 512² (−1.24 MB, and they are noise), the two §2.1 sign canvases sharing one painter, and §3.3's three bay variants at 384². **A budget that gets raised every time something wants room is not a budget; a budget that is silently exceeded is worse than both.**
+
+**Mobile fits, at 8.65 of 9, and that is the column that means something.** Every painter in this pass is tier-split from the first line — the grain and its normal are 256² there — which is the discipline §16.12 went looking for when it found §6.2's ripple normal had never had a split at all.
+
+**Draw calls, measured at spawn with the whole alley in frame: 101 of 140 desktop, 95 of 90 mobile.** §3.7 called 93 of 90 *"the same problem one section later"* and it still is. Since then §2.1's board arrived, §3.7's scooter became three merged instances instead of parts folded into existing buckets, and §3.3's reveal grid cost one. **Mobile has been over this cap for three sections and the lever §3.7 named has still not been spent**: merging by material rather than by `(geometry, material)` takes §3.7's twelve buckets to eight. That is four calls for nothing visual, which is exactly the margin, and it is recorded here for the third time rather than done because it is a change to how the whole prop layer is drawn and belongs in its own diff.
+
+Triangles are not close on either tier — 157 k of 350 k desktop, 89 k of 220 k mobile — which is worth stating precisely because it is the number that *feels* like it should be the constraint and never has been. **In this world the ceiling is always draw calls.**
+
+**Three resident, not four, and that is §17's rule rather than a tuning knob.** Keeping every screenshot in memory is O(N) in the project count, and §17 requires that a project added to `CONTENT.md` appear *with no component edited* — a fifth project must not silently put the world over budget. `{prev, current, next}` is O(1), and with four projects it is not even a compromise: the only non-resident screenshot is two pages away in either direction, so paging never waits.
+
+**The board face is one canvas, repainted on project change, never four cached.** Four cached desktop faces would be 22 MB on their own — more than the entire world was before this section. §11.1's redraw policy already says *once on mount, and once per project change*, which is exactly this.
+
+**Mobile again did not move, and again that is the number that means something.** It lands at 7.95 of 9 — and it only fits because §6.2's ripple normal turned out to be the one painter in the world that had never been tier-split. That saving is real headroom recovered, not an accounting trick: the map is genuinely too large for a phone and always was.
 
 Everything repeated is `InstancedMesh` or drei `<Instances>`: shutters, lanterns, condensers, cables, crates, rain, steam, ripples. Geometries and materials are created once at module scope or in `useMemo`, never in a render body.
 
@@ -1261,17 +1551,21 @@ Orientation is the exception and *is* live, because the §12.1 FOV split has to 
 
 These need a decision before the code that depends on them is written, and the brief will be updated rather than the value invented:
 
-1. **Screenshot pre-processing** — whether the four JPGs get a build-step darken/desaturate pass, or the `#A6B2C6` tint in §8 does the whole job. Decide when the shopfront is first lit.
+1. ~~**Screenshot pre-processing**~~ — **settled with §2.1: no build step.** The `#A6B2C6` tint in §8 does the whole darkening job, and the resize is done at runtime. See §16.12.
 2. **The bend geometry at `z = +23`** — the *orientation* is settled (§3.1: across the end, 20° off square) and thickness is 1.00 (§3), so the shell builds it as a bare box. **What the opening reveals is now settled too — §3.6, the cross street.** What remains open is the return wall's own modelled form: the shuttered doors on its face. Lands with the rest of the §3.2 inventory.
 3. **Font subsetting for the Japanese canvas faces** — currently system faces only; if a webfont ships, it must be subset to the fourteen strings in §11.4 and re-budgeted against §15.
 4. **Whether the door opens a real tab or a confirm step on mobile** — popup blockers treat a canvas click differently across browsers.
 5. **The gutter's 0.03 recess** — §3 resolves how the gutter *reads* (through the puddle mask) but not how it gets depth. It needs the floor to stop being a plane. Decide with the kerb and drain modelling.
-6. **§15's 14 MB texture budget cannot hold §2.1's screenshots.** A 1920 × 1020 JPEG decodes to about 7.8 MB of RGBA and 10.4 with mipmaps, and §3.5 has already spent 13.2 of the 14. One screenshot is over budget on its own; four are not close. The answer is a build-step resize — the lightbox is 3.20 × 1.70 world metres and at §11.1's painter scale wants roughly 1280 × 680, which is a 2.5× saving before anything else — but it belongs with item 1 below, which is the other reason those files get pre-processed. **Decide both at once, when the shopfront is first lit.**
+6. ~~**§15's texture budget cannot hold §2.1's screenshots.**~~ — **settled with §2.1**, and it was right that they did not fit. The resize happens at runtime rather than in a build step, at 1024 × 544 desktop and 512 × 272 mobile, with three resident. §15 and §16.12 carry the arithmetic.
 7. **Turning without a pointer** — §12.2 makes looking a drag and §12.3 spends the arrows on movement, so a visitor with a keyboard and no pointing device can walk but cannot turn. The answer this document already contains is §12.6's guided path and §12.7's top nav, which reach every surface without walking; whether that is *enough*, or whether a key should rotate the camera, is decided when those two exist and can be tested against the ten-second test in §17. Named rather than patched, because a `Q`/`E` binding invented now would be a second movement basis nobody asked for.
 
-8. **The alley mouth around `z = +22` is reserved, and nothing atmospheric may go there.** §2.1's showcase may move from the west wall to the bend, which is the most prominent sightline in the world — every visitor faces it from spawn, and §3.1 built the return wall specifically to close it. A `lantern`-coloured landmark was planned for that spot and **cancelled for this reason**, so the reservation is the whole of what remains of it. It has to be written down rather than merely left empty: §2.4 forbids content in the surroundings, so anything decorative placed there could not be relabelled as the showcase afterwards — it would have to be deleted, and by then it will look load-bearing. Resolved when §2.1 is built and the shopfront's position is settled either way.
+8. ~~**The alley mouth around `z = +22` is reserved.**~~ — **resolved: the showcase moved to the bend.** The reservation did its job. §2.1 is now on that wall and §16.12 records the move.
 
-9. **§7's lights 2 to 5, after the ×44 correction to 6 to 10.** Lights 3 and 5 are `pointLight`s in the same candela that were wrong by two orders of magnitude everywhere else in §7, so they are almost certainly wrong too — but they light §2's vending machine, payphone and shopfront, none of which exist, and a light cannot be set against a surface that is not there. Lights 2 and 4 are `rectAreaLight`s measured in cd/m², which the correction says nothing about. All four are set when §2 is built, against §17's rule that the three touchable things are the warmest in the alley. Named rather than scaled, because a number that looks verified and is not is worse than one that is obviously pending.
+9. **§7's lights 4 and 5** — **2 and 3 are settled with §2.1** (§7 has the derivations). Lights 4 and 5 belong to §2.2's vending machine and §2.3's payphone, neither of which exists, and a light cannot be set against a surface that is not there. Light 5 is a `pointLight` at 2.5 cd and is wrong by §7.1's argument; light 4 is a `rectAreaLight` in cd/m², which that correction says nothing about and which §2.1's light 2 now gives a worked precedent for — luminance × area against the alley's candela. Both are set when their surfaces are built.
+
+10. **The west wall's 5.20 m gap.** §3.4 reserves `z ∈ [−6.60, −1.40]` for a showcase that is now at the bend, so that stretch of west wall is bare and will read as one. **Filling it is deliberately not part of §2.1's build**, and the reason is the size of the blast radius rather than the size of the work: `STOREFRONT.reserved` feeds a largest-remainder apportionment, so removing the slot redraws every unit width, joint, doorway and sign box on that wall — which moves §3.5's sign `z` values, which moves the sign panel centres, which re-seats **§7.1's five dynamic lights**, which re-runs §3.7's five placement audits. That is a full re-verification of four sections to close a gap, and it deserves its own diff rather than riding in on the showcase's.
+
+11. **Auto-advance while the visitor is locked in front of the board.** §2.1 stops the automatic paging on the first manual page, which is unambiguous for someone walking past. It does not say what should happen inside §2.1.1's locked view, where the visitor is deliberately reading. Both readings are defensible — the lock is the one place all four projects can be seen without walking, and it is also the one place someone is definitely mid-sentence. **Currently it keeps running.** Decided by watching it, not by arguing about it.
 
 ### 16.1 Settled during the shell build
 
@@ -1409,6 +1703,60 @@ All of §3.7. Free choices: every dimension in its table except the vending mach
 
 **The rings are placed from the mask, not scattered.** §6.2 already decides where water is, and a ring expanding on a dry island contradicts it in the most visible way available. Sampling the painted canvas rather than the weight function that generated it is the distinction that matters: the function describes the bias, the canvas describes the blobs, and a ring has to land in a blob. This gave §6.2's mask a second consumer at no cost in memory — the same argument it made for cloning the ripple normal onto the base plane.
 
+### 16.12 Settled during the showcase build
+
+**§16 item 8 is resolved, and the reservation is why there was anything to resolve.** The showcase moved from the west wall to the bend. That item was written when a `lantern`-coloured landmark was cancelled for the same spot, and its argument was that a decorative object placed there *could not be relabelled as the showcase afterwards — it would have to be deleted, and by then it will look load-bearing.* Nothing was there to delete. **The value of a reservation is only ever visible at the moment it is redeemed**, and it is invisible at every other moment, which is why it has to be written down rather than remembered.
+
+**Moving a section falsifies the sections that cited it, and two of those citations were structural.** §3's wall thickness was *"set by the 0.55 shopfront recess"* and §3.3's window band base was *"the top of the §2.1 shopfront recess"*. The recess no longer exists. Both numbers stay: 4.60 is now load-bearing in the opposite direction — §3.3's floor counts, §3.4's band top, every §3.5 sign `z`, and the five §7.1 lights seated on those signs all derive from it, so re-deriving it would redraw both facades to move a line nothing is asking to move. **A value whose reason has expired is not automatically a value that is wrong**, but leaving it pointing at a deleted section is how a brief rots.
+
+**The board's width could not be chosen, and the thing that decided it was §3's clamp.** The reading distance is fixed by where a visitor can physically stand, which on a wall at 20° to a rectangular clamp varies from 0.645 m to nine. That forces a locked pose; the pose fixes the distance at 3.4297 m; the distance and §12.1's portrait FOV fix the width at 2.059 m. §2.1's old 3.20 m lightbox is not merely too big here, it is **impossible** — it needs 5.44 m of standoff and the face normal leaves `BOUNDS` at 5.11.
+
+**The lateral offset in the locked pose is not composition.** Head-on, the pose lands inside §3.7's dead vending machine at west `z = 20.3`, whose resolver stops the visitor at `x = −3.16`. Offset 0.45 m along the face it clears by 0.57 m. This is the class of fault that is only ever found by standing where the code puts you.
+
+**The surrender order had been wrong since the gate light landed, and nothing had asked it.** §7 described mobile as holding *"six lights in the world"*; §16.10 had made it seven, so it was exactly full rather than comfortable, and `[10, 9, 8]` would have taken **light 10 — the one the visitor spawns 1.15 m from** — the first time §2 arrived. Highest-id-first was a proxy for importance that stopped tracking it. The new order is `[9, 8, 7, 6]`, and lights 10 and 11 are **not in it at all**: a budget that can reach the spawn light or §17's opening beat is not a budget.
+
+**§6.2's ripple normal was the only painter in the world with no tier split**, found while budgeting mobile for the board. Every other canvas halves; this one shipped at 512² on both tiers from the ground build onward. Turning it down on mobile returned **1.05 MB — more than the board's entire painted face costs there**. §6's turn-down ladder already read *1024 → 512 → 256*; it was understood to be about the reflector target and it was always about this map too. **A value that is identical on both tiers is not a decision that was taken, it is one that was skipped**, and the way to find those is to go looking when a budget is tight rather than to raise the cap.
+
+**Three screenshots resident and not four, because §17 is O(1) and a cache is not.** *A project added to `CONTENT.md` appears with no component edited* — so a fifth project must not put the world over §15. `{prev, current, next}` costs the same at four projects as at twelve, and with four it is not even a compromise: the one non-resident image is two pages away in either direction.
+
+**The click guard was measured before anything was built on it.** §12.2 specifies *a pointer that travelled more than 6 px between down and up is a look, not a click*, and that constant had sat unused since the player build. A probe mesh confirmed both halves: a clean tap reports `delta` 0 with the camera unmoved, and a 60 px drag ending over the same mesh **still fires the click** — `delta` 113, camera yawed 14°. Without the guard that drag opens a door. Also confirmed: `Camera.tsx`'s `setPointerCapture` does not starve the raycast, because it captures on the canvas, which is the element the event system is already bound to. **A rule that has never had a consumer has never been tested**, and this one had one build's worth of assumptions resting on it.
+
+### 16.13 Settled during the surface pass
+
+**Three complaints, and all three were the same complaint: nothing in this world varies across its own surface.** A pole through a sign, a scooter that reads as crates, walls that read as plastic. §6 spent an entire section on the ground because it varies — puddles, ripples, a reflection — and every vertical surface beside it was one flat value with a highlight in the middle of it. **The alley was built as a set of correct objects and it needed to be built as a set of surfaces**, which is a different thing and is not visible in any number the budget tracks.
+
+**The pole rule was written as a paragraph and shipped as a fault, twice.** `pole-through-sign-box` had a full derivation in a source comment for two passes while the thing it describes was on screen. Everything in `lib/props.ts` that *is* a rule — overlaps, doorways, reserved slots, awnings, lanterns over sign boxes — has caught something nobody was looking for; the one that was only prose caught nothing. **A placement rule that only lives in a comment is a rule that has not been checked**, and the cost of finding that out was four `audit()` failures on four consecutive edits and three screenshots from the person who has to look at it.
+
+**The 1.30 m clearance is derived and the derivation says something about the alley.** A pole's silhouette does not land on its own `z`: it lands at `z_pole + (M − 1)(z_pole − z_eye)` with `M = 1.078`, so walking the alley swings it ±3.3 m. Taken literally, **no pole can be placed anywhere on either wall** — which is not a conclusion about poles, it is the corridor telling you that a 44 m sightline crosses everything with everything. Scoping the rule to the range where a sign is legible (±8 m) gives 1.29 m, and the figure a screenshot had already produced was 1.2. **A derivation that agrees with a measurement is worth more than either alone**, and one that returns "impossible" is usually asking a question with the wrong bounds rather than reporting a fact.
+
+**Two vocabulary rules turned out to be one rule that had been transcribed wrong.** §3.2 and §3.4 both read *boxes and cylinders*, and §3.6 had already broken that for the cross-street cars with an argument that was never folded back: **the rule is "nothing at a fidelity nothing around it shares"**, and boxes were an implementation of it that held while every distance in the world was 20 m or more. The scooter stands at 2 m. Nothing about the principle changed; the transcription of it had quietly become the thing being enforced.
+
+**`lib/carModels.ts` took a second caller with no changes, which is the only real test that split was drawn correctly.** It was written for §3.6 — bake the node transforms into the vertices, merge by material, normalise to a target length with the nose at `+X`, then *measure* rather than predict. All four of those are properties of turning a glTF into something instanceable, none is a property of a car, and the file knew the difference before there was any way to tell.
+
+**Facade depth is normals, not shadows, and that is a standing property of this world rather than a trick used here.** §15 has shadow maps off and §7's ten lights are spent inside the alley, so a recessed window cannot be shaded by anything. It reads because a reveal is *a surface facing sideways*: the jamb and head faces take §7's grazing light at a different angle from the wall in front of them. §3.4's shopfronts have worked this way since they were built — the recess is faked by standing everything else proud — and §3.3 is that trick moved one band up.
+
+**Two coplanar front faces is z-fighting across an entire facade, and the fix is 3 cm.** Piers run the full band height and spandrels the full bay width, so all thirty crossings have two boxes meeting; at equal depth their front faces coincide. Offsetting them by 0.03 makes the piers win every crossing and turns an artefact into a concrete-frame facade. The alternative — segmenting the piers per floor so nothing overlaps — is 342 instances instead of 114 to avoid a problem one number solves. **The first idea for a geometric conflict is usually more geometry, and it is usually wrong.**
+
+**One greyscale canvas fills `map` and `roughnessMap` because in this world the polarity agrees.** Dark texels darken the §4 token *and* lower the §8 roughness — darker and glossier, which is wrong on a dry wall and exactly right on one standing in §10's rain. Both slots multiply, so the map can only take a surface away from its authored value in one direction: **nothing in this canvas can make a surface lighter or rougher than the palette says it is**, which is what makes it safe to put on every large flat surface at once.
+
+**Instanced unit boxes stretch their UVs and there is no fixing it**, only choosing noise that survives it. A 6.20 m fascia and a 0.30 m pier sample the same 0 → 1 UV, so the texture arrives stretched by up to 4:1. Blotches and streaks smear and give the game away; isotropic aggregate speckle stretched 4:1 is still speckle. **This is a constraint of the technique that was chosen for the draw-call budget, and it is answered inside the technique rather than by abandoning it.**
+
+### 16.14 Settled during the visibility pass
+
+**The complaint was "the props are too dark" and the answer was not light.** Two levers were tried in the order anyone would try them, and both failed in a way that is worth recording: raising §7's hemisphere **eight-fold** and the five alley lights **three and a half times** changed the west wall barely at all. What changed it completely — at the *authored* light intensities — was §4.1's albedo correction. **1.2% of a large number is still a small number**, and every hour spent on the light side of that multiplication was an hour spent on the wrong term.
+
+**The root cause was a category error in §4: a hex in a palette is an albedo, not a pixel.** Those five colours were picked by looking at a dark render, so they encode *how dark the wall should appear* — but three.js reads them as *what fraction of light the wall returns*, and the darkness was then applied a second time by §7 having almost no light in it and §5 eating what was left. Authoring both and multiplying them is how a wall ends up at 0.8% reflectance, which is darker than charcoal and about a fifth of fresh asphalt. **The scene is supposed to be dark because there is nothing lighting it, not because the surfaces are black.**
+
+**Scaling five tokens by one factor beat re-choosing five colours.** ×1.75 per sRGB channel, ×3.83 linear, applied to all of them: the hues, the ordering and the distances between them survive exactly. **A palette is a set of relations**, and re-picking by eye to fix one member would have quietly changed all of them — which is the failure mode that makes a palette stop being a palette.
+
+**`decay: 2` was the wrong falloff law and it had been wrong since §7.1.** Every one of these lights stands in for an *area* emitter — a square metre of neon, a lit acrylic panel, a backlit plate — and inverse-square is the far-field limit of an area source. Close to a panel the falloff is nearer linear, and "close" means within a few multiples of the panel's own size, which in a 9 m alley is everywhere a visitor can stand. At decay 2 almost the entire output landed within a metre of a sign nobody can reach. 1.45 delivers **8.0 lux** at knee height six metres away where 2 delivered 3.4, with the source unchanged.
+
+**And `distance` is a cutoff, not a reach.** three.js windows the falloff to zero at that boundary, so props at 8.7 m from a light with `distance: 10` were being crushed toward black by the *window* rather than by the physics — at exactly the range where §7.1's five pools were meant to be overlapping. `reachReport()` said the pools were continuous and it was telling the truth about the wrong quantity. **Two numbers on one light meant two different things and only one of them was physical.**
+
+**A second reflector was the obvious way to wet the cross street and the wrong one.** `MeshReflectorMaterial` renders the whole scene again from a mirrored camera; a second one doubles §15's most expensive pass. Extending the existing plane costs **nothing extra per frame** — the render target does not grow with the geometry — and pays in resolution spread instead, 13% coarser reflections everywhere. For a road seen through a 3.36 m slot at 30 m through fog, that is the cheap side of the trade. ***Add another one* is always the first idea and it is usually the expensive one.**
+
+**The 0.2 m gap that caused it was a good decision that outlived its reason.** §3.6 started the carriageway at 26.2 because the reflector ended at 26.0 and a material seam under a light is ugly. It avoided a seam nobody would have noticed and created a hard edge between *wet* and *not wet* across the one view that opens out of the alley. **A boundary chosen to hide a small artefact produced a much louder one**, which is only ever visible from the far side of the thing being hidden.
+
 ---
 
 ## 17. Definition of done, for this world specifically
@@ -1417,7 +1765,7 @@ All of §3.7. Free choices: every dimension in its table except the vending mach
 - The ground is the brightest thing in the frame and it is not a light source.
 - Three things are lit warmer than everything else and they are the only three things you can touch.
 - Nothing in the backdrop responds to a click.
-- A project added to `CONTENT.md` appears on the shopfront with no component edited.
+- A project added to `CONTENT.md` appears on the board with no component edited.
 - Every door opens the real deployment.
 - The whole alley is walkable end to end in under twenty seconds, and nothing lets you out of it.
 - **A stranger, on a phone, finds the contact details in ten seconds without walking anywhere.**

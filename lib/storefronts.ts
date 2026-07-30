@@ -261,8 +261,14 @@ function build(): StorefrontUnit[] {
   ].slice(0, total)
   const dealtStates = shuffle(states, random)
 
+  /* §3.4 — units within `clearOfBendZ` of §3.1's bend are not eligible. An awning reaches
+     1.25 m into the alley at 2.60 m, which puts it across §2.1's screen from every approach.
+     Filtered out of the *candidates* rather than removed afterwards, so the count stays 5. */
   const awningSlots = shuffle(
-    placements.map((_, i) => i),
+    placements
+      .map((placement, i) => ({ i, z: placement.z }))
+      .filter(({ z }) => z < STOREFRONT.awning.clearOfBendZ)
+      .map(({ i }) => i),
     random,
   ).slice(0, STOREFRONT.awning.count)
   const awnings = new Set(awningSlots)

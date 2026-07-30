@@ -23,6 +23,7 @@ import {
   shutterDrop,
 } from '@/lib/storefronts'
 import { signBoxTexture } from '@/lib/textures/signBox'
+import { grainParams } from '@/lib/textures/surfaceGrain'
 import { LAYOUT, MATERIALS, PALETTE, STOREFRONT, type ColorToken } from '@/lib/world'
 
 /**
@@ -359,12 +360,27 @@ export default function Storefronts() {
      *  what keeps a wall of them from reading as three different materials. */
     const shutterTints = [PALETTE.shutter, PALETTE.metalDark, PALETTE.concrete]
 
+    /**
+     * §3.4's surface grain — on the plinth, the piers, the fascia and the awning, and on
+     * nothing else here.
+     *
+     * **The shutters and the small metal parts get none deliberately.** Slats are already
+     * geometry at a fixed 0.09 pitch; this section spends draw calls on that specifically
+     * so the shutters do not need a map. A jamb, a lintel or a shutter roll is too small
+     * on screen to resolve a 512² texture at any distance the alley offers, so mapping
+     * them would cost the same and buy nothing. The sign boxes carry their own painted
+     * faces and the spill is emissive — a grain map on either fights what it is for.
+     */
+    const concreteGrain = grainParams('concrete', tier)
+    const facadeGrain = grainParams('facade', tier)
+
     return {
       concrete: standard(PALETTE.concrete, {
         roughness: MATERIALS.concrete.roughness,
         envMapIntensity: MATERIALS.concrete.envMapIntensity,
+        ...concreteGrain,
       }),
-      fascia: standard(PALETTE.facade),
+      fascia: standard(PALETTE.facade, facadeGrain),
       backing: standard(PALETTE.void, { roughness: 0.95 }),
       metal: standard(PALETTE.metalDark, {
         roughness: MATERIALS.paintedMetal.roughness,
@@ -415,6 +431,7 @@ export default function Storefronts() {
       awning: standard(PALETTE.shutter, {
         roughness: MATERIALS.norenFabric.roughness,
         metalness: MATERIALS.norenFabric.metalness,
+        ...grainParams('fabric', tier),
       }),
     }
   }, [litGroups, tier])

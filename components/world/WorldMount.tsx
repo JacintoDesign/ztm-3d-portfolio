@@ -1,6 +1,7 @@
 'use client'
 
 import dynamic from 'next/dynamic'
+import type { Project } from '@/lib/projects'
 
 /**
  * The Canvas never server-renders.
@@ -17,6 +18,7 @@ import dynamic from 'next/dynamic'
  */
 const World = dynamic(() => import('./World'), { ssr: false })
 
-export default function WorldMount() {
-  return <World />
+/** §2.1's projects pass straight through; this wrapper still holds one flag and no logic. */
+export default function WorldMount({ projects }: { projects: readonly Project[] }) {
+  return <World projects={projects} />
 }

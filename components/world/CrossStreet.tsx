@@ -12,7 +12,10 @@ import {
   BoxGeometry,
   PlaneGeometry,
 } from 'three'
+import { useFrame } from '@react-three/fiber'
 import { resolveTier } from '@/lib/device'
+import { flickerLevel } from '@/lib/flicker'
+import { prefersReducedMotion } from '@/lib/reducedMotion'
 import { colorRun } from '@/lib/signs'
 import { brandSignTexture } from '@/lib/textures/brandSign'
 import { facadeWindowTexture } from '@/lib/textures/facadeWindows'
@@ -21,6 +24,7 @@ import {
   type ColorToken,
   FACADE_WINDOWS,
   MATERIALS,
+  NEON_FLICKER,
   PALETTE,
   dimHex,
   facadeWindowFloors,
@@ -252,14 +256,37 @@ function BrandSign() {
   const material = useMemo(() => {
     const map = brandSignTexture(tier)
     if (map === null) return null
+    /* The map carries §4's two colours itself, so the material's own colour is only the §8.1
+       gain — the multiply that keeps the sign visible through §5's fog at this range. And it is
+       `transparent`, because the canvas is empty everywhere the letters are not: what draws is
+       the type and the shadow it casts, which is how forty letters get bolted to a wall 52 m
+       away without forty solids. */
     return new MeshBasicMaterial({
       map,
-      /* The gain, applied to the material rather than per instance — there is only one of these,
-         so `instanceColor` would be machinery for a single quad. */
       color: new Color(panels.gain, panels.gain, panels.gain),
+      transparent: true,
       toneMapped: true,
     })
   }, [tier])
+
+  /**
+   * §11.3 — the brand sign flickers, on its own phase.
+   *
+   * A `MeshBasicMaterial` has no emissive term, so the flicker rides the material's **colour**,
+   * which is where §8.1's gain already lives — level × gain, mutated in place. Hoisted scratch
+   * and a direct read, like every other flicker in this world; this never reaches React state.
+   *
+   * The phase is 0.41 of the period, chosen against §2.1's 0.00: the two are the only Latin
+   * signs in the world and they sit on the same sightline 52 m apart, so stuttering together
+   * would read as the *scene* blinking rather than as two failing tubes.
+   */
+  useFrame((state) => {
+    if (material === null) return
+    const level = prefersReducedMotion()
+      ? 1
+      : flickerLevel(state.clock.elapsedTime, NEON_FLICKER.phase.brandSign)
+    material.color.setScalar(panels.gain * level)
+  })
 
   if (material === null) return null
 

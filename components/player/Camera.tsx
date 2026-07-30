@@ -3,6 +3,7 @@
 import { useEffect } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import { expose } from '@/lib/debug'
+import { poseAdvance, sampled } from '@/lib/pose'
 import { prefersReducedMotion } from '@/lib/reducedMotion'
 import { canControl, getMode, setMode } from '@/lib/store'
 import { CAMERA, LOOK, degToRad, yawToThreeRotationY } from '@/lib/world'
@@ -129,7 +130,19 @@ export default function Camera(): null {
    * loop — only a positive one would make us responsible for calling `gl.render`.
    */
   useFrame((state, delta) => {
-    if (prefersReducedMotion()) {
+    /**
+     * §2.1.1 — the pose is advanced here and nowhere else, at −2, before either reader
+     * touches it. One writer and one clock, so `Camera` and `Player` cannot disagree about
+     * what time it is or where the curve has got to.
+     *
+     * `elapsedTime` is in seconds; the poses are authored in ms.
+     */
+    if (poseAdvance(state.clock.elapsedTime * 1000)) {
+      /* Written *through* `look` rather than around it, so releasing the pose needs no
+         write-back on this axis: `look` is already where the camera is. */
+      look.yaw = look.targetYaw = sampled.yaw
+      look.pitch = look.targetPitch = sampled.pitch
+    } else if (prefersReducedMotion()) {
       // §13 — camera easing on look: off, direct.
       look.yaw = look.targetYaw
       look.pitch = look.targetPitch

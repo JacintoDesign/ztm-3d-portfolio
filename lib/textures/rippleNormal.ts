@@ -41,7 +41,16 @@ const SLOPE = RIPPLE_NORMAL.slope
 function buildHeightField(size: number): Float32Array {
   const height = new Float32Array(size * size)
   const random = mulberry32(SEED)
-  const [minRadius, maxRadius] = RIPPLE_NORMAL.dimples.radiusPx
+  /**
+   * §6.2 — the authored radii are in pixels *at the desktop size*, and they scale with it.
+   * A tile covers the same 1.5 m on both tiers, so a dimple that stayed at 6–22 px on a
+   * 256² map would be twice the world size — 4–14 cm craters instead of raindrops.
+   */
+  const scale = size / RIPPLE_NORMAL.size.desktop
+  const [minRadius, maxRadius] = RIPPLE_NORMAL.dimples.radiusPx.map((r) => r * scale) as [
+    number,
+    number,
+  ]
 
   for (let d = 0; d < RIPPLE_NORMAL.dimples.count; d++) {
     const cx = random() * size
@@ -77,8 +86,7 @@ function buildHeightField(size: number): Float32Array {
   return height
 }
 
-function paint(): HTMLCanvasElement {
-  const size = RIPPLE_NORMAL.size
+function paint(size: number): HTMLCanvasElement {
   const canvas = document.createElement('canvas')
   canvas.width = size
   canvas.height = size
@@ -120,14 +128,17 @@ function paint(): HTMLCanvasElement {
   return canvas
 }
 
-let cached: CanvasTexture | null = null
+/** Keyed by tier since §6.2 split the size — a bare `let` would serve one tier's map to both. */
+const cache = new Map<Tier, CanvasTexture>()
 
 /** The ripple normal, painted on first call and cached for the lifetime of the page. */
 export function rippleNormal(tier: Tier): CanvasTexture | null {
   if (typeof document === 'undefined') return null
-  if (cached !== null) return cached
 
-  const texture = new CanvasTexture(paint())
+  const cached = cache.get(tier)
+  if (cached !== undefined) return cached
+
+  const texture = new CanvasTexture(paint(RIPPLE_NORMAL.size[tier]))
   // Normals are vectors, not colour. sRGB here would bend every one of them.
   texture.colorSpace = NoColorSpace
   texture.wrapS = RepeatWrapping
@@ -138,6 +149,6 @@ export function rippleNormal(tier: Tier): CanvasTexture | null {
   texture.anisotropy = CANVAS_PAINTER.anisotropy[tier]
   texture.needsUpdate = true
 
-  cached = texture
+  cache.set(tier, texture)
   return texture
 }

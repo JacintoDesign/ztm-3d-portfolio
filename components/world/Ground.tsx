@@ -139,7 +139,10 @@ export default function Ground() {
       {/* §6.1 — the reflector strip, 4 mm above the base plane. That lift is depth-buffer
           arithmetic and not a look choice: at near 0.10 / far 90.0 the conventional 1 mm
           separation z-fights at 40 m, which is exactly where nobody thinks to look. */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, REFLECTOR_STRIP.y, 0]}>
+      <mesh
+        rotation={[-Math.PI / 2, 0, 0]}
+        position={[0, REFLECTOR_STRIP.y, REFLECTOR_STRIP.centreZ]}
+      >
         <planeGeometry args={[REFLECTOR_STRIP.width, REFLECTOR_STRIP.length]} />
         <MeshReflectorMaterial
           color={PALETTE.asphaltWet}

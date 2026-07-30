@@ -28,6 +28,15 @@ import type { NextConfig } from 'next'
  */
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  /**
+   * §2.1 — `lib/content.ts` reads `CONTENT.md` off disk at build time. The file is not
+   * imported by anything, so nothing traces it into the deployment bundle, and without this
+   * the read **works in dev and 500s on Vercel** — the worst shape a config omission takes,
+   * because local verification passes.
+   */
+  outputFileTracingIncludes: {
+    '/': ['./CONTENT.md'],
+  },
 }
 
 export default nextConfig

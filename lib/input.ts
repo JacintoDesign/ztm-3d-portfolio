@@ -69,8 +69,29 @@ function recomputeKeyboard(): void {
   keyboard.y = y
 }
 
+/**
+ * §12.5 — a monotonic tick, bumped on every movement press **whether or not the gate below
+ * lets it through**, and on the stick leaving its dead zone.
+ *
+ * It exists because §2.1.1's locked view has to release on movement input and cannot: the
+ * gate on the next line means that in `'locked'` mode a `W` is never recorded, so `held`
+ * stays empty and `hasMovementInput()` is permanently false. The gate itself must not move
+ * — it is what stops a visitor walking while typing in §2.3's contact form — so the signal
+ * goes *above* it instead.
+ *
+ * **The consumer decides when it means anything**, and that is the part to get right. This
+ * same tick fires when someone types `w` into a contact form; a consumer that watched it in
+ * `'overlay'` mode would close the form under them. The locked view watches it only while
+ * the mode is `'locked'`.
+ */
+let movementSeq = 0
+
+/** Read directly in a frame loop; never subscribed to. */
+export const movementTick = (): number => movementSeq
+
 function onKeyDown(event: KeyboardEvent): void {
   if (!isBound(event.code)) return
+  if (!event.repeat) movementSeq++
   // Gated here rather than downstream so that an overlay's text field keeps its arrow
   // keys: while the visitor cannot control the world, we neither record nor preventDefault.
   if (!canControl()) return
@@ -137,6 +158,11 @@ export function setStick(rawX: number, rawY: number): void {
     stick.y = 0
     return
   }
+
+  /* §12.5 — the touch half of the movement tick, on the *crossing* rather than on every
+     move: a thumb held out of the dead zone would otherwise bump this sixty times a second
+     for a signal whose whole meaning is "something new happened". */
+  if (stick.x === 0 && stick.y === 0) movementSeq++
 
   const clamped = Math.min(magnitude, 1)
   const scale = ((clamped - deadZone) / (1 - deadZone)) / magnitude
