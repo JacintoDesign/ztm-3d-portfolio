@@ -11,7 +11,7 @@
  */
 
 import { NEON_SIGN_LIST } from './signs'
-import { STOREFRONT, type ColorToken } from './world'
+import { DOORWAY_SURROUND, STOREFRONT, type ColorToken } from './world'
 
 export type ShutterState = 'closed' | 'ajar' | 'open'
 
@@ -278,10 +278,13 @@ function build(): StorefrontUnit[] {
      alley quietly ships six lit boxes while every count in §3.4 still reads seven. */
   const doorSides = placements.map((_, i): -1 | 1 => (i % 2 === 0 ? -1 : 1))
   const keepsSignBox = placements.map((placement, i) => {
+    /* The same arithmetic as `doorwayZ` below, and it has to be: this runs before any
+       `StorefrontUnit` exists to pass to it. It reads `DOORWAY_SURROUND` for exactly that
+       reason — while the two forms disagreed, the check that decides which units keep a
+       sign box was measuring a doorway 0.18 m from where the box would actually go. */
     const usable = placement.width - STOREFRONT.aperture.sideInset * 2
     const doorZ =
-      placement.z +
-      (doorSides[i] as number) * (usable / 2 - STOREFRONT.doorway.width / 2)
+      placement.z + (doorSides[i] as number) * (usable / 2 - DOORWAY_SURROUND / 2)
     const min = doorZ - STOREFRONT.signBox.width / 2
     const max = doorZ + STOREFRONT.signBox.width / 2
 
@@ -334,16 +337,40 @@ function build(): StorefrontUnit[] {
 
 export const STOREFRONT_UNITS: readonly StorefrontUnit[] = build()
 
-/** Aperture width for a unit — the doorway takes one end, the shutter takes the rest. */
+/**
+ * Aperture width for a unit — the doorway takes one end, the shutter takes the rest.
+ *
+ * Sized off `DOORWAY_SURROUND`, not off the doorway's opening. See `doorwayZ`.
+ */
 export function apertureWidth(unit: StorefrontUnit): number {
   const usable = unit.width - STOREFRONT.aperture.sideInset * 2
-  return usable - STOREFRONT.doorway.width - STOREFRONT.doorGap
+  return usable - DOORWAY_SURROUND - STOREFRONT.doorGap
 }
 
-/** Centre of the doorway along the alley, at whichever end of the unit it took. */
+/**
+ * Centre of the doorway along the alley, at whichever end of the unit it took.
+ *
+ * **Placed by what the doorway *occupies*, not by the width of its opening**, and that
+ * distinction was a fault on all fourteen units. The old form subtracted
+ * `doorway.width / 2`, which puts the 0.90 m hole hard against the pier's inner edge and
+ * leaves nothing for the frame around it — so the jambs, which go on 0.06 clear of the
+ * opening and are 0.12 wide, overhung the pier by 0.12 m. They did not merely overhang it:
+ * a jamb stands 0.45 proud against a pier's 0.35, so each one passed through the front of
+ * the pier beside it, and the lintel with it. It read as a doubled column beside every door
+ * in the alley.
+ *
+ * `DOORWAY_SURROUND` is 1.26 and it lands the whole assembly flush on the pier with nothing
+ * outside it. The narrowest unit still fits: usable 3.00, surround 1.26, gap 0.15, aperture
+ * 1.59.
+ *
+ * **This moves every doorway 0.18 m toward its unit's centre, and that is not local.** §3.4's
+ * sign boxes are centred here, §7.1's five alley lights are seated on sign panels rather than
+ * on coordinates, and §3.7's placement rules all measure against this function. The chain
+ * re-resolves; `lib/props.ts`'s `audit()` is what proves it landed.
+ */
 export function doorwayZ(unit: StorefrontUnit): number {
   const usable = unit.width - STOREFRONT.aperture.sideInset * 2
-  return unit.z + unit.doorSide * (usable / 2 - STOREFRONT.doorway.width / 2)
+  return unit.z + unit.doorSide * (usable / 2 - DOORWAY_SURROUND / 2)
 }
 
 /** Centre of the shutter aperture — the remainder of the unit, opposite the doorway. */

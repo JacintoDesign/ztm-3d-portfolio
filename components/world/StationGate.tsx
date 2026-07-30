@@ -3,6 +3,7 @@
 import { useCallback, useMemo } from 'react'
 import {
   BoxGeometry,
+  CylinderGeometry,
   type InstancedMesh,
   Matrix4,
   MeshStandardMaterial,
@@ -17,6 +18,7 @@ import {
   PALETTE,
   STATION_GATE,
   STATION_GATE_SLAT_COUNT,
+  STOREFRONT,
 } from '@/lib/world'
 
 /**
@@ -55,6 +57,25 @@ const SLAT_MATERIAL = new MeshStandardMaterial({
   roughness: MATERIALS.rollerShutter.roughness,
   metalness: MATERIALS.rollerShutter.metalness,
 })
+
+/**
+ * §3.1 — the drum the curtain winds onto, in §3.4's `metalDark` like every other roll in
+ * the alley.
+ *
+ * **A roller shutter is a curtain of slats *and* the drum it winds onto**, and this one had
+ * only the curtain: the slats stopped at the head against nothing, which turns a shutter
+ * into corrugated cladding. §3.4 got it right for fourteen shopfronts and the one shutter
+ * §17 actually opens on was the one that missed it.
+ */
+const ROLL_MATERIAL = new MeshStandardMaterial({
+  color: PALETTE.metalDark,
+  roughness: MATERIALS.paintedMetal.roughness,
+  metalness: MATERIALS.paintedMetal.metalness,
+  envMapIntensity: MATERIALS.paintedMetal.envMapIntensity,
+})
+
+/** Radius 1, height 1, axis Y — turned to lie along the run at the mesh. §3.4's convention. */
+const UNIT_CYLINDER = new CylinderGeometry(1, 1, 1, 12, 1)
 
 export default function StationGate() {
   const tier = resolveTier()
@@ -122,6 +143,19 @@ export default function StationGate() {
         name="station:gateSlats"
         ref={attachSlats}
         args={[UNIT_BOX, SLAT_MATERIAL, slats.length]}
+      />
+
+      {/* §3.1 — the roll, at the head of the curtain. **Rotated about Z, not X**: a
+          shopfront's shutter runs *along* the alley and §3.4 turns its drum with X, and
+          this one runs *across* it. That axis is the whole difference between a drum and a
+          rolling pin, and it is not visible in any number. */}
+      <mesh
+        name="station:gateRoll"
+        geometry={UNIT_CYLINDER}
+        material={ROLL_MATERIAL}
+        position={[0, STATION_GATE.headY, faceZ + STOREFRONT.rollRadius]}
+        rotation={[0, 0, Math.PI / 2]}
+        scale={[STOREFRONT.rollRadius, STATION_GATE.width, STOREFRONT.rollRadius]}
       />
 
       {noticeMaterial !== null ? (

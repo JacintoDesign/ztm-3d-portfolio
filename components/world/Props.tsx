@@ -5,8 +5,10 @@ import { useGLTF } from '@react-three/drei'
 import {
   BoxGeometry,
   type BufferGeometry,
+  Color,
   CylinderGeometry,
   DoubleSide,
+  Float32BufferAttribute,
   type InstancedMesh,
   type Material,
   Matrix4,
@@ -23,8 +25,8 @@ import { expose } from '@/lib/debug'
 import { resolveTier } from '@/lib/device'
 import {
   CONE_TAPERS,
-  LIT_SCOOTERS,
   PROP_BOXES,
+  PROP_TOKENS,
   STREET_PROPS,
   type Part,
   type PrimitiveKey,
@@ -35,7 +37,9 @@ import {
 } from '@/lib/props'
 import { lanternPaper } from '@/lib/textures/lanternPaper'
 import { roadGlowTexture } from '@/lib/textures/roadGlow'
-import { CONTACT_AO_DECAL, MATERIALS, PALETTE, PROPS } from '@/lib/world'
+import { grainParams } from '@/lib/textures/surfaceGrain'
+import { vendingFront } from '@/lib/textures/vendingFront'
+import { CONTACT_AO_DECAL, MATERIALS, PALETTE, PROPS, type Tier } from '@/lib/world'
 
 /**
  * §3.7 — the street props. The band between §3.4's wall and §3.5's overhead layer, and
@@ -45,20 +49,28 @@ import { CONTACT_AO_DECAL, MATERIALS, PALETTE, PROPS } from '@/lib/world'
  * in `lib/props.ts` and read here. This file knows how to draw a list of parts and
  * nothing about how that list was chosen, which is the same split §3.4 and §3.6 use.
  *
- * **Everything is drawn by material, not by object.** Sixty-four props made of 225 parts
- * come out as **twelve** `InstancedMesh`es plus one decal pass, because a bucket is keyed
- * on `(geometry, material)` and a crate, a scooter cowl and a vending machine body are
- * all the same box in the same dark. Drawn per object this section would be sixty-four
- * draw calls on its own and could not ship on a phone at all (§15).
+ * **Drawn by material, and now genuinely by material.** Two hundred and twenty-five parts
+ * used to come out as twelve `InstancedMesh`es bucketed on `(geometry, material)` — so a
+ * crate and a vending machine body shared one, while the *same surface on a cylinder*
+ * needed a second. §15 named the remaining lever three sections ago and this spends it:
+ * the transforms bake into the vertices, one merged mesh per material family, and where
+ * two surfaces differ only in colour the colour bakes into a vertex attribute. **Twelve
+ * becomes eight.**
+ *
+ * **What baking costs, stated rather than assumed.** A box is 24 vertices, so 225 baked
+ * parts is roughly 250 kB of buffer where instancing stored one geometry and 225 matrices.
+ * Triangles do not move — an instance draws its geometry once either way. Culling does not
+ * move either: these meshes span 44 m of alley and were never being culled. **What changes
+ * is that four crate shades and the cone's three surfaces are now free**, because a vertex
+ * colour is not a material.
  *
  * **Carries nothing** (§2.4). No strings, nothing clickable, nothing raycast against.
  */
 
-/* Written once at mount and never in a frame loop — nothing in this file moves. The two
-   dummies are reused across all 225 parts; the composed matrices cannot be, since each
-   one is kept until its InstancedMesh exists to receive it. */
+/* Written once at mount and never in a frame loop — nothing in this file moves. */
 const root = new Object3D()
 const child = new Object3D()
+const composed = new Matrix4()
 
 /**
  * The four shapes.
@@ -83,59 +95,126 @@ function standard(color: string, extra: MeshStandardMaterialParameters = {}) {
   return new MeshStandardMaterial({ color, ...extra })
 }
 
-/**
- * Eight surfaces for the whole prop set.
+/* ────────────────────────────────────────────────────────────────────────────
+ * §15 — the material families
  *
- * Every one of these is a draw call per geometry it appears on (§15), so the set is kept
- * deliberately short — a colour earns its own material only where no existing one does
- * its job. `void` is the exception worth naming: it is a full 1.5 stops darker than
- * `shutter` and it is what makes a vending machine front read as glass rather than as
- * more machine.
+ * A family is a set of surfaces that agree on everything a material carries except the
+ * colour. That is the whole test, and it is what the old `(geometry, material)` bucketing
+ * could not express: `metalDark`, `signWhite` and `roadOrange` have had identical
+ * roughness, metalness and `envMapIntensity` since §3.7 was written and differed only in a
+ * hex, which is a vertex attribute, not a draw call.
+ * ──────────────────────────────────────────────────────────────────────────── */
+
+type Family = 'paintedMetal' | 'matte' | 'crate' | 'shutter' | 'binDrum' | 'vendingFront' | 'cartLamp' | 'lanternGlow'
+
+/**
+ * Which family each surface belongs to.
+ *
+ * **`void` sits in `matte` and that is the one entry worth defending.** Its parts are four
+ * coin flaps and two cart tyres — six near-black objects a few centimetres across, at 0.4%
+ * reflectance. `matte` gives them roughness 0.72 where `void` asked for 0.95 and puts
+ * §3.4's grain on them, and neither is visible on a surface that returns four parts in a
+ * thousand of the light that hits it. It is a draw call for a difference that cannot be
+ * seen, and §15's cap is a real constraint.
  */
-const SURFACE: Record<SurfaceKey, Material> = {
-  concrete: standard(PALETTE.concrete, {
-    roughness: MATERIALS.concrete.roughness,
-    metalness: MATERIALS.concrete.metalness,
-    envMapIntensity: MATERIALS.concrete.envMapIntensity,
-  }),
-  metalDark: standard(PALETTE.metalDark, {
-    roughness: MATERIALS.paintedMetal.roughness,
-    metalness: MATERIALS.paintedMetal.metalness,
-    envMapIntensity: MATERIALS.paintedMetal.envMapIntensity,
-  }),
-  shutter: standard(PALETTE.shutter, {
-    roughness: MATERIALS.rollerShutter.roughness,
-    metalness: MATERIALS.rollerShutter.metalness,
-  }),
-  void: standard(PALETTE.void, { roughness: 0.95, metalness: 0.0 }),
-  signWhite: standard(PALETTE.signWhite, {
-    roughness: MATERIALS.paintedMetal.roughness,
-    metalness: MATERIALS.paintedMetal.metalness,
-    envMapIntensity: MATERIALS.paintedMetal.envMapIntensity,
-  }),
-  roadOrange: standard(PALETTE[PROPS.cone.color], {
-    roughness: MATERIALS.paintedMetal.roughness,
-    metalness: MATERIALS.paintedMetal.metalness,
-  }),
-  /* §3.4's rule, which applies to every emissive surface in the world: the accent lives
-     in the emissive term and the diffuse stays `void`. Putting it in both stacks a fully
-     lit surface under the glow, so the panel reads as orange paint instead of as a lamp
-     and arrives at roughly twice the intensity §8.1 asked for. */
-  cartLamp: standard(PALETTE.void, {
-    emissive: PALETTE[PROPS.foodCart.lamp.color],
-    emissiveIntensity: PROPS.foodCart.lamp.emissive,
-  }),
-  /* §8 — `side: DoubleSide` on the paper lantern, because a paper shade is lit from
-     inside and its far wall is part of what you see. §3.7's painted paper is attached in
-     the component, not here: this object is module scope and the tier is not known until a
-     component can call `resolveTier()`. */
-  lanternGlow: standard(PALETTE.void, {
-    emissive: PALETTE[PROPS.paperLantern.color],
-    emissiveIntensity: PROPS.paperLantern.emissive,
-    roughness: MATERIALS.paperLantern.roughness,
-    metalness: MATERIALS.paperLantern.metalness,
-    side: DoubleSide,
-  }),
+const FAMILY: Record<SurfaceKey, Family> = {
+  metalDark: 'paintedMetal',
+  signWhite: 'paintedMetal',
+  roadOrange: 'paintedMetal',
+  concrete: 'matte',
+  void: 'matte',
+  crateKraft: 'crate',
+  crateTimber: 'crate',
+  shutter: 'shutter',
+  binDrum: 'binDrum',
+  vendingFront: 'vendingFront',
+  cartLamp: 'cartLamp',
+  lanternGlow: 'lanternGlow',
+}
+
+/** Families whose members differ only in colour, so the colour goes in the geometry. */
+const TINTED: ReadonlySet<Family> = new Set<Family>(['paintedMetal', 'matte', 'crate'])
+
+/**
+ * Eight materials for two hundred and twenty-five parts.
+ *
+ * Built per tier rather than at module scope, because three of them carry §3.4's grain and
+ * the grain is tier-split — `resolveTier()` cannot be called from module scope.
+ */
+function buildMaterials(tier: Tier): Record<Family, Material> {
+  /* Tinted families take white and let the vertex colour carry §4. `color × vertexColor`
+     is a multiply, so anything but white here would darken every member of the family at
+     once, silently, in a way that looks like a palette change. */
+  const tintable = (extra: MeshStandardMaterialParameters) =>
+    standard('#ffffff', { vertexColors: true, ...extra })
+
+  return {
+    paintedMetal: tintable({
+      roughness: MATERIALS.paintedMetal.roughness,
+      metalness: MATERIALS.paintedMetal.metalness,
+      envMapIntensity: MATERIALS.paintedMetal.envMapIntensity,
+    }),
+    matte: tintable({
+      roughness: MATERIALS.concrete.roughness,
+      metalness: MATERIALS.concrete.metalness,
+      envMapIntensity: MATERIALS.concrete.envMapIntensity,
+      ...grainParams('concrete', tier),
+    }),
+    /* §3.7 — the crates' own repeat. One grain tile across a 0.52 m face, which is the
+       scale a cardboard box is; the `concrete` class at 3 would put aggregate speckle on a
+       carton. A cloned texture shares its Source, so this costs no memory (§3.4). */
+    crate: tintable({
+      roughness: MATERIALS.concrete.roughness,
+      metalness: MATERIALS.concrete.metalness,
+      envMapIntensity: MATERIALS.concrete.envMapIntensity,
+      ...grainParams('crate', tier),
+    }),
+    shutter: standard(PALETTE.shutter, {
+      roughness: MATERIALS.rollerShutter.roughness,
+      metalness: MATERIALS.rollerShutter.metalness,
+    }),
+    /* §3.7 — `metalDark` carrying the grain at the `metal` class, for galvanised speckle.
+       It is the same colour as `paintedMetal`'s commonest member and still earns its own
+       material: that one is shared with thirty-nine other cylinders in this alley, and a
+       grain map on all of them is §3.4's rule applied where §3.4 says not to. */
+    binDrum: standard(PALETTE[PROPS.rubbishPoint.drumColor], {
+      roughness: MATERIALS.paintedMetal.roughness,
+      metalness: MATERIALS.paintedMetal.metalness,
+      envMapIntensity: MATERIALS.paintedMetal.envMapIntensity,
+      ...grainParams('metal', tier),
+    }),
+    /* §3.7 — the painted drinks rack. **White, because the map *is* the albedo**: every
+       other surface here multiplies a §4 token by a texture, and this one has no token to
+       multiply. No emissive term — §3.7's rule that the bio station is the only lit
+       machine stands, and what was wrong was the panel's reflectance, not its light. */
+    vendingFront: standard('#ffffff', {
+      map: vendingFront(tier),
+      roughness: MATERIALS.rollerShutter.roughness,
+      metalness: 0.0,
+    }),
+    /* §3.4's rule, which applies to every emissive surface in the world: the accent lives
+       in the emissive term and the diffuse stays `void`. Putting it in both stacks a fully
+       lit surface under the glow, so the panel reads as orange paint instead of as a lamp
+       and arrives at roughly twice the intensity §8.1 asked for. */
+    cartLamp: standard(PALETTE.void, {
+      emissive: PALETTE[PROPS.foodCart.lamp.color],
+      emissiveIntensity: PROPS.foodCart.lamp.emissive,
+    }),
+    /* §8 — `side: DoubleSide` on the paper lantern, because a paper shade is lit from
+       inside and its far wall is part of what you see. §3.7's painted paper goes in
+       `emissiveMap`: the diffuse is `void` per the rule above, so a `map` would modulate a
+       near-black surface and change nothing, while `emissiveMap` multiplies
+       `emissive × emissiveIntensity` per texel — which is what "the frame behind the paper
+       is blocking the light here" actually is. */
+    lanternGlow: standard(PALETTE.void, {
+      emissive: PALETTE[PROPS.paperLantern.color],
+      emissiveIntensity: PROPS.paperLantern.emissive,
+      emissiveMap: lanternPaper(tier),
+      roughness: MATERIALS.paperLantern.roughness,
+      metalness: MATERIALS.paperLantern.metalness,
+      side: DoubleSide,
+    }),
+  }
 }
 
 /** Lies flat, so the decal quad is one shared geometry with no per-instance rotation. */
@@ -152,10 +231,9 @@ useGLTF.preload(PROPS.scooter.model.file)
  * The model's five authored materials, folded onto §4's three.
  *
  * It ships a light body, a near-black, a dark grey, an 8-triangle gold and a 12-triangle
- * chrome. The last two are a headlamp lens and a mirror on a bike parked at 3am with
- * nobody on it, so they go to the frame — **and what comes out is exactly the three
- * tokens `PROPS.scooter` has declared since it was five boxes.** Not by design: a scooter
- * has a body, tyres and a frame whichever way it is built.
+ * chrome. The gold is the headlamp lens and has a rung of its own; **the chrome goes to the
+ * body rather than to the frame**, because on a pale scooter the mirror stalks are what make
+ * the silhouette read, and on a black one they were correctly invisible.
  *
  * Keyed on the model's own material names, so a swapped model announces itself by coming
  * out entirely in `metalColor` rather than by silently keeping its own colours.
@@ -168,7 +246,9 @@ const SCOOTER_TOKEN: Record<string, ScooterToken> = {
   'Material.003': 'metalColor',
   /* §3.7 — the headlamp lens, which was folded into the frame when it was always off. */
   [PROPS.scooter.lamp.material]: 'lamp',
-  'Material.005': 'metalColor',
+  /* §4.2 — the chrome. It followed the frame while the body was `shutter`; on
+     `scooterPaint` it belongs with the paint. */
+  'Material.005': 'bodyColor',
 }
 
 const SCOOTER_SURFACE: Record<ScooterToken, Material> = {
@@ -203,9 +283,10 @@ const SCOOTER_SURFACE: Record<ScooterToken, Material> = {
  * the only real test of whether the split between *what a model is* and *where it stands*
  * was drawn in the right place.
  *
- * The three merged parts land in three draw calls carrying four instances each. Mounted as
- * authored it would be twenty; drawn per scooter from the box vocabulary it was free, so
- * this genuinely costs three rather than trading them — see §3.7 and §15.
+ * Instanced rather than baked like the rest of this file, and deliberately: four copies of
+ * a 1 665-triangle mesh is 6 660 triangles either way, but baked it is four copies in the
+ * buffer instead of one. The prop parts are 24-vertex boxes where that trade does not
+ * matter; a model is where it starts to.
  */
 function Scooters() {
   const { scene } = useGLTF(PROPS.scooter.model.file)
@@ -235,7 +316,7 @@ function Scooters() {
     }
 
     /* Re-materialled onto §4 and merged **again**, by token this time, so a scooter is
-       three draw calls whatever the model's own material count happens to be. `prepareCar`
+       four draw calls whatever the model's own material count happens to be. `prepareCar`
        merges by the model's materials and returns five parts; two of those weigh 8 and 12
        triangles and have no business being draw calls of their own. */
     const byToken = new Map<string, BufferGeometry[]>()
@@ -258,30 +339,23 @@ function Scooters() {
   }, [scene])
 
   /**
-   * One matrix per scooter, composed exactly as `buildBuckets` composes a prop's own
-   * transform — `YXZ`, so the lean is taken about the *yawed* X axis, which is the
-   * scooter's length. Under three's default `XYZ` a leaning scooter pulls a wheelie.
+   * One matrix per scooter, composed exactly as `bake` composes a prop's own transform —
+   * `YXZ`, so the lean is taken about the *yawed* X axis, which is the scooter's length.
+   * Under three's default `XYZ` a leaning scooter pulls a wheelie.
+   *
+   * **One list, because all four are lit now.** It was split into `all` and `lit` while two
+   * of the four had their headlamp on; §3.7 records why that stopped being two.
    */
-  /**
-   * One matrix per scooter, composed exactly as `buildBuckets` composes a prop's own
-   * transform — `YXZ`, so the lean is taken about the *yawed* X axis. Split into all
-   * four and the two §3.7 leaves switched on, because the lamp lens is the one part
-   * that is not the same on every scooter and an `InstancedMesh` has no way to say so
-   * per instance.
-   */
-  const { all, lit } = useMemo(() => {
-    const all: Matrix4[] = []
-    const lit: Matrix4[] = []
+  const matrices = useMemo(() => {
+    const out: Matrix4[] = []
     for (const prop of STREET_PROPS) {
       if (prop.kind !== 'scooter') continue
       root.position.set(prop.position[0], prop.position[1], prop.position[2])
       root.rotation.set(prop.lean, prop.yaw, 0, 'YXZ')
       root.updateMatrix()
-      const matrix = root.matrix.clone()
-      all.push(matrix)
-      if (LIT_SCOOTERS.has(prop.key)) lit.push(matrix)
+      out.push(root.matrix.clone())
     }
-    return { all, lit }
+    return out
   }, [])
 
   return (
@@ -292,28 +366,34 @@ function Scooters() {
           name={`prop:scooter:${part.key}`}
           geometry={part.geometry}
           material={part.material}
-          /* The dark scooters simply have no lens. Eight triangles of unlit acrylic on a
-             near-black bike at 3am is nothing to look at, and drawing them would cost a
-             second instanced mesh to render what cannot be seen. */
-          matrices={part.key === 'lamp' ? lit : all}
+          matrices={matrices}
         />
       ))}
     </>
   )
 }
 
-type Bucket = { key: string; primitive: PrimitiveKey; surface: SurfaceKey; matrices: Matrix4[] }
+/* ────────────────────────────────────────────────────────────────────────────
+ * Baking
+ * ──────────────────────────────────────────────────────────────────────────── */
+
+/** Hoisted; `bake` runs once at mount but it is still a loop over 225 parts. */
+const tint = new Color()
 
 /**
- * Every part of every prop, composed into world space and sorted into its bucket.
+ * Every part of every prop, composed into world space and merged into its family.
  *
  * The composition is `propTransform × partTransform`, and the prop's own euler order is
  * **`YXZ`**: the yaw turns it to face its wall, and the lean is then taken about the
  * *yawed* X axis, which is the scooter's own length. Under three's default `XYZ` the lean
  * would be applied first and a leaning scooter would come out pitched nose-down instead.
+ *
+ * A prop's `position[1]` is **the surface it stands on** — §3's kerb top for anything on
+ * the pavement — so the whole part list rides up with it and nothing here needs to know
+ * about kerbs.
  */
-function buildBuckets(): { buckets: Bucket[]; decals: Matrix4[] } {
-  const byKey = new Map<string, Bucket>()
+function bake(): { meshes: { family: Family; geometry: BufferGeometry }[]; decals: Matrix4[] } {
+  const byFamily = new Map<Family, BufferGeometry[]>()
   const decals: Matrix4[] = []
 
   for (const prop of STREET_PROPS) {
@@ -328,20 +408,35 @@ function buildBuckets(): { buckets: Bucket[]; decals: Matrix4[] } {
       child.scale.set(part.scale[0], part.scale[1], part.scale[2])
       child.updateMatrix()
 
-      const key = `${part.primitive}:${part.surface}`
-      let bucket = byKey.get(key)
-      if (bucket === undefined) {
-        bucket = { key, primitive: part.primitive, surface: part.surface, matrices: [] }
-        byKey.set(key, bucket)
+      const family = FAMILY[part.surface]
+      const geometry = (GEOMETRY[part.primitive] as BufferGeometry).clone()
+      geometry.applyMatrix4(composed.multiplyMatrices(root.matrix, child.matrix))
+
+      if (TINTED.has(family)) {
+        /* `Color` converts the §4 hex out of sRGB into the linear space the shader works
+           in — the same conversion `material.color` does, done here instead because this
+           value is travelling as a vertex attribute rather than as a uniform. */
+        tint.set(PALETTE[PROP_TOKENS[part.surface]])
+        const count = geometry.getAttribute('position').count
+        const colors = new Float32Array(count * 3)
+        for (let i = 0; i < count; i++) {
+          colors[i * 3] = tint.r
+          colors[i * 3 + 1] = tint.g
+          colors[i * 3 + 2] = tint.b
+        }
+        geometry.setAttribute('color', new Float32BufferAttribute(colors, 3))
       }
-      bucket.matrices.push(new Matrix4().multiplyMatrices(root.matrix, child.matrix))
+
+      const bucket = byFamily.get(family)
+      if (bucket === undefined) byFamily.set(family, [geometry])
+      else bucket.push(geometry)
     }
 
     if (!prop.decal) continue
 
     /* §7's decal, at §3.7's multiplier of the prop's own footprint. It takes the prop's
-       yaw so an oblong prop gets an oblong shadow, and sits at 0.010 — over §6.1's
-       reflector strip at 0.004 and under §3.6's road glow at 0.014. */
+       yaw so an oblong prop gets an oblong shadow, and sits 0.010 above **the surface the
+       prop stands on** — which for anything on §3's kerb used to be 11 cm underneath it. */
     child.position.set(0, PROPS.contactDecal.y, 0)
     child.rotation.set(0, 0, 0, 'XYZ')
     child.scale.set(
@@ -353,7 +448,14 @@ function buildBuckets(): { buckets: Bucket[]; decals: Matrix4[] } {
     decals.push(new Matrix4().multiplyMatrices(root.matrix, child.matrix))
   }
 
-  return { buckets: [...byKey.values()], decals }
+  const meshes: { family: Family; geometry: BufferGeometry }[] = []
+  for (const [family, geometries] of byFamily) {
+    const merged = geometries.length === 1 ? geometries[0] : mergeGeometries(geometries, false)
+    if (merged === null || merged === undefined) continue
+    merged.computeBoundingSphere()
+    meshes.push({ family, geometry: merged })
+  }
+  return { meshes, decals }
 }
 
 /**
@@ -388,30 +490,8 @@ function Instanced({
 
 export default function Props() {
   const tier = resolveTier()
-  const { buckets, decals } = useMemo(() => buildBuckets(), [])
-
-  /**
-   * §3.7 — the lantern's painted paper, attached to the shared material once the tier is
-   * known. `SURFACE` is module scope and cannot call `resolveTier()`; the painter caches, so
-   * this runs one canvas for the page however many times the component re-renders.
-   *
-   * **`emissiveMap`, not `map`.** The shade's diffuse is `void` per §3.4's rule, so a `map`
-   * would modulate a near-black surface and change nothing. `emissiveMap` multiplies
-   * `emissive × emissiveIntensity` per texel, which is exactly what "the frame behind the
-   * paper is blocking the light here" is. Greyscale for the same reason: the colour is
-   * `lantern` and the map only says how much gets through.
-   *
-   * In `useMemo` rather than `useEffect` so the map is on the material before the first
-   * frame — an effect would show one frame of unribbed lanterns on every mount.
-   */
-  useMemo(() => {
-    const paper = lanternPaper(tier)
-    if (paper === null) return
-    const shade = SURFACE.lanternGlow as MeshStandardMaterial
-    if (shade.emissiveMap === paper) return
-    shade.emissiveMap = paper
-    shade.needsUpdate = true
-  }, [tier])
+  const { meshes, decals } = useMemo(() => bake(), [])
+  const materials = useMemo(() => buildMaterials(tier), [tier])
 
   /**
    * §3.6's painted radial pool, reused rather than repainted: it is already a smoothstep
@@ -456,14 +536,12 @@ export default function Props() {
 
   return (
     <>
-      {buckets.map((bucket) => (
-        <Instanced
-          key={bucket.key}
-          name={`prop:${bucket.key}`}
-          geometry={GEOMETRY[bucket.primitive]}
-          material={SURFACE[bucket.surface]}
-          matrices={bucket.matrices}
-        />
+      {/* One mesh per family. `bake` calls `computeBoundingSphere` on each merged
+          geometry, so these cull correctly against the frustum even though each spans a
+          good part of the alley — the same thing the instanced meshes needed, for the
+          same reason, arrived at from the other direction. */}
+      {meshes.map(({ family, geometry }) => (
+        <mesh key={family} name={`prop:${family}`} geometry={geometry} material={materials[family]} />
       ))}
 
       {decalMaterial !== null ? (

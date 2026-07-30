@@ -73,6 +73,22 @@ export const PALETTE = {
   shutter: '#272F3F', // roller shutters
   concrete: '#2E3646', // kerbs, plinths, poles
   metalDark: '#353F51', // brackets, condensers, railings
+  /**
+   * §4.2 — §3.7's scooter bodywork, and **the only pale surface in the surroundings**.
+   *
+   * 18.3% linear, against `metalDark` at 7.4% and `facade` at 3.1%. The glTF authors its
+   * body at 0.80 linear — a near-white scooter — and §3.7 folded that onto `shutter` at
+   * 4.7% because `shutter` was the darkest non-hole the palette had. That is §4.1's fault
+   * exactly, one object down: a black shape with a headlamp on it, two metres from a
+   * visitor who walks past four of them.
+   *
+   * A sixth of the model's own figure rather than all of it, because this scene has almost
+   * no light in it and the model was authored for one that does.
+   */
+  scooterPaint: '#6E7789',
+  /** §4.2 — the crates. Two browns beside the two greys they used to alternate with. */
+  crateKraft: '#4A3B2A', // 4.7% — cardboard, the same reflectance as `shutter`
+  crateTimber: '#5C4630', // 6.6% — timber, between `concrete` and `metalDark`
   neonMagenta: '#FF2E6A', // primary neon, the alley's signature
   neonPink: '#FF6FA5', // secondary neon, softer signs
   neonCyan: '#3BD9FF', // counter-accent, awning underside
@@ -152,6 +168,18 @@ const raise = (authored: number): number =>
 export const EMISSIVE = {
   neonTubes: raise(3.2), //             3.20 → 5.96
   vehicleHeadlight: raise(2.6), //      2.60 → 4.64
+  /**
+   * §8.1 / §3.7 — the parked scooters' headlamps. **0.90 × the rung above, held as a
+   * fraction of it rather than as a number of its own**, so the two can never drift.
+   *
+   * §3.7 put its lenses on `vehicleHeadlight` on the argument that it is the same object
+   * doing the same job, which is right. What changed is the count and the distance: four
+   * are lit now instead of two, and three of the four stand about two metres from a
+   * visitor who walks past them, where §3.6's cars are forty metres away through fog.
+   * Same job, closer, and more of them — so it steps down one notch. Well above the knee
+   * either way; this is a decision about how bright a lamp is, not about whether it is one.
+   */
+  scooterHeadlamp: raise(2.6) * 0.9, // 4.64 × 0.90 = 4.18
   verticalSigns: raise(2.4), //         2.40 → 4.20
   selectionButtons: raise(2.1), //      2.10 → 3.54
   payphoneLamp: raise(1.9), //          1.90 → 3.10
@@ -208,6 +236,25 @@ export const EMISSIVE = {
  * §3 — Layout
  * ──────────────────────────────────────────────────────────────────────────── */
 
+/**
+ * §3 — the kerb width, derived rather than authored, and declared out here because
+ * `LAYOUT` cannot reference itself while it is being built.
+ *
+ * `wallStandoff 0.20 + deepest wall prop 1.00 + 0.10 clearance`. The deepest wall prop is
+ * §3.7's food cart; the vending machines want 1.02 and the scooters 0.95, so the cart is
+ * what sets it. **Sized to the thing that has to fit**, so a prop deeper than 1.00 either
+ * moves the kerb or trips `audit()`'s `prop-straddles-kerb` rule instead of silently
+ * hanging half of itself over the edge, which is what all twenty of them were doing at
+ * the old 0.60.
+ *
+ * The two figures it is built from live in `PROPS` eight hundred lines below, so they are
+ * restated rather than referenced — and `PROPS.foodCart.size[1]` is checked against this
+ * by `lib/props.ts`'s audit, which is the only place both are in scope at once.
+ */
+const KERB_WIDTH = 0.2 + 1.0 + 0.1
+const KERB_INNER_EDGE_X = 4.5 - KERB_WIDTH
+const GUTTER_WIDTH = 0.22
+
 export const LAYOUT = {
   alley: {
     length: 46.0,
@@ -235,14 +282,20 @@ export const LAYOUT = {
   },
   kerb: {
     height: 0.12,
-    width: 0.6,
-    /** Inner edge; outer edge meets the wall at x = ±4.5. */
-    innerEdgeX: 3.9,
+    /** §3 — 0.60 → 1.30, and derived. See `KERB_WIDTH` above. */
+    width: KERB_WIDTH,
+    /** Inner edge at 3.20; outer edge meets the wall at x = ±4.5. */
+    innerEdgeX: KERB_INNER_EDGE_X,
   },
   gutter: {
-    width: 0.22,
-    /** Centre line, both sides. */
-    x: 3.72,
+    width: GUTTER_WIDTH,
+    /**
+     * §3 — the centre line, both sides, **derived off the kerb face**: `innerEdgeX −
+     * width/2 − 0.07`. That formula returns the old 3.72 from the old 0.60 kerb exactly,
+     * which is how it was checked — it was a free-standing literal for four sections and
+     * only looked right because nothing had moved. §6.2's puddle bias reads this.
+     */
+    x: KERB_INNER_EDGE_X - GUTTER_WIDTH / 2 - 0.07,
     depth: 0.03,
     /** Standing water — the one place roughness is this low outside the puddles. */
     roughness: 0.06,
@@ -413,10 +466,17 @@ export const FACADE_WINDOWS = {
   /** §11.4's precedent: assigned by index, never randomised. Six bays cycle A B C A B C. */
   variants: 3,
   /**
-   * §15 — 512 across 8.00 m is 64 px/m. The §11.1 painter scale is a signage figure; at
+   * §15 — 384 across 8.00 m is 48 px/m. The §11.1 painter scale is a signage figure; at
    * 4 px/cm this bay would want 3200 px and spend the entire texture budget on one wall.
+   *
+   * **512 → 384, one of the three levers §15 named against its own breach.** Three cached
+   * variants at 512² are 4.19 MB; at 384² they are 2.36. What is painted here is a grid of
+   * flat rectangles with hairline reveals — no glyphs, no gradients, nothing that a third
+   * fewer texels along each axis can blur into something else. The wall is also never seen
+   * closer than 4.60 m up and mostly from thirty, which is the other half of why this is the
+   * cheapest 1.83 MB in the world.
    */
-  canvas: { desktop: 512, mobile: 256 },
+  canvas: { desktop: 384, mobile: 192 },
   /** §6.1's depth arithmetic, unchanged — 1 mm z-fights at the far end, 4 mm does not. */
   offset: 0.004,
 
@@ -477,8 +537,26 @@ export const STOREFRONT = {
   slatPitch: 0.09,
   slatDepth: 0.035,
   rollRadius: 0.16,
-  /** §2.1 gives the shopfront door 2.05; this is the ordinary version of that door. */
-  doorway: { width: 0.9, height: 2.05, recess: 0.45 },
+  /**
+   * §2.1 gives the shopfront door 2.05; this is the ordinary version of that door.
+   *
+   * **`jambWidth` was a literal inside `Storefronts.tsx` and that is why the doorway cut
+   * through the pier beside it on all fourteen units.** The doorway was placed by its
+   * *opening* — hard against the pier's inner edge, leaving nothing for the frame — and
+   * then the component put 0.12 m of jamb **outside** that, either side. A jamb stands
+   * 0.45 proud against a pier's 0.35, so it did not merely overhang the pier, it passed
+   * through the front of it. The lintel, sized `width + 0.24`, did the same.
+   *
+   * A number that lives in one file and is depended on by another is a number with no
+   * owner. It is a §3.4 value; it lives here now, and `DOORWAY_SURROUND` below is what the
+   * layout is actually placed by.
+   *
+   * The jambs stay **flush to the opening** rather than standing off it. A reveal was
+   * considered and is wrong here: the door panel is a 0.02 slab on the wall and the jamb is
+   * 0.45 proud, so a gap between them shows a sliver of bare facade down the middle of the
+   * doorway. A frame surrounds an opening; it does not hover beside it.
+   */
+  doorway: { width: 0.9, height: 2.05, recess: 0.45, jambWidth: 0.12 },
   /** Centred over the doorway, not over the unit — a shop sign hangs above its entrance. */
   signBox: { width: 1.3, height: 0.7, baseY: 2.85, proud: 0.14 },
   /** The doorway takes one end of the unit; the shutter aperture takes the rest. */
@@ -528,12 +606,27 @@ export const STOREFRONT = {
     ['sodium', 'lantern'],
     ['neonCyan'],
   ],
-  /** No unit may enter these — §2.1, §2.3 west; §2.2 east. */
+  /**
+   * No unit may enter these — §2.3 west; §2.2 east.
+   *
+   * **The west slot at `[−6.60, −1.40]` is gone, and it is §16 item 10 closed.** It was
+   * reserved for §2.1's showcase from the shell onward; §2.1 then moved to §3.1's bend and
+   * the reservation stayed, leaving **5.20 m of bare west wall** — no shutter, no doorway,
+   * no sign — in the middle of the alley. Measured at eye height from mid-alley it came out
+   * at 8.5 of 255 against 37.7 on the lit wall beside it, and it read exactly as what it
+   * was: the one stretch of this street nobody had built.
+   *
+   * §16 recorded it as *deliberately not part of §2.1's build* and named the blast radius
+   * rather than the work, which was right at the time: removing a slot re-runs
+   * `placeWall`'s largest-remainder apportionment, so **every unit width, joint, doorway and
+   * sign box on this wall moves**, which moves §3.5's sign `z` values, which re-seats §7.1's
+   * five dynamic lights, which re-runs all seven of §3.7's `audit()` rules. That is a full
+   * re-verification of four sections — and this pass had already done one, for §3.4's
+   * doorway surround, which moves the same chain. **The second one is nearly free once the
+   * first has been paid for**, which is the only reason it is here rather than in §16.
+   */
   reserved: {
-    west: [
-      [-6.6, -1.4],
-      [12.9, 15.1],
-    ],
+    west: [[12.9, 15.1]],
     east: [[5.1, 6.9]],
   },
   /** The run stays inside the alley proper, not the facade's full extent. */
@@ -544,6 +637,23 @@ export const STOREFRONT = {
   signPalette: readonly (readonly ColorToken[])[]
   [key: string]: unknown
 }
+
+/**
+ * §3.4 — how much of a unit the doorway occupies, which is not the same as how wide the
+ * hole in it is. **1.14**, from `width + 2 × jambWidth`.
+ *
+ * `lib/storefronts.ts` places the doorway and sizes the shutter aperture from this rather
+ * than from `doorway.width`, so the whole assembly — panel, both jambs, lintel — ends flush
+ * on the pier's inner edge with nothing outside it. Placing by the opening put 0.12 m of
+ * jamb through the front of every pier in the alley, twenty-eight times.
+ *
+ * It is also the lintel's width, which is where the fault was visible in the old code
+ * without being legible: the lintel was authored as `doorway.width + 0.24`, the correct
+ * total, sitting on a doorway placed as if the total were `doorway.width`.
+ *
+ * The narrowest unit still works: usable 3.00, surround 1.14, `doorGap` 0.15, aperture 1.71.
+ */
+export const DOORWAY_SURROUND = STOREFRONT.doorway.width + 2 * STOREFRONT.doorway.jambWidth
 
 /**
  * §3.5 — the decorative neon signs. Nine of them, projecting into the alley at 90° on
@@ -993,16 +1103,60 @@ export const PROPS = {
   wallStandoff: 0.2,
 
   /**
-   * §3.7 — §2.2's body, unlit. Five more of the bio station's own object is what makes
+   * §3.7 — how far along the wall anything tall has to stand from a **lit** sign's edge.
+   *
+   * **Moved up from `utilityPole`, and that move is the whole point of this pass's audit
+   * work.** It was a property of the pole because a pole was the prop that had failed it;
+   * the thing crossing the pink 立呑 box turned out to be a *standpipe*, which runs at
+   * `|x| = 4.09` — 0.08 m in **front** of a sign box's 4.01 face, closer than a pole ever
+   * gets — and the rule never looked at it because it tested `kind === 'utilityPole'`.
+   * **A rule scoped to the example that produced it is a rule that catches that example.**
+   *
+   * **Derived, and the derivation is in §3.7.** The silhouette lands not on the mast's own
+   * z but at `z_mast + (M − 1)(z_mast − z_eye)`, with `M = 4.01 ÷ 3.72 = 1.078`. Over the
+   * whole alley that term swings ±3.3 m, which excludes every position on both walls — a
+   * fact about a 44 m corridor rather than about masts. Scoped to where a sign is legible
+   * and dominant, ±8 m: `(0.65 + 0.11 × 1.078 + 0.078 × 8) ÷ 1.078 = 1.29`. A screenshot
+   * had already given 1.2. **A derivation that agrees with a measurement is worth more
+   * than either.**
+   *
+   * **Held as clear air between the two edges, not as centre-to-centre**, so it means the
+   * same thing for a 0.70 m §3.5 sign as for a 1.30 m §3.4 box. `0.55 + 0.65 + 0.11` comes
+   * back to the 1.31 the derivation asked for on a box.
+   *
+   * Lit signs only. An unlit box is `shutter` with no emissive term — a dark slab on a dark
+   * wall — and a mast in front of one cannot be seen from any angle.
+   */
+  signClearance: 0.55,
+
+  /**
+   * §3.7 — §2.2's body, unlit. Four more of the bio station's own object is what makes
    * the lit one mean something: it is the only lit drinks machine in the alley and it is
-   * the one you can open. The front panel takes §2.2's 0.96 × 1.42 as a `void` slab and
-   * there is no emissive term anywhere on it.
+   * the one you can open. **There is no emissive term anywhere on these**, and that rule
+   * is unreversed.
+   *
+   * **What changed is the albedo, not the light.** The front was a `void` slab: §4's
+   * reference black at 0.4% reflectance, which is not *an unlit drinks machine*, it is a
+   * hole cut in a machine. §4.1 found this exact fault at wall scale and named it — a hex
+   * in §4 is an albedo, not a pixel — and the panel now carries a painted drinks rack in
+   * `map` at real plastic albedos. The distinction from §2.2 becomes **lit versus
+   * legible**, which is stronger than *dark versus lit*: §2.2's carries the same canvas at
+   * `vendingFrontPanel`'s 2.44, over the bloom knee, plus §7's light 4. One of the five
+   * throws light on the alley and no amount of paint imitates that.
+   *
+   * **`proud` is now a standoff, not an inset, and that is the flicker fix.** The panel's
+   * front face used to sit at `depth/2` — *exactly* where the body's front face is — so two
+   * coplanar surfaces resolved differently every frame as the camera moved. Both now stand
+   * in front of the body, which is §3.4's own trick for faking the shopfront recess: this
+   * world puts things in front of other things and never needs two faces on one plane.
    */
   vendingMachine: {
     size: [1.12, 0.82, 1.94],
     kick: { height: 0.08 },
     front: { width: 0.96, height: 1.42, baseY: 0.44, proud: 0.03 },
     flap: { width: 0.7, height: 0.2, baseY: 0.16, proud: 0.04 },
+    /** §11.1 — the painted rack. Portrait, because the panel is 0.96 × 1.42. */
+    frontCanvas: { desktop: [256, 512], mobile: [128, 256] },
     bodyColor: 'shutter',
     panelColor: 'void',
     kickColor: 'metalDark',
@@ -1073,25 +1227,38 @@ export const PROPS = {
     lamp: {
       material: 'Material.004',
       color: 'signWhite',
-      emissive: EMISSIVE.vehicleHeadlight,
+      emissive: EMISSIVE.scooterHeadlamp,
     },
     /**
      * Its five authored materials fold onto these three. The model ships a light body, a
-     * near-black, a dark grey, an 8-triangle gold and a 12-triangle chrome; the last two
-     * are a headlamp lens and a mirror on a bike parked at 3am with nobody on it. What
-     * comes out is exactly the three tokens this object has declared since it was boxes —
-     * not by design, but because a scooter has a body, tyres and a frame either way.
+     * near-black, a dark grey, an 8-triangle gold and a 12-triangle chrome. The gold is
+     * the headlamp lens and has a rung of its own now; **the chrome goes to the body
+     * rather than to the frame**, because on a pale scooter the mirror stalks are what
+     * make the silhouette read, and on a black one they were correctly invisible.
+     *
+     * **`bodyColor` was `shutter` and that was §4.1's fault one object down.** The mapping
+     * originally landed on the exact three tokens this object had declared since it was
+     * five boxes, which read as confirmation and was a coincidence: `shutter` was picked
+     * because it was the darkest non-hole in the palette, not because a scooter is a
+     * roller shutter. §4.2 gives it 18.3% against the model's own 80%.
      */
-    bodyColor: 'shutter',
+    bodyColor: 'scooterPaint',
     metalColor: 'metalDark',
     darkColor: 'void',
   },
 
-  /** Stacks of 2 to 4, each stack offset and turned a little off square. */
+  /**
+   * Stacks of 2 to 4, each stack offset and turned a little off square.
+   *
+   * **Four shades, and it was two tokens that were one colour.** `shutter` and `metalDark`
+   * are 4.7% and 7.4% of the same blue-grey — half a stop apart in hue-identical tokens,
+   * which at three metres through §5's fog is not a distinction. §4.2 adds two browns; the
+   * run cycles kraft, timber, concrete, metal so no stack is one material and no two
+   * neighbouring crates match.
+   */
   crate: {
     size: [0.52, 0.36, 0.31],
-    /** Two tints of the same dark, so nine stacks do not read as nine materials. */
-    colors: ['shutter', 'metalDark'],
+    colors: ['crateKraft', 'crateTimber', 'concrete', 'metalDark'],
   },
 
   /**
@@ -1117,11 +1284,32 @@ export const PROPS = {
     metalColor: 'metalDark',
   },
 
+  /**
+   * §3.7 — a galvanised drum, and it used to be a cylinder with a slightly wider cylinder
+   * on top of it.
+   *
+   * **What identifies a rubbish drum is the hoops**, the rolled bands that stiffen the
+   * sheet, plus a rim under the lid — and none of that is texture, it is silhouette. Two
+   * hoops, a rim and a lid knob go on, all of them cylinders in a bucket this section
+   * already pays for, so the whole silhouette costs **nothing**.
+   *
+   * The drum then takes §3.4's grain at the `metal` class for the galvanised speckle, and
+   * that is the one part which earns a material of its own: `metalDark` is shared with
+   * thirty-nine other cylinders in this alley and a grain map on all of them would be
+   * §3.4's rule applied exactly where §3.4 says not to apply it.
+   */
   rubbishPoint: {
     drum: { radius: 0.3, height: 0.74 },
+    /** Two rolled bands round the body, as a fraction of its height. */
+    hoop: { radius: 0.313, height: 0.035, at: [0.3, 0.68] },
+    /** The lip the lid sits on. */
+    rim: { radius: 0.318, height: 0.045 },
     lid: { radius: 0.32, height: 0.05 },
+    /** What you lift it by. */
+    knob: { radius: 0.055, height: 0.05 },
     sack: { size: [0.42, 0.36, 0.34] },
     drumColor: 'metalDark',
+    hoopColor: 'concrete',
     lidColor: 'concrete',
     sackColor: 'shutter',
   },
@@ -1143,10 +1331,17 @@ export const PROPS = {
   },
 
   /**
-   * §3.7 — on §3's gutter centre, not against the wall: §3.4's fascia projects 0.35
-   * across every unit above 2.55, so a pole behind 4.15 is buried for most of its
-   * height. The cost is 0.11 m inside the walkable band, which is where a real one
-   * stands. No pole may share a z span with an awninged unit (see §3.7).
+   * §3.7 — on the pavement, not against the wall: §3.4's fascia projects 0.35 across
+   * every unit above 2.55, so a pole behind 4.15 is buried for most of its height.
+   *
+   * **The coordinate has not moved since it was chosen — what moved was the ground under
+   * it.** 3.72 used to be §3's gutter centre, which put a pole 0.11 m inside the walkable
+   * band; the kerb now reaches to 3.20, so the same number stands a pole half a metre back
+   * from the edge of a 1.30 m pavement, which is where a utility pole actually goes. It is
+   * still 0.11 m outside §3's clamp, so it stays inert against the visitor.
+   *
+   * No pole may share a z span with an awninged unit, and nothing tall may stand within
+   * `PROPS.signClearance` of a lit sign — see there for why that constant is not here.
    */
   utilityPole: {
     x: 3.72,
@@ -1157,34 +1352,6 @@ export const PROPS = {
       { length: 1.1, size: 0.09, y: 7.1 },
     ],
     color: 'concrete',
-    /**
-     * §3.7 — how far along the wall a pole must stand from a **lit** sign, and the one
-     * rule in this file that shipped as a fault twice while it was only a comment.
-     *
-     * **A `z` gap is not the test.** A pole stands at `|x| = 3.72` and a §3.4 sign box
-     * faces `|x| = 4.01`, so there is 0.29 m of depth between them; a §3.5 sign projects
-     * to `|x| = 3.78`, which is *inside* the pole's own diameter and so an intersection
-     * rather than an occlusion. At that separation the two are effectively coplanar and
-     * the only clearance that matters runs along the wall.
-     *
-     * **Derived.** The silhouette lands not on the pole's own z but at
-     * `z_pole + (M − 1)(z_pole − z_eye)`, with `M = 4.01 ÷ 3.72 = 1.078`. Over the whole
-     * alley that term swings ±3.3 m, which excludes every position on both walls — not a
-     * fact about poles but a corridor telling you a 44 m sightline crosses everything
-     * with everything. Scoped to the range where a sign is legible and dominant, ±8 m:
-     * `(0.65 + 0.11 × 1.078 + 0.078 × 8) ÷ 1.078 = 1.29`. A screenshot had already given
-     * 1.2. **A derivation that agrees with a measurement is worth more than either.**
-     *
-     * **Held as clear air between the two edges, not as centre-to-centre**, so it means
-     * the same thing for a §3.5 sign as for a §3.4 box — those are 1.30 and 0.70 wide
-     * and a single centre distance would be two different rules. `0.55 + 0.65 + 0.11`
-     * comes back to the 1.31 the derivation asked for on a sign box.
-     *
-     * Lit signs only. An unlit box is `shutter` with no emissive term — a dark slab on a
-     * dark wall — and a pole in front of one cannot be seen from any angle. Extending the
-     * rule to all fourteen closes most of both walls to protect what nobody can see.
-     */
-    signClearance: 0.55,
   },
 
   /** §8.1 — 1.30, already on the ladder. §8 gives the material `side: DoubleSide`. */
@@ -1229,6 +1396,12 @@ export const PROPS = {
    * §15's budget does not move.
    */
   contactDecal: {
+    /**
+     * **Above the surface the prop stands on, not above `y = 0`.** For anything on §3's
+     * kerb that used to put the decal 11 cm *underneath* it. `lib/props.ts` adds this to
+     * each prop's own `baseY`, which is the same rule stated once instead of a constant
+     * that happened to be right while every prop was in the road.
+     */
     y: 0.01,
     /**
      * §7 gives one decal size, 1.4 × 1.4, and the props are not one size — a 1.4 m smear
@@ -1251,7 +1424,13 @@ export const PROPS = {
   crate: { colors: readonly ColorToken[]; [key: string]: unknown }
   cone: { color: ColorToken; bandColor: ColorToken; footColor: ColorToken; [key: string]: unknown }
   barrier: { boardColor: ColorToken; metalColor: ColorToken; [key: string]: unknown }
-  rubbishPoint: { drumColor: ColorToken; lidColor: ColorToken; sackColor: ColorToken; [key: string]: unknown }
+  rubbishPoint: {
+    drumColor: ColorToken
+    hoopColor: ColorToken
+    lidColor: ColorToken
+    sackColor: ColorToken
+    [key: string]: unknown
+  }
   standpipe: { color: ColorToken; [key: string]: unknown }
   utilityPole: { color: ColorToken; [key: string]: unknown }
   paperLantern: { color: ColorToken; armColor: ColorToken; [key: string]: unknown }
@@ -1640,19 +1819,68 @@ export const PUDDLE_MASK = {
   /** Water is the ground; the dry patches are broken islands within it. */
   coverage: 0.6,
   /**
-   * Measured across the alley only, not the full strip. The 1.5 m of strip past each
-   * wall is hidden geometry — counting it makes the generator flood the floor the
-   * visitor can actually see in order to hit a global average.
+   * **Where the 60% is measured, and it is two regions rather than one rectangle.**
+   *
+   * It was `x ∈ [−4.5, 4.5]` across every row of the canvas, which was right when this was
+   * written because the strip *was* the alley. §3.6 ran it out to `z = 33`, and a single
+   * global average then let the generator satisfy itself on the alley alone: measured, the
+   * carriageway came out **5.8% wet against the alley's 59.8%** — 44 m² of road with traffic
+   * on it, a §6.0 reflection of the traffic in it, §10's rain visibly falling into it, and no
+   * water. A single average over two regions is a number that describes neither.
+   *
+   * The generator now fills whichever region is furthest behind and stops when **both** are
+   * met. The x bounds are what the visitor can see: the alley's walls, and §3.1's mouth slot
+   * for the cross street — the 1.5 m of strip past each wall is hidden geometry, and a puddle
+   * out there is one nobody can look at, counted into an average that then dries the floor
+   * they can.
    */
-  coverageMeasureX: [-4.5, 4.5],
+  coverageRegions: [
+    { id: 'alley', x: [-4.5, 4.5], z: [-23.0, 23.0] },
+    { id: 'crossStreet', x: [0.9, 6.0], z: [26.2, 31.6] },
+  ],
   blob: { ellipsesPerBlob: [3, 6], majorAxis: [0.8, 4.5] },
   /**
    * Water pools where it drains — centre of the alley, and the gutter lines. The
    * baseline is load-bearing: without it the weight falls to nothing between the bumps
    * and concentrates water into saturated bands instead of biasing a floor that is wet
    * throughout.
+   *
+   * **`gutterX` reads §3 rather than restating it.** It was a literal 3.72 while §3's
+   * gutter was also a literal 3.72, which is two copies of one number in one file — the
+   * drift this module exists to prevent, sitting inside it.
+   *
+   * **`beyondWallsToZ` scopes the `|x| > 4.5` penalty to the alley.** That penalty exists
+   * to stop the generator spending puddles on the 1.5 m of strip hidden behind each side
+   * wall, which is a fact about the alley's walls. Past the bend there are none: §3.6's
+   * carriageway is 5.4 m of open road crossing the strip, and a quarter weight out there
+   * was drying the one stretch of ground in the world with traffic on it — and a §6.0
+   * reflection of the traffic in it.
    */
-  bias: { baseline: 0.38, centre: true, gutterX: 3.72, thinsAtKerb: true },
+  bias: {
+    baseline: 0.38,
+    centre: true,
+    gutterX: LAYOUT.gutter.x,
+    thinsAtKerb: true,
+    beyondWallsToZ: 24.0,
+    /**
+     * **Past the bend the weight is flat, and 0.59 is the alley's own mean.**
+     *
+     * The whole weight function is a model of *the alley's* drainage: a crown at `x = 0` and
+     * gutters at `|x| = 3.02`, both of which run **along** the alley. §3.6's carriageway runs
+     * across it, so its crown and its gutters are perpendicular to everything modelled here —
+     * applying the alley's profile to it makes the far road dry wherever the alley happens to
+     * be dry, for no reason that exists in the world. Measured: **5.8% wet against the alley's
+     * 59.8%**, on the one stretch of ground with traffic on it and a §6.0 reflection of the
+     * traffic in it.
+     *
+     * A flat weight is the honest answer — the cross street's own drainage is not modelled and
+     * inventing a second profile for a road seen through a 3.36 m slot at 30 m would be
+     * detail nobody can see. **0.59 is derived rather than picked**: it is this function's own
+     * mean over the alley, `0.38 + 0.152 + 0.055`, so the far road gets the same expected blob
+     * density as the near one without pretending to know which line it drains to.
+     */
+    crossStreet: 0.59,
+  },
 } as const
 
 /** §6.2 — the resting ripple texture. The §10 emitters own the expanding rings. */
@@ -1732,37 +1960,62 @@ export const LIGHTS = [
    * §7.1's reason — a lightbox light that is not the size of its lightbox has drifted off
    * its emitter. Position comes from §2.1 too, so there is no coordinate here at all.
    *
-   * **70 is cd/m², and it was derived rather than corrected.** §7.1's ×44 applies to
-   * candela; a `rectAreaLight`'s intensity is luminance, so the comparable quantity is
-   * luminance × area: 70 × 1.7213 = 120.5 cd equivalent, between §7.1's light 9 at 115 and
-   * light 7 at 130.
+   * **8 cd/m², and it was 70 — because the derivation used the wrong area.** §7.1's ×44
+   * applies to candela; a `rectAreaLight`'s intensity is luminance, so the comparable
+   * quantity is luminance × area. That much was right. The area was written as **1.7213 m²**
+   * and the screen is **5.20 × 2.7625 = 14.365 m²** — eight times larger — so 70 nits was
+   * putting roughly 1 000 cd on a wall where §7.1's brightest sign light is 150. Mounted, it
+   * washed the whole bend white.
+   *
+   * `120 ÷ 14.365 = 8.35`, taken as **8**, which lands the equivalent between §7.1's light 9
+   * at 115 and light 7 at 130 — where the original derivation meant to put it. **The method
+   * was right and the number it was applied to was not**, which is the failure mode this
+   * whole file exists to make visible: `size` is read from `SHOWCASE`, so the area can now
+   * only be got wrong by changing the screen.
    *
    * **Desktop only.** `rectAreaLight` is the most expensive light three.js has — two 64²
    * float LTC tables, a shader permutation, and no `distance`/`decay` at all, so its reach
    * is unbounded. §7's dash in that column is a property of the type, not a missing value.
+   * It also needs `RectAreaLightUniformsLib.init()`: without it the light contributes
+   * exactly zero, with no warning and no error.
    */
   {
     id: 2,
     type: 'rectArea',
     size: [SHOWCASE.screen.width, SHOWCASE.screen.height],
     color: 'signWhite',
-    intensity: 70,
+    intensity: 8,
     mountedOn: 'showcaseScreen',
     mobile: 'drop',
   },
   /**
-   * §7 — on §2.1's vertical neon sign. **6.0 × §7.1's own ×44 = 264**, which is what §16.9
-   * asked for: apply the recorded correction rather than pick a fresh number that happens
-   * to look right. It lands as the brightest dynamic light in the world, which is §17's
-   * rule — it sits on §8.1's top rung, and §7's note that 150 cd is *"still conservative"*
-   * for a square metre of neon applies here at 1.77 m².
+   * §7 — on §2.1's title lightbox.
+   *
+   * **150 at 0.90 m, and it was 264 at 0.12.** The 264 came from applying §7.1's ×44 to an
+   * authored 6.0, which was the right instinct — *apply the recorded correction rather than
+   * pick a number that looks right* — and it was calibrated against a palette §4.1 has since
+   * lifted ×3.83 in linear. Mounted at that value it did not read as a bright sign; it read
+   * as a blown white blob with a sign somewhere inside it.
+   *
+   * **The standoff mattered more than the intensity.** §3.1's gate light already recorded
+   * this exact fault: a point light a few centimetres off a flat panel is inverse-square
+   * squared into a hotspot the size of the panel, which is a blob rather than a lit sign.
+   * 0.90 m throws the same light across the sign, its case and the wall behind — physically
+   * the *spill* from a lit box rather than the tube inside it, which is the thing that
+   * actually lights a shopfront.
+   *
+   * 150 puts it level with §7.1's brightest alley light rather than at 1.76× it. §17 wants
+   * the content surfaces dominant and they are — this one has **two** lights on it and every
+   * §3.5 sign has at most one.
    */
   {
     id: 3,
     type: 'point',
     color: 'neonMagenta',
-    intensity: 264,
+    intensity: 150,
     mountedOn: 'showcaseSign',
+    /** Clear air between the sign's face and the light. §3.1's gate light, verbatim. */
+    standoff: 0.9,
     distance: 9.0,
     decay: 2,
     mobile: 'keep',
@@ -2022,8 +2275,16 @@ export const MATERIALS = {
  * draw calls, and it is answered by choosing the right noise rather than by fighting it.
  */
 export const SURFACE_GRAIN = {
-  /** §3.3's precedent — a wall does not get §11.1's signage scale. */
-  canvas: { desktop: 512, mobile: 256 },
+  /**
+   * §3.3's precedent — a wall does not get §11.1's signage scale.
+   *
+   * **512 → 384, and §15 named this one first.** Two canvases at 512² are 2.80 MB; at 384²
+   * they are 1.56. This is *noise*: a field of aggregate speckle under broad damp patches,
+   * tiled two to four times across every surface it lands on and stretched by up to 4:1 by
+   * the instancing. There is no feature in it that a third fewer texels can destroy, which
+   * is exactly why §15 listed it as the lever to spend before the ones that carry glyphs.
+   */
+  canvas: { desktop: 384, mobile: 192 },
   /**
    * The darkest texel on the wall, as a fraction of the §4 token — the field is
    * *normalised* into `[darkest, 1]`, so this is the one knob and it means what it says.
@@ -2037,10 +2298,19 @@ export const SURFACE_GRAIN = {
   /** Coarse damp patches over fine aggregate — see the note on stretching above. */
   patchScale: 4,
   speckleDensity: 0.5,
-  /** Per surface class: how many times the field tiles across one instance's UVs. */
-  repeat: { concrete: 3, facade: 2, fabric: 4 },
+  /**
+   * Per surface class: how many times the field tiles across one instance's UVs.
+   *
+   * **`crate` and `metal` are §3.7's, and they cost nothing.** A per-class repeat needs its
+   * own `Texture`, but a *cloned* `Texture` shares its `Source` — one GPU upload, many
+   * samplers — so the fifth and sixth classes are two more views of a canvas that is already
+   * resident and §15's figure does not move. A crate at 1 gets one grain tile across its
+   * 0.52 m face, which is the scale a cardboard box is; a bin drum at 2 gets the finer
+   * speckle of galvanised sheet.
+   */
+  repeat: { concrete: 3, facade: 2, fabric: 4, crate: 1, metal: 2 },
   /** How much of the Sobel-derived normal each class takes. */
-  normalScale: { concrete: 0.6, facade: 0.45, fabric: 0.35 },
+  normalScale: { concrete: 0.6, facade: 0.45, fabric: 0.35, crate: 0.5, metal: 0.35 },
 } as const
 
 /* ────────────────────────────────────────────────────────────────────────────
@@ -2220,9 +2490,47 @@ export const RIPPLES = {
   /* §10.0.1 — 64 → 48 and 28 → 21, down 25%. The count was raised to 64 to make the rings
      visible at all against §6.0's mirror; with two generations alive and per-cycle jitter each
      emitter now reads as continuous rain rather than as one blinking spot, so the count that
-     made twelve visible is more than the picture needs. Draw calls do not move at any count. */
-  desktop: { emitters: 48 },
-  mobile: { emitters: 21 },
+     made twelve visible is more than the picture needs. Draw calls do not move at any count.
+     The counts now live per region below, since the alley and the carriageway are two
+     different amounts of visible ground. */
+  /**
+   * §10.0 — **where the rings may land, and it was one rectangle that was wrong at both
+   * ends.**
+   *
+   * It ran `x ∈ [±4.5]`, which is the alley *including its pavements*, so rings were
+   * expanding on the kerb — on a surface 12 cm above the water — and §3's widening from
+   * 0.60 to 1.30 would have made that four times as visible. And it stopped at `z = 23`,
+   * so **no rain landed on the carriageway** the bend opens onto, even though §6.0 had
+   * already run the reflector to `z = 33` and put the far building and the traffic in that
+   * road as reflections. Rain visibly falling into a street with a still, mirror-flat
+   * surface is the one thing §10 exists to prevent, and it was happening in the only part
+   * of the world where a moving vehicle is there to be compared against.
+   *
+   * The carriageway's x range is not the road's width; it is **how much of the road can be
+   * seen** — §3.1's 3.36 m opening plus what parallax adds — cut off at 6.0 because §6.1's
+   * strip ends there and the mask returns dry past it anyway. Twelve against forty-eight is
+   * roughly the visible-area ratio.
+   *
+   * The rejection sampler needed no new machinery for either: the mask is one canvas over
+   * one reflector and it was already wet out there.
+   */
+  sampleRegions: [
+    {
+      id: 'alley',
+      /** §3's kerb inner edge, not the walls — the road, not the pavement. */
+      x: [-3.2, 3.2],
+      z: [-23.0, 23.0],
+      desktop: 48,
+      mobile: 21,
+    },
+    {
+      id: 'carriageway',
+      x: [0.9, 6.0],
+      z: [26.2, 31.6],
+      desktop: 12,
+      mobile: 5,
+    },
+  ],
   decalDiameter: 0.85,
   /* Still longer than the 1.4 s life, so rings overlap slightly instead of the floor
      going quiet between them. 64 at 1.1 s is 58 impacts a second across the alley. */
@@ -2271,14 +2579,6 @@ export const RIPPLES = {
       between. 0.20 is inside the water rather than on the transition, so no ring
       straddles an edge. */
   wetThreshold: 0.2,
-  /**
-   * §10.0 — the alley, not the strip. §6.1 runs the reflector 3 m behind each end wall and
-   * 1.5 m past each side wall so its seams are never in frame; that margin is hidden
-   * geometry, and a ring out there is one nobody can see, spent out of a budget of twelve.
-   * The first build put two of its twelve behind the station gate.
-   */
-  sampleX: [-4.5, 4.5],
-  sampleZ: [-23.0, 23.0],
   /**
    * §10.0 — minimum metres between emitters. 2.0 was set when there were twelve; §6.2 leaves
    * roughly 250 m² of water in the alley and 64 emitters do not fit in it at that spacing.

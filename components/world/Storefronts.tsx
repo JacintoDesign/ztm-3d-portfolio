@@ -24,7 +24,14 @@ import {
 } from '@/lib/storefronts'
 import { signBoxTexture } from '@/lib/textures/signBox'
 import { grainParams } from '@/lib/textures/surfaceGrain'
-import { LAYOUT, MATERIALS, PALETTE, STOREFRONT, type ColorToken } from '@/lib/world'
+import {
+  DOORWAY_SURROUND,
+  LAYOUT,
+  MATERIALS,
+  PALETTE,
+  STOREFRONT,
+  type ColorToken,
+} from '@/lib/world'
 
 /**
  * §3.4 — the lower 4.00 m of both facades. What the visitor actually walks past.
@@ -59,6 +66,9 @@ const faceX = (unit: StorefrontUnit) =>
 /** How far the piers and fascia stand in front of the wall — the depth of the shopfront. */
 const FRAME_DEPTH = aperture.recess
 const APERTURE_HEIGHT = aperture.headY - aperture.baseY
+
+/** §3 — the surface the plinth stands on. The same one §3.7's props now stand on. */
+const KERB_TOP = LAYOUT.kerb.height
 
 type Placement = {
   position: [number, number, number]
@@ -155,9 +165,12 @@ function buildPlacements() {
     const apZ = apertureZ(unit)
     const doorZ = doorwayZ(unit)
 
-    // Plinth — a step at the base of the whole unit, sitting on the kerb.
+    /* Plinth — a step at the base of the whole unit, sitting **on** §3's kerb.
+       It sat at `y ∈ [0, 0.10]` under a 0.12 kerb top, which put it entirely inside the
+       kerb: invisible in every screenshot for four sections while this comment said it
+       was on it. Two centimetres and a preposition. */
     plinths.push({
-      position: [proud(plinth.depth), plinth.height / 2, unit.z],
+      position: [proud(plinth.depth), KERB_TOP + plinth.height / 2, unit.z],
       scale: [plinth.depth, plinth.height, unit.width],
     })
 
@@ -233,19 +246,22 @@ function buildPlacements() {
       position: [wall + dir * 0.01, doorway.height / 2, doorZ],
       scale: [0.02, doorway.height, doorway.width],
     })
+    /* The two figures come from §3.4 now, not from here. While they were literals in this
+       file, `lib/storefronts.ts` had no way to place the doorway with room for them —
+       which is exactly how twenty-eight jambs ended up passing through fourteen piers. */
     for (const side of [-1, 1] as const) {
       jambs.push({
         position: [
           proud(doorway.recess),
           doorway.height / 2,
-          doorZ + side * (doorway.width / 2 + 0.06),
+          doorZ + side * (doorway.width + doorway.jambWidth) / 2,
         ],
-        scale: [doorway.recess, doorway.height, 0.12],
+        scale: [doorway.recess, doorway.height, doorway.jambWidth],
       })
     }
     lintels.push({
-      position: [proud(doorway.recess), doorway.height + 0.06, doorZ],
-      scale: [doorway.recess, 0.12, doorway.width + 0.24],
+      position: [proud(doorway.recess), doorway.height + doorway.jambWidth / 2, doorZ],
+      scale: [doorway.recess, doorway.jambWidth, DOORWAY_SURROUND],
     })
 
     /* Sign box, centred over the doorway — unless a §3.5 neon sign already claims this
@@ -301,18 +317,27 @@ function buildPlacements() {
     })
   }
 
+  /**
+   * §15 — **four pairs share a geometry and a material and were four meshes each way.**
+   *
+   * A plinth and a pier are both a `UNIT_BOX` in `concrete`; an `InstancedMesh` already
+   * carries a per-instance scale, so the only thing keeping them apart was that they were
+   * pushed into two arrays. Same for the backing and the door panel, the jamb and the
+   * lintel, and the shutter roll and the awning bar. Concatenating them is **four draw
+   * calls for no visual change whatsoever** — the cheapest four in the world, and they went
+   * unnoticed for four sections because each pair reads as two different *objects*.
+   *
+   * Concatenated here rather than in the render body: this function runs once at module
+   * scope and a render body would rebuild both arrays on every re-render.
+   */
   return {
-    plinths,
-    piers,
+    concreteBoxes: [...plinths, ...piers],
     fascias,
-    backings,
-    rolls,
-    doors,
-    jambs,
-    lintels,
+    voidPanels: [...backings, ...doors],
+    metalBoxes: [...jambs, ...lintels],
+    metalCylinders: [...rolls, ...awningBars],
     spills,
     awningSlabs,
-    awningBars,
     darkSigns,
     litSigns,
     slats,
@@ -447,17 +472,16 @@ export default function Storefronts() {
 
   return (
     <>
-      <Instanced name="storefront:plinth" geometry={UNIT_BOX} material={materials.concrete} placements={placements.plinths} />
-      <Instanced name="storefront:pier" geometry={UNIT_BOX} material={materials.concrete} placements={placements.piers} />
+      {/* §15 — plinths + piers, backings + door panels, jambs + lintels, rolls + awning
+          bars. Each pair is one geometry in one material, so each pair is one mesh. */}
+      <Instanced name="storefront:concrete" geometry={UNIT_BOX} material={materials.concrete} placements={placements.concreteBoxes} />
       <Instanced name="storefront:fascia" geometry={UNIT_BOX} material={materials.fascia} placements={placements.fascias} />
-      <Instanced name="storefront:backing" geometry={UNIT_BOX} material={materials.backing} placements={placements.backings} />
-      <Instanced name="storefront:door" geometry={UNIT_BOX} material={materials.backing} placements={placements.doors} />
-      <Instanced name="storefront:jamb" geometry={UNIT_BOX} material={materials.metal} placements={placements.jambs} />
-      <Instanced name="storefront:lintel" geometry={UNIT_BOX} material={materials.metal} placements={placements.lintels} />
-      <Instanced name="storefront:roll"
+      <Instanced name="storefront:voidPanel" geometry={UNIT_BOX} material={materials.backing} placements={placements.voidPanels} />
+      <Instanced name="storefront:metalBox" geometry={UNIT_BOX} material={materials.metal} placements={placements.metalBoxes} />
+      <Instanced name="storefront:metalCylinder"
         geometry={UNIT_CYLINDER}
         material={materials.metal}
-        placements={placements.rolls}
+        placements={placements.metalCylinders}
       />
 
       {placements.slats.map((bank, variant) => (
@@ -487,11 +511,6 @@ export default function Storefronts() {
         geometry={UNIT_BOX}
         material={materials.awning}
         placements={placements.awningSlabs}
-      />
-      <Instanced name="storefront:awningBar"
-        geometry={UNIT_CYLINDER}
-        material={materials.metal}
-        placements={placements.awningBars}
       />
     </>
   )

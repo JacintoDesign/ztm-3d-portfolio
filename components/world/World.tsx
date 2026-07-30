@@ -5,6 +5,7 @@ import { PerspectiveCamera } from '@react-three/drei'
 import { Canvas } from '@react-three/fiber'
 import type { PerspectiveCamera as ThreePerspectiveCamera } from 'three'
 import { ACESFilmicToneMapping, ColorManagement, SRGBColorSpace } from 'three'
+import { RectAreaLightUniformsLib } from 'three/examples/jsm/lights/RectAreaLightUniformsLib.js'
 import Camera from '@/components/player/Camera'
 import Interact from '@/components/player/Interact'
 import Player from '@/components/player/Player'
@@ -37,6 +38,19 @@ import Traffic from './Traffic'
  * so the code names it.
  */
 ColorManagement.enabled = ATMOSPHERE.colorManagement
+
+/**
+ * §7 light 2 — **`rectAreaLight` does not work until this is called, and it fails by
+ * lighting nothing.**
+ *
+ * three's LTC evaluation needs two 64² float lookup tables uploaded into the renderer's
+ * uniform library, and `WebGLRenderer` does not ship them: a `rectAreaLight` mounted
+ * without this contributes exactly zero, with no warning, no error and a light plainly
+ * present in the scene graph. It is called at module scope beside `ColorManagement` for the
+ * same reason that one is — both are renderer-wide switches the brief names, and neither
+ * belongs inside a component that might unmount.
+ */
+RectAreaLightUniformsLib.init()
 
 /**
  * The single <Canvas> for the whole world.

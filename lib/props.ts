@@ -51,6 +51,10 @@ export type SurfaceKey =
   | 'void'
   | 'signWhite'
   | 'roadOrange'
+  | 'crateKraft'
+  | 'crateTimber'
+  | 'binDrum'
+  | 'vendingFront'
   | 'cartLamp'
   | 'lanternGlow'
 
@@ -81,7 +85,14 @@ export type PropKind =
 export type Prop = {
   key: string
   kind: PropKind
-  /** The prop's origin on the ground, in world space. */
+  /**
+   * The prop's origin on the ground, in world space.
+   *
+   * `y` is **the surface it stands on**, which is §3's kerb top for anything on the
+   * pavement and 0 for anything in the carriageway — see `standingHeight`. It was 0 for
+   * everything, which sank every wall prop 12 cm into the kerb it was meant to be
+   * standing on.
+   */
   position: readonly [number, number, number]
   /** About Y. Composed before the lean — see `lean`. */
   yaw: number
@@ -129,6 +140,25 @@ export const reachX = (depth: number, standoff: number = wallStandoff): number =
   WALL_X - standoff - depth
 
 /**
+ * §3 / §3.7 — which surface this prop stands on.
+ *
+ * **§3.7 sat every prop at `y = 0` while §3's kerb top is at 0.12**, so all twenty wall
+ * props were sunk 12 cm into the pavement they were meant to be standing on. It was not
+ * visible in any number: `y` was the ground and the ground was zero.
+ *
+ * The rule is stated once here and read by everything downstream, including §7's contact
+ * decals — a decal at a flat 0.010 is 11 cm *under* a kerb. A prop is on the pavement if
+ * its **whole** footprint is outboard of the kerb edge; anything straddling it is a fault
+ * rather than a case to handle, and `audit()` says so.
+ */
+const KERB_INNER = LAYOUT.kerb.innerEdgeX
+
+function standingHeight(x: number, yaw: number, footprint: readonly [number, number]): number {
+  const inner = Math.abs(x) - halfExtents(yaw, footprint).halfX
+  return inner >= KERB_INNER ? LAYOUT.kerb.height : 0
+}
+
+/**
  * The axis-aligned world footprint of a rotated rectangle.
  *
  * Local +X maps to (cos y, 0, −sin y) and local +Z to (sin y, 0, cos y), so each world
@@ -136,15 +166,21 @@ export const reachX = (depth: number, standoff: number = wallStandoff): number =
  * props this collapses to a swap; the cones and the barrier stand at their own angles and
  * need the general form.
  */
+function halfExtents(
+  yaw: number,
+  footprint: readonly [number, number],
+): { halfX: number; halfZ: number } {
+  const halfLength = footprint[0] / 2
+  const halfDepth = footprint[1] / 2
+  const c = Math.abs(Math.cos(yaw))
+  const s = Math.abs(Math.sin(yaw))
+
+  return { halfX: halfLength * c + halfDepth * s, halfZ: halfLength * s + halfDepth * c }
+}
+
 function boxFor(prop: Prop): Box {
   const [x, , z] = prop.position
-  const halfLength = prop.footprint[0] / 2
-  const halfDepth = prop.footprint[1] / 2
-  const c = Math.abs(Math.cos(prop.yaw))
-  const s = Math.abs(Math.sin(prop.yaw))
-
-  const halfX = halfLength * c + halfDepth * s
-  const halfZ = halfLength * s + halfDepth * c
+  const { halfX, halfZ } = halfExtents(prop.yaw, prop.footprint)
 
   return { minX: x - halfX, maxX: x + halfX, minZ: z - halfZ, maxZ: z + halfZ }
 }
@@ -170,7 +206,16 @@ const cyl = (
   rotation?: readonly [number, number, number],
 ): Part => ({ primitive: 'cylinder', surface, position, scale, ...(rotation ? { rotation } : {}) })
 
-/** §3.7 — §2.2's machine with the light off. See there for why that is the point. */
+/**
+ * §3.7 — §2.2's machine with the light off. See there for why that is the point.
+ *
+ * **Both front slabs stand proud of the body rather than flush with it**, and that is the
+ * flicker fix. `face - proud / 2` put the panel's front face at exactly `depth / 2`, which
+ * is exactly where the body's front face is: two coplanar surfaces, resolved differently
+ * every frame as the camera moved past. `face + proud / 2` stands them in front instead —
+ * §3.4's own trick for faking the shopfront recess, and this world never needs two faces
+ * on one plane.
+ */
 function vendingMachineParts(): Part[] {
   const { size, kick, front, flap } = PROPS.vendingMachine
   const [length, depth, height] = size
@@ -179,9 +224,12 @@ function vendingMachineParts(): Part[] {
   return [
     box('metalDark', [0, kick.height / 2, 0], [length, kick.height, depth]),
     box('shutter', [0, kick.height + (height - kick.height) / 2, 0], [length, height - kick.height, depth]),
-    // The lit panel of §2.2, dark. Same rectangle, same place, no emissive term.
-    box('void', [0, front.baseY + front.height / 2, face - front.proud / 2], [front.width, front.height, front.proud]),
-    box('void', [0, flap.baseY + flap.height / 2, face - flap.proud / 2], [flap.width, flap.height, flap.proud]),
+    /* §2.2's lit panel, unlit — but painted. `vendingFront` carries §3.7's drinks rack in
+       `map` only, at real plastic albedos: the machine was unreadable because this was
+       `void` at 0.4% reflectance, which is §4.1's fault one object down. No emissive term
+       anywhere on it; §2.2's machine is the one that glows and the one with a light. */
+    box('vendingFront', [0, front.baseY + front.height / 2, face + front.proud / 2], [front.width, front.height, front.proud]),
+    box('void', [0, flap.baseY + flap.height / 2, face + flap.proud / 2], [flap.width, flap.height, flap.proud]),
   ]
 }
 
@@ -242,13 +290,23 @@ const CRATE_JITTER = [
   { x: 0.03, z: 0.05, yaw: -0.04 },
 ] as const
 
-function crateStackParts(count: number): Part[] {
+/**
+ * §4.2's four shades, cycling — and the *stack index* is part of the cycle key, so two
+ * neighbouring stacks never come out the same way up.
+ *
+ * It was `i % 2` over two tokens that are 4.7% and 7.4% of the same blue-grey, which at
+ * three metres through §5's fog is one colour with a rounding error. Four now: kraft,
+ * timber, concrete, metal.
+ */
+const CRATE_SURFACES: readonly SurfaceKey[] = ['crateKraft', 'crateTimber', 'concrete', 'metalDark']
+
+function crateStackParts(count: number, stack: number): Part[] {
   const [length, depth, height] = PROPS.crate.size
   const parts: Part[] = []
 
   for (let i = 0; i < count; i++) {
     const jitter = CRATE_JITTER[i % CRATE_JITTER.length] as (typeof CRATE_JITTER)[number]
-    const surface: SurfaceKey = i % 2 === 0 ? 'shutter' : 'metalDark'
+    const surface = CRATE_SURFACES[(i + stack) % CRATE_SURFACES.length] as SurfaceKey
     parts.push(
       box(surface, [jitter.x, height / 2 + i * height, jitter.z], [length, height, depth], [0, jitter.yaw, 0]),
     )
@@ -316,16 +374,90 @@ function barrierParts(): Part[] {
   ]
 }
 
+/**
+ * §3.7 — a galvanised drum, and it used to be a cylinder with a wider cylinder on top.
+ *
+ * **What identifies a rubbish drum is the hoops** — the rolled bands that stiffen the
+ * sheet — plus a rim under the lid and something to lift it by. None of that is texture;
+ * it is silhouette, which is why no amount of map on the old two cylinders would have
+ * fixed it. Four cylinders go on, all in buckets this section already pays for, so the
+ * whole identity costs **nothing**.
+ *
+ * The drum is the one part with a material of its own: `binDrum` is `metalDark` carrying
+ * §3.4's grain at the `metal` class. `metalDark` is shared with thirty-nine other cylinders
+ * in this alley, and a grain map on all of them would be §3.4's rule applied precisely
+ * where §3.4 says not to apply it.
+ */
 function rubbishPointParts(): Part[] {
-  const { drum, lid, sack } = PROPS.rubbishPoint
+  const { drum, hoop, rim, lid, knob, sack } = PROPS.rubbishPoint
   const [sackLength, sackDepth, sackHeight] = sack.size
+  const rimBase = drum.height
 
   return [
-    cyl('metalDark', [0, drum.height / 2, 0], [drum.radius * 2, drum.height, drum.radius * 2]),
-    cyl('concrete', [0, drum.height + lid.height / 2, 0], [lid.radius * 2, lid.height, lid.radius * 2]),
+    cyl('binDrum', [0, drum.height / 2, 0], [drum.radius * 2, drum.height, drum.radius * 2]),
+    ...hoop.at.map((fraction) =>
+      cyl('concrete', [0, drum.height * fraction, 0], [hoop.radius * 2, hoop.height, hoop.radius * 2]),
+    ),
+    cyl('concrete', [0, rimBase + rim.height / 2, 0], [rim.radius * 2, rim.height, rim.radius * 2]),
+    cyl('concrete', [0, rimBase + rim.height + lid.height / 2, 0], [lid.radius * 2, lid.height, lid.radius * 2]),
+    cyl('metalDark', [0, rimBase + rim.height + lid.height + knob.height / 2, 0], [
+      knob.radius * 2,
+      knob.height,
+      knob.radius * 2,
+    ]),
     box('shutter', [drum.radius + sackLength / 2 - 0.02, sackHeight / 2, 0.03], [sackLength, sackHeight, sackDepth], [0, 0.12, 0]),
     box('shutter', [-(drum.radius + sackLength / 2 - 0.04), sackHeight / 2 - 0.04, -0.05], [sackLength * 0.86, sackHeight * 0.8, sackDepth * 0.9], [0, -0.2, 0]),
   ]
+}
+
+/**
+ * §3.4's lit signs on one wall, as a z and a half-width.
+ *
+ * At module scope rather than inside `audit()`, because `build()` needs it too: a
+ * standpipe's *length* is chosen against this list, so the placement and the check that
+ * proves it are reading the same thing.
+ */
+export function litSignsOn(side: Side): { z: number; halfWidth: number; what: string }[] {
+  return [
+    ...STOREFRONT_UNITS.filter(
+      (unit) => unit.wall === side && unit.signBox && unit.signColor !== null,
+    ).map((unit) => ({
+      z: doorwayZ(unit),
+      halfWidth: STOREFRONT.signBox.width / 2,
+      what: `unit ${unit.index}'s lit box`,
+    })),
+    ...NEON_SIGN_LIST.filter((sign) => sign.wall === side).map((sign) => ({
+      z: sign.z,
+      halfWidth: (sign.size[0] as number) / 2,
+      what: `§3.5 sign ${sign.index}`,
+    })),
+  ]
+}
+
+/**
+ * §3.7 — how tall this pipe may be, given what is on the wall beside it.
+ *
+ * **Thirteen of the twenty-two are derived from §3.4's joints, so they cannot be moved by
+ * hand** — a seed change or a fifth unit width re-rolls every one of them. What they *can*
+ * do is stop short. The tall run reaches 4.00 and a lit sign box occupies `y ∈ [2.85,
+ * 3.55]`; the short run reaches 2.60 and therefore cannot cross one from any position at
+ * all. So a pipe that would foul a sign takes the short length, and the alternation §3.7
+ * asks for — *a wall of identical pipes is a fence, not a street* — carries on among the
+ * rest.
+ *
+ * **Derived rather than dodged.** The alternative was moving five pipes, three of which are
+ * generated and would come back the next time §3.4 re-rolls. This cannot come back: the
+ * only way to foul a sign is to reach it.
+ */
+function standpipeTopY(side: Side, z: number, index: number): number {
+  const alternating = PROPS.standpipe.topY[index % PROPS.standpipe.topY.length] as number
+  if (alternating <= STOREFRONT.signBox.baseY) return alternating
+
+  const clear = litSignsOn(side).every(
+    (sign) =>
+      Math.abs(sign.z - z) - sign.halfWidth - PROPS.standpipe.radius >= PROPS.signClearance,
+  )
+  return clear ? alternating : (PROPS.standpipe.topY[0] as number)
 }
 
 /** Two lengths alternating by index — a wall of identical pipes is a fence, not a street. */
@@ -437,24 +569,24 @@ const CART: WallPlacement = { side: 'east', z: 19.0 }
 /**
  * Lean sign: −1 tips the scooter toward the wall, +1 into the alley.
  *
- * **`lamp` is two of the four, and which two is the whole point.** A parked vehicle is
- * scenery; a parked vehicle with its light still on is somebody who has just stepped
- * inside. One sits 1.2 m from §12.1's spawn so the visitor meets it in the opening beat,
- * and one is mid-alley on the opposite wall, so the pair reads as *a couple of them* and
- * not as a rule about scooters. The other two stay dark — four lit headlamps in
- * forty-four metres is a car park.
+ * **All four have their lamp on, and it was two.** A parked vehicle is scenery; a parked
+ * vehicle with its light still on is somebody who has just stepped inside. The argument
+ * for two was *a couple of them rather than a rule about scooters* — which is a good
+ * sentence about **placement**, used to answer a question about **how many lamps are on**.
+ * Four parked scooters in forty-four metres is already a rule about scooters; the lamps
+ * were never what made it one. What two lit and two dark actually produced was two bikes
+ * the eye finds and two it does not.
+ *
+ * *A car park* was the risk named at the time and it is real. The answer to it is the
+ * **rung, not the count** — §8.1's `scooterHeadlamp` is 0.90 of §3.6's car lamp, because
+ * four lamps at two metres is more light in the frame than two at the same value.
  */
-const SCOOTERS: readonly (WallPlacement & { tip: -1 | 1; lamp: boolean })[] = [
-  { side: 'west', z: -18.3, tip: -1, lamp: true },
-  { side: 'east', z: -10.6, tip: 1, lamp: false },
-  { side: 'east', z: 8.4, tip: -1, lamp: true },
-  { side: 'west', z: 18.0, tip: 1, lamp: false },
+const SCOOTERS: readonly (WallPlacement & { tip: -1 | 1 })[] = [
+  { side: 'west', z: -18.3, tip: -1 },
+  { side: 'east', z: -10.6, tip: 1 },
+  { side: 'east', z: 8.4, tip: -1 },
+  { side: 'west', z: 18.0, tip: 1 },
 ]
-
-/** Which scooters have their headlamp on, by `lib/props.ts` key. §3.7. */
-export const LIT_SCOOTERS: ReadonlySet<string> = new Set(
-  SCOOTERS.flatMap(({ lamp }, i) => (lamp ? [`scooter:${i}`] : [])),
-)
 
 /**
  * §3.2's nine, in stacks of 2 to 4.
@@ -498,7 +630,11 @@ const BARRIER = { x: -0.95, z: -8.95, yawDeg: 74 }
  */
 const RUBBISH: readonly WallPlacement[] = [
   { side: 'east', z: -12.4 },
-  { side: 'west', z: -8.3 },
+  /* §16 item 10 — −8.3 → −5.1. Closing §2.1's abandoned west reservation re-ran
+     `placeWall`'s apportionment, and this drum landed across two doorways *and* on top of
+     `standpipe:2`. Three findings from one deleted array entry, which is the blast radius
+     §16 named written out as `audit()` output. */
+  { side: 'west', z: -5.1 },
 ]
 
 /**
@@ -547,9 +683,16 @@ const POLES: readonly WallPlacement[] = [
 const LANTERNS: readonly WallPlacement[] = [
   { side: 'east', z: -19.6 },
   { side: 'west', z: -18.9 },
-  { side: 'west', z: -13.2 },
+  /* §3.4 — −13.2 → −13.45. Unit 1's lit box moved 0.12 m when §3.4's doorway stopped being
+     placed by its opening, and this lantern was standing 1.030 m from it against a required
+     1.035. Five millimetres, and it is exactly the case §3.7 predicted when it wrote that
+     §3.4's layout is *generated* and the next collision would arrive unannounced. It arrived
+     unannounced and `audit()` announced it. */
+  { side: 'west', z: -13.45 },
   { side: 'east', z: -11.9 },
-  { side: 'west', z: -7.4 },
+  /* §16 item 10 — −7.4 → −6.0. Unit 2's lit box arrived at −7.43 when the west wall
+     re-rolled, three centimetres from where this shade was hanging. */
+  { side: 'west', z: -6.0 },
   { side: 'east', z: -2.2 },
   /* §3.7 — 2.6 → 0.85 and 12.6 → 10.75. At their old z these two hung 65 mm in front of a
      §3.4 lit sign box and dead centre on it vertically (shade centre y 3.18 against box centre
@@ -558,9 +701,13 @@ const LANTERNS: readonly WallPlacement[] = [
      which is a better place for a paper lantern than in front of a sign anyway. The second had
      to go down rather than up: the gap between the box edge and §2.3's payphone slot is 0.105 m
      wide. Both off-round, per this section's "nothing is evenly spaced". */
-  { side: 'west', z: 0.85 },
+  /* §16 item 10 — 0.85 → −0.25 and 10.75 → 9.5, for the same reason: the boxes moved. Both
+     are *below* their new box rather than above it, and that is not a coin toss — the
+     forbidden span either side of a lit box is 1.035 m, and above each of these there is a
+     second box (3.37 and, at 11.73, §2.3's reserved slot) that closes the gap entirely. */
+  { side: 'west', z: -0.25 },
   { side: 'east', z: 8.6 },
-  { side: 'west', z: 10.75 },
+  { side: 'west', z: 9.5 },
   { side: 'east', z: 16.8 },
   { side: 'west', z: 18.2 },
 ]
@@ -615,7 +762,22 @@ function jointAnchors(): WallPlacement[] {
 
 function build(): Prop[] {
   const props: Prop[] = []
-  const add = (prop: Omit<Prop, 'key'> & { key: string }) => props.push(prop)
+
+  /**
+   * Every call site below writes `position: [x, 0, z]`, and this is where the 0 becomes
+   * the surface the prop is actually standing on.
+   *
+   * **Gated on `decal`, which is this file's existing name for *stands on the ground*.**
+   * A lantern hangs off a wall at 3.46 m and a standpipe is clamped to one; raising either
+   * by a kerb height would be raising something that is not on the kerb. The two sets are
+   * the same set, so it is read here rather than duplicated as a second flag that could
+   * disagree with the first.
+   */
+  const add = (prop: Omit<Prop, 'key'> & { key: string }) => {
+    const [x, , z] = prop.position
+    const y = prop.decal ? standingHeight(x, prop.yaw, prop.footprint) : 0
+    props.push({ ...prop, position: [x, y, z] })
+  }
 
   const vendingParts = vendingMachineParts()
   VENDING.forEach(({ side, z }, i) => {
@@ -679,7 +841,7 @@ function build(): Prop[] {
       position: [wallX(side, footprint[1], standoff), 0, z],
       yaw: yawFor(side),
       lean: 0,
-      parts: crateStackParts(count),
+      parts: crateStackParts(count, i),
       footprint,
       solid: true,
       decal: true,
@@ -764,14 +926,14 @@ function build(): Prop[] {
 
   const pipes = [...jointAnchors(), ...EXTRA_PIPES]
   pipes.forEach(({ side, z }, i) => {
-    const { x, radius, topY, solidCount } = PROPS.standpipe
+    const { x, radius, solidCount } = PROPS.standpipe
     add({
       key: `standpipe:${i}`,
       kind: 'standpipe',
       position: [side === 'west' ? -x : x, 0, z],
       yaw: yawFor(side),
       lean: 0,
-      parts: standpipeParts(topY[i % topY.length] as number),
+      parts: standpipeParts(standpipeTopY(side, z, i)),
       /* The pipe only, not its clamps: the clamps reach back *toward* the wall, and a
          symmetric footprint that included them would grow the box toward the visitor
          instead — 0.10 m of blocking in the one direction the clamps do not occupy. */
@@ -818,7 +980,7 @@ export type AuditFinding = { rule: string; detail: string }
  * *"Make sure that there are no collisions"* — stated as a list of findings rather than
  * as a claim.
  *
- * Six rules, each of which has a failure that is invisible in a diff and obvious once
+ * Seven rules, each of which has a failure that is invisible in a diff and obvious once
  * you walk into it:
  *
  * 1. **No two props overlap.** Two AABBs sharing space is one prop growing out of another.
@@ -828,11 +990,15 @@ export type AuditFinding = { rule: string; detail: string }
  *    and nothing may be parked in front of one.
  * 4. **No utility pole stands in front of an awning.** The poles are the only prop that
  *    reaches above 2.60, and the awnings are the only thing out there at that height.
- * 5. **No utility pole stands within `signClearance` of a lit sign.** The same clash
- *    against the other thing up there — see §3.7, and see `POLES` for what it cost to
- *    leave this one as a comment for two passes.
+ * 5. **Nothing tall stands within `signClearance` of a lit sign.** The same clash against
+ *    the other thing up there — see §3.7, and see `POLES` for what it cost to leave this
+ *    one as a comment for two passes, and `mast-through-sign-box` below for what it cost
+ *    to write it about poles when the next thing to break it was a standpipe.
  * 6. **No lantern hangs in front of a §3.5 sign or a lit §3.4 box.** Occlusion rather
  *    than intersection: nothing touches and the shade blanks the middle of a painted face.
+ * 7. **No prop straddles §3's kerb edge.** A prop stands on the pavement or in the road,
+ *    at one height, and anything overhanging is standing on a surface that is not under
+ *    half of it.
  *
  * Runs at module load in development. Empty is the pass.
  */
@@ -913,46 +1079,96 @@ export function audit(): AuditFinding[] {
   }
 
   /**
-   * §3.7 — **no pole within `signClearance` of a lit sign's edge, on the same wall.**
+   * §3.7 — **nothing tall within `signClearance` of a lit sign's edge, on the same wall.**
    *
-   * The rule that spent two passes as prose above `POLES` while the fault it describes was
-   * on screen. It is deliberately *not* an intersection test: a pole at `|x| = 3.72` and a
-   * §3.4 sign box facing `|x| = 4.01` never touch, and from anywhere but square-on the
-   * 0.29 m between them is nothing — the pole is simply drawn down the middle of the sign.
-   * §3.5's signs are the harder case and would fail an intersection test *too*, since they
-   * project to `|x| = 3.78`, inside the pole's own diameter.
+   * It is deliberately *not* an intersection test: a pole at `|x| = 3.72` and a §3.4 sign
+   * box facing `|x| = 4.01` never touch, and from anywhere but square-on the 0.29 m between
+   * them is nothing — the mast is simply drawn down the middle of the sign. §3.5's signs
+   * are the harder case and would fail an intersection test *too*, since they project to
+   * `|x| = 3.78`, inside a pole's own diameter.
+   *
+   * **This was `kind === 'utilityPole'` and that is why it shipped a fault it was written
+   * to catch.** The thing crossing unit 6's `neonPink` box was a **standpipe** — `|x| =
+   * 4.09`, which is 0.08 m in *front* of the sign face, closer than a pole ever gets — and
+   * the rule never looked at it. Every number in the rule was right. **A rule scoped to the
+   * example that produced it is a rule that catches that example**, so it now asks the two
+   * questions that actually matter: does this prop reach into the sign's height band, and
+   * does it stand near enough to the sign's own depth to be read against it.
+   *
+   * `mastReach` is the top of the prop's tallest part, taken from the part list rather than
+   * from `kind`, so a new tall prop is covered the day it is added.
    *
    * **Lit signs only**, both here and in the brief: an unlit §3.4 box is `shutter` with no
-   * emissive term, and a pole in front of a dark slab on a dark wall cannot be seen.
+   * emissive term, and a mast in front of a dark slab on a dark wall cannot be seen.
    */
-  const poleRadius = PROPS.utilityPole.radius
-  const litSignsOn = (side: Side): { z: number; halfWidth: number; what: string }[] => [
-    ...STOREFRONT_UNITS.filter(
-      (unit) => unit.wall === side && unit.signBox && unit.signColor !== null,
-    ).map((unit) => ({
-      z: doorwayZ(unit),
-      halfWidth: STOREFRONT.signBox.width / 2,
-      what: `unit ${unit.index}'s lit box`,
-    })),
-    ...NEON_SIGN_LIST.filter((sign) => sign.wall === side).map((sign) => ({
-      z: sign.z,
-      halfWidth: (sign.size[0] as number) / 2,
-      what: `§3.5 sign ${sign.index}`,
-    })),
-  ]
+  /** Top of this prop's tallest part, in world y. */
+  const mastReach = (prop: Prop): number =>
+    prop.parts.reduce(
+      (top, part) => Math.max(top, prop.position[1] + part.position[1] + part.scale[1] / 2),
+      0,
+    )
+
+  /**
+   * How near a mast has to be to a sign's own depth before the two read as one object.
+   *
+   * A §3.4 box faces 4.01 and a §3.5 sign projects to 3.78; a pole stands at 3.72 and a
+   * standpipe at 4.09. **All four are inside half a metre of each other**, which is the
+   * point — at that separation nothing is behind anything, it is all one plane with a
+   * stripe down it. Props further out than this are in the alley rather than on the wall
+   * and pass in front of a sign the way a scooter does, which is depth, not a fault.
+   */
+  const MAST_DEPTH_BAND = 0.5
 
   for (const prop of STREET_PROPS) {
-    if (prop.kind !== 'utilityPole') continue
+    /* Lanterns reach into the band and have a rule of their own two below — a shade hanging
+       on an arm and blanking the middle of a painted face is occlusion, and it is measured
+       against `SIGN_CLEARANCE` plus the shade's radius. This rule is about a vertical run
+       drawn *down* a sign. Two rules with two clearances over one object would be one rule
+       nobody could reason about. */
+    if (prop.kind === 'paperLantern') continue
+
     const side: Side = prop.position[0] < 0 ? 'west' : 'east'
+    if (mastReach(prop) <= STOREFRONT.signBox.baseY) continue
+
+    const { halfX } = halfExtents(prop.yaw, prop.footprint)
+    const centre = Math.abs(prop.position[0])
+    if (Math.abs(centre - (WALL_X - STOREFRONT.aperture.recess - STOREFRONT.signBox.proud)) > MAST_DEPTH_BAND) {
+      continue
+    }
 
     for (const sign of litSignsOn(side)) {
-      const gap = Math.abs(sign.z - prop.position[2]) - sign.halfWidth - poleRadius
-      if (gap >= PROPS.utilityPole.signClearance) continue
+      const gap = Math.abs(sign.z - prop.position[2]) - sign.halfWidth - halfX
+      if (gap >= PROPS.signClearance) continue
       findings.push({
-        rule: 'pole-through-sign-box',
-        detail: `${prop.key} at z ${prop.position[2]} leaves ${gap.toFixed(2)} m of air beside ${sign.what} at ${sign.z.toFixed(2)} — wants ${PROPS.utilityPole.signClearance}`,
+        rule: 'mast-through-sign-box',
+        detail: `${prop.key} at z ${prop.position[2]} leaves ${gap.toFixed(2)} m of air beside ${sign.what} at ${sign.z.toFixed(2)} — wants ${PROPS.signClearance}`,
       })
     }
+  }
+
+  /**
+   * §3 / §3.7 — **no prop straddles the kerb edge.**
+   *
+   * A prop is either on the pavement or in the road; `standingHeight` picks one height for
+   * the whole thing, so anything overhanging the edge is standing on a surface that is not
+   * under half of it. §3 derives the kerb's width from the deepest wall prop precisely so
+   * this rule can hold, and this is what makes that derivation load-bearing rather than a
+   * sentence: a future prop deeper than 1.00 fails here instead of quietly hanging over.
+   *
+   * **The guardrail is exempt and it is the only one.** §3.7 runs it across §3.1's opening
+   * from `x = 0.90` to the east frame at 4.15, so it crosses the kerb by design — it is a
+   * barrier spanning the mouth, not an object standing somewhere.
+   */
+  for (const prop of STREET_PROPS) {
+    if (prop.kind === 'guardrail' || !prop.decal) continue
+    const { halfX } = halfExtents(prop.yaw, prop.footprint)
+    const inner = Math.abs(prop.position[0]) - halfX
+    const outer = Math.abs(prop.position[0]) + halfX
+    if (inner >= KERB_INNER || outer <= KERB_INNER) continue
+    findings.push({
+      rule: 'prop-straddles-kerb',
+      detail: `${prop.key} spans |x| ${inner.toFixed(2)}–${outer.toFixed(2)} across the kerb edge at ${KERB_INNER.toFixed(2)}`,
+    })
   }
 
   /* §3.5's signs share the lanterns' height band, and a shade inside one of their z spans
@@ -1059,6 +1275,14 @@ export const PROP_TOKENS: Readonly<Record<SurfaceKey, ColorToken>> = {
   void: 'void',
   signWhite: 'signWhite',
   roadOrange: PROPS.cone.color,
+  crateKraft: 'crateKraft',
+  crateTimber: 'crateTimber',
+  /* §3.7 — `metalDark` carrying §3.4's grain at the `metal` class. The colour is the same;
+     the material is not, which is why it is a surface of its own. */
+  binDrum: PROPS.rubbishPoint.drumColor,
+  /* §3.7 — white, because the painted rack *is* the albedo. Every other surface here
+     multiplies a §4 token by a map; this one has no token to multiply. */
+  vendingFront: 'signWhite',
   cartLamp: PROPS.foodCart.lamp.color,
   lanternGlow: PROPS.paperLantern.color,
 }

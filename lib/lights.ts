@@ -17,6 +17,7 @@ import {
   ALLEY_LIGHTS,
   BUDGET,
   GATE_LIGHT,
+  LIGHTS,
   LIGHT_SURRENDER_ORDER,
   STATION_PLATE,
   STATION_PLATE_PANEL,
@@ -52,6 +53,56 @@ export type SeatedLight = {
 const MOUNTED_ELSEWHERE = 2
 
 /**
+ * §7 lights 2 and 3 — §2.1's, mounted by `Showcase.tsx` rather than here.
+ *
+ * They were authored in §7 when §2.1 was designed and **never mounted**, which is §7.1's
+ * complaint from the other side: that section deleted four lightformers for being light
+ * with no emitter, and these were two emitters with no light. The alley's one content
+ * surface was lit by whichever §3.5 sign happened to be nearest.
+ *
+ * `null` where the tier drops one. Light 2 is a `rectAreaLight` — the most expensive light
+ * three has, two 64² LTC tables and a shader permutation — and §7 marks it `drop` on mobile
+ * for that reason rather than for the count.
+ *
+ * **Returned rather than mounted here, because a light seated on an object belongs with the
+ * object.** `Showcase.tsx` has the bend's frame and this file does not; a coordinate written
+ * here would drift the moment `BEND` moved, silently, because a light two metres off its
+ * emitter still looks like a light.
+ */
+export function showcaseLightsFor(tier: Tier): {
+  screen: (typeof LIGHTS)[1] | null
+  sign: (typeof LIGHTS)[2] | null
+} {
+  const screen = LIGHTS[1]
+  const sign = LIGHTS[2]
+  const surrendered = surrenderedFor(tier)
+
+  return {
+    screen: tier === 'mobile' && screen.mobile === 'drop' ? null : screen,
+    sign: surrendered.has(sign.id) ? null : sign,
+  }
+}
+
+/**
+ * How many of §7's lights the world is over the tier's cap by, and which ids give way.
+ *
+ * **Counted across the whole world, not per file.** §7's cap is a renderer limit and the
+ * lights are mounted from three different components; a cap applied inside one of them
+ * would let the other two walk past it. The count is: §5's hemisphere, §3.1's gate light,
+ * §2.1's two, and `ALLEY_LIGHTS`.
+ */
+function surrenderedFor(tier: Tier): Set<number> {
+  const cap = BUDGET[tier].dynamicLights
+  /* Light 2 is desktop-only, so on mobile it is not competing for a slot. Counting it
+     there would surrender one of §7.1's five to make room for a light that is not
+     mounted — a cap enforcing itself against a light nobody can see. */
+  const showcaseCount = tier === 'mobile' ? 1 : 2
+  const overBy = MOUNTED_ELSEWHERE + showcaseCount + ALLEY_LIGHTS.length - cap
+
+  return new Set<number>(overBy > 0 ? LIGHT_SURRENDER_ORDER.slice(0, overBy) : [])
+}
+
+/**
  * §7 / §15 — the alley's lights for a tier, with the cap applied.
  *
  * The cap is a count, not a flag on individual lights. §7 used to mark 8, 9 and 10
@@ -63,13 +114,7 @@ const MOUNTED_ELSEWHERE = 2
  * Lights 6 and 7 are still halved on mobile, which is a §7 value and unrelated to the cap.
  */
 export function alleyLightsFor(tier: Tier): SeatedLight[] {
-  const cap = BUDGET[tier].dynamicLights
-  const overBy = MOUNTED_ELSEWHERE + ALLEY_LIGHTS.length - cap
-
-  const surrendered = new Set<number>(
-    overBy > 0 ? LIGHT_SURRENDER_ORDER.slice(0, overBy) : [],
-  )
-
+  const surrendered = surrenderedFor(tier)
   const seated: SeatedLight[] = []
 
   for (const light of ALLEY_LIGHTS) {

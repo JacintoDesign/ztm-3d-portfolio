@@ -49,13 +49,50 @@ const level = (roughness: number) => Math.round(roughness * 255)
  * gutter lines at x = ±3.72 are where the water actually runs. The weight drops away
  * past the walls, which the visitor never sees.
  */
-function wetnessWeight(x: number): number {
+function wetnessWeight(x: number, z: number): number {
+  /* **Everything below models the alley's drainage, so past the bend none of it applies.**
+     The crown at `x = 0` and the gutters at `|x| = 3.02` both run *along* the alley; §3.6's
+     carriageway runs across it, and its crown and gutters are perpendicular to every term
+     here. Applied out there the profile made the far road dry wherever the alley happened to
+     be dry — measured at 5.8% wet against the alley's 59.8%, on the one stretch of ground
+     with traffic on it and a §6.0 reflection of the traffic in it. §6.2's flat figure is this
+     function's own mean over the alley, so the far road gets the same expected density
+     without a second invented profile. */
+  if (z >= PUDDLE_MASK.bias.beyondWallsToZ) return PUDDLE_MASK.bias.crossStreet
+
   const baseline = PUDDLE_MASK.bias.baseline
   const centre = 0.3 * Math.exp(-((x / 2.6) ** 2))
   const gutter = 0.28 * Math.exp(-(((Math.abs(x) - PUDDLE_MASK.bias.gutterX) / 0.5) ** 2))
+  /* The 1.5 m of strip past each wall is hidden geometry — §6.1 runs it out there so no seam
+     is ever in frame — and a puddle on it is a puddle nobody can see. */
   const beyondWalls = Math.abs(x) > 4.5 ? 0.25 : 1
   return (baseline + centre + gutter) * beyondWalls
 }
+
+/* ────────────────────────────────────────────────────────────────────────────
+ * World ↔ texel, in one place
+ *
+ * **The painter and the sampler disagreed about which way `z` ran, and had since §6.2.**
+ * `paint()` drew a blob at `row = (z − z0) × pxPerMetre`, so row 0 was the *north* end;
+ * `puddleWetnessAt()` read `row = (1 − v) × height`, so row 0 was the *south* end. The
+ * plane is rotated −90° about X, which puts texture V along −Z, so the sampler was the one
+ * that matched the render — and the whole mask was therefore **painted mirrored in z**.
+ *
+ * Nothing showed it. `wetnessWeight` had no `z` term, so a z-flip of a z-symmetric field is
+ * the same field, and §10's emitters landed in real puddles because the sampler and the
+ * render agreed with each other. It surfaced the moment §6.2 asked for a blob *in a named
+ * region*: every cross-street blob went to the north end of the alley and the region it was
+ * aimed at stayed dry through four thousand attempts.
+ *
+ * Both conversions live here now. A world-to-texel mapping written twice is a mapping that
+ * can be written twice differently.
+ * ──────────────────────────────────────────────────────────────────────────── */
+
+const toColumn = (x: number, width: number): number =>
+  ((x - REFLECTOR_STRIP.x[0]) / REFLECTOR_STRIP.width) * width
+
+const toRow = (z: number, height: number): number =>
+  (1 - (z - REFLECTOR_STRIP.z[0]) / REFLECTOR_STRIP.length) * height
 
 function paint(tier: Tier): HTMLCanvasElement {
   const { width, height, boundaryBlurPx } = PUDDLE_MASK.size[tier]
@@ -81,24 +118,44 @@ function paint(tier: Tier): HTMLCanvasElement {
   const [minAxis, maxAxis] = PUDDLE_MASK.blob.majorAxis
 
   /**
-   * Blobs go down until the target coverage is met, rather than to a fixed count —
-   * a count would drift away from 60% the moment any size or bias value changed.
-   * The cap is a guard against a weight function that can never reach the target,
-   * not an expected outcome.
+   * Blobs go down until every §6.2 region has met the target, rather than to a fixed
+   * count — a count would drift away from 60% the moment any size or bias value changed.
+   * The cap is a guard against a weight function that can never reach the target, not an
+   * expected outcome.
+   *
+   * **Each pass fills whichever region is furthest behind**, which is the fix for a
+   * single global average satisfying itself on the alley and leaving §3.6's carriageway
+   * at 5.8%. Blob centres are drawn from that region **grown by half the largest major
+   * axis**, so a blob can straddle the boundary and the region has an edge that water
+   * found rather than one that was measured.
    */
   const MAX_BLOBS = 4000
   const CHECK_EVERY = 15
   let placed = 0
 
   while (placed < MAX_BLOBS) {
+    const levels = PUDDLE_MASK.coverageRegions.map((region) =>
+      coverage(ctx, width, height, region),
+    )
+    let worst = 0
+    for (let i = 1; i < levels.length; i++) {
+      if ((levels[i] as number) < (levels[worst] as number)) worst = i
+    }
+    if ((levels[worst] as number) >= PUDDLE_MASK.coverage) break
+
+    const region = PUDDLE_MASK.coverageRegions[worst] as (typeof PUDDLE_MASK.coverageRegions)[number]
+    const bleed = maxAxis / 2
+    const [xFrom, xTo] = [region.x[0] - bleed, region.x[1] + bleed]
+    const [zFrom, zTo] = [region.z[0] - bleed, region.z[1] + bleed]
+
     for (let i = 0; i < CHECK_EVERY; i++) {
       // Rejection-sample a centre so blobs follow the wetness weight.
       let cx = 0
       let cz = 0
       for (let attempt = 0; attempt < 24; attempt++) {
-        cx = REFLECTOR_STRIP.x[0] + random() * REFLECTOR_STRIP.width
-        cz = REFLECTOR_STRIP.z[0] + random() * REFLECTOR_STRIP.length
-        if (random() < wetnessWeight(cx)) break
+        cx = xFrom + random() * (xTo - xFrom)
+        cz = zFrom + random() * (zTo - zFrom)
+        if (random() < wetnessWeight(cx, cz)) break
       }
 
       // Each puddle is a union of overlapping ellipses — a single ellipse reads as a
@@ -116,8 +173,8 @@ function paint(tier: Tier): HTMLCanvasElement {
 
         ctx.beginPath()
         ctx.ellipse(
-          (ex - REFLECTOR_STRIP.x[0]) * pxPerMetreX,
-          (ez - REFLECTOR_STRIP.z[0]) * pxPerMetreZ,
+          toColumn(ex, width),
+          toRow(ez, height),
           rx * pxPerMetreX,
           rz * pxPerMetreZ,
           random() * Math.PI,
@@ -128,36 +185,43 @@ function paint(tier: Tier): HTMLCanvasElement {
       }
       placed++
     }
-
-    if (coverage(ctx, width, height) >= PUDDLE_MASK.coverage) break
   }
 
   return blur(canvas, boundaryBlurPx)
 }
 
 /**
- * Fraction of the *visible* floor that is wet, measured on a coarse sample of the
- * hard-edged art before it is blurred.
+ * Fraction of one §6.2 region that is wet, measured on a coarse sample of the hard-edged
+ * art before it is blurred.
  *
- * Measured across the alley only — x ∈ [-4.5, 4.5] — and not across the full 12 m
- * strip. The strip runs 1.5 m past the walls on each side so that its seam is never in
- * frame (§6.1), but that margin is hidden geometry: counting it drags the average down
- * and the loop compensates by flooding the part you can actually see.
+ * **Per region, not globally.** The bounds are what the visitor can see — the alley's walls,
+ * and §3.1's mouth slot for the cross street. §6.1 runs the strip 1.5 m past each wall and
+ * 3 m behind each end wall so no seam is ever in frame, and that margin is hidden geometry:
+ * counting it drags the average down and the loop floods the part you *can* see to
+ * compensate. A single average over the alley and the cross street had the same failure in
+ * the other direction — it was satisfied by the alley alone and left the far road dry.
  */
-function coverage(ctx: CanvasRenderingContext2D, width: number, height: number): number {
+function coverage(
+  ctx: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+  region: { x: readonly [number, number]; z: readonly [number, number] },
+): number {
   const midpoint = (level(PUDDLE_MASK.roughnessWet) + level(PUDDLE_MASK.roughnessDry)) / 2
   const step = 8
   const { data } = ctx.getImageData(0, 0, width, height)
 
-  const metreToPx = (x: number) =>
-    Math.round(((x - REFLECTOR_STRIP.x[0]) / REFLECTOR_STRIP.width) * width)
-  const fromX = metreToPx(PUDDLE_MASK.coverageMeasureX[0])
-  const toX = metreToPx(PUDDLE_MASK.coverageMeasureX[1])
+  /* V runs opposite to the row order — the plane is rotated −90° about X — so a region's
+     `z` maximum is its *first* row. */
+  const fromX = Math.max(0, Math.round(toColumn(region.x[0], width)))
+  const toX = Math.min(width, Math.round(toColumn(region.x[1], width)))
+  const fromY = Math.max(0, Math.round(toRow(region.z[1], height)))
+  const toY = Math.min(height, Math.round(toRow(region.z[0], height)))
 
   let wet = 0
   let total = 0
 
-  for (let y = 0; y < height; y += step) {
+  for (let y = fromY; y < toY; y += step) {
     for (let x = fromX; x < toX; x += step) {
       const red = data[(y * width + x) * 4] ?? 255
       if (red < midpoint) wet++
@@ -242,19 +306,15 @@ export function puddleWetnessAt(tier: Tier): ((x: number, z: number) => number) 
   const { data } = ctx.getImageData(0, 0, width, height)
 
   /* §6.2 — the mask maps 1:1 onto the reflector strip, no UV repeat, so world position
-     converts straight to a texel. The plane is rotated -90° about X, which is what puts
-     texture V along -Z: the same relationship `Ground.tsx` relies on for the scroll. */
+     converts straight to a texel, through the same two helpers `paint()` uses. */
   const [x0, x1] = REFLECTOR_STRIP.x
   const [z0, z1] = REFLECTOR_STRIP.z
 
   const sampler = (x: number, z: number): number => {
-    const u = (x - x0) / (x1 - x0)
-    const v = (z - z0) / (z1 - z0)
-    if (u < 0 || u > 1 || v < 0 || v > 1) return PUDDLE_MASK.roughnessDry
+    if (x < x0 || x > x1 || z < z0 || z > z1) return PUDDLE_MASK.roughnessDry
 
-    const px = Math.min(width - 1, Math.floor(u * width))
-    // V runs opposite to the row order, matching the plane's -90° rotation about X.
-    const py = Math.min(height - 1, Math.floor((1 - v) * height))
+    const px = Math.min(width - 1, Math.max(0, Math.floor(toColumn(x, width))))
+    const py = Math.min(height - 1, Math.max(0, Math.floor(toRow(z, height))))
     return (data[(py * width + px) * 4] ?? 255) / 255
   }
 

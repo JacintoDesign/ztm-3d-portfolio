@@ -6,15 +6,16 @@ import { BoxGeometry, Color, MeshStandardMaterial, PlaneGeometry } from 'three'
 import { expose } from '@/lib/debug'
 import { resolveTier } from '@/lib/device'
 import { flickerLevel } from '@/lib/flicker'
+import { showcaseLightsFor } from '@/lib/lights'
 import { lockTo } from '@/lib/lockedView'
 import type { Project } from '@/lib/projects'
 import { prefersReducedMotion } from '@/lib/reducedMotion'
 import {
-  pollAutoAdvance,
+  pollShowcase,
   setShowcaseCount,
-  showcaseIndex,
+  showcaseDisplayIndex,
   transitionLevel,
-  useShowcaseIndex,
+  useShowcaseDisplayIndex,
 } from '@/lib/showcase'
 import { registerStation } from '@/lib/stations'
 import { projectTitleTexture } from '@/lib/textures/projectTitle'
@@ -84,7 +85,7 @@ const CASE_MATERIAL = new MeshStandardMaterial({
 
 export default function Showcase({ projects }: { projects: readonly Project[] }) {
   const tier = resolveTier()
-  const index = useShowcaseIndex()
+  const index = useShowcaseDisplayIndex()
   const project = projects[index]
 
   useEffect(() => {
@@ -93,6 +94,7 @@ export default function Showcase({ projects }: { projects: readonly Project[] })
 
   const [groupX, , groupZ] = bendFacePoint(SHOWCASE.t, 0)
   const groupRotationY = yawToThreeRotationY(BEND.angleRad)
+  const showcaseLights = useMemo(() => showcaseLightsFor(tier), [tier])
 
   /**
    * §2.1 — the screenshot **glows and still never blooms.**
@@ -205,13 +207,13 @@ export default function Showcase({ projects }: { projects: readonly Project[] })
       lockPitchDeg: SHOWCASE_LOCK.pitchDeg,
       groupAt: [groupX, groupZ],
       projectCount: projects.length,
-      index: showcaseIndex,
+      index: showcaseDisplayIndex,
     })
   }, [groupX, groupZ, projects.length])
 
   useFrame((state) => {
     const nowMs = performance.now()
-    pollAutoAdvance(nowMs)
+    pollShowcase(nowMs)
 
     /* §2.1's transition, applied by mutating the materials directly — sixty React renders a
        second to dim a board costs more than the board does. Both surfaces move together, so
@@ -245,6 +247,9 @@ export default function Showcase({ projects }: { projects: readonly Project[] })
   const { screen, titleSign, faceOffset } = SHOWCASE
   const screenY = screen.baseY + screen.height / 2
   const signY = titleSign.baseY + titleSign.height / 2
+  /* §7 — resolved against the tier's cap in `lib/lights.ts`, where the whole world is
+     counted at once. A cap applied inside one component lets the other two walk past it. */
+  const { screen: light2, sign: light3 } = showcaseLights
 
 
   return (
@@ -282,6 +287,43 @@ export default function Showcase({ projects }: { projects: readonly Project[] })
         position={[titleSign.x, signY, faceOffset + titleSign.depth + 0.002]}
         scale={[titleSign.width * 0.94, titleSign.height * 0.86, 1]}
       />
+
+      {/* ── §7 lights 2 and 3, seated on the two things above ──
+          Authored in §7 since §2.1 was designed and never mounted, which is the fault §7.1
+          spent a section on in the other direction: a light with no emitter. These are two
+          emitters that had no light, and the alley's one content surface was lit by the
+          §3.5 sign nearest to it.
+
+          **Inside the group, so neither carries a coordinate.** The group already puts local
+          +Z on §3.1's inward face normal; a light written in world space here would drift the
+          moment `BEND` moves, silently, because a light two metres off its emitter still
+          looks like a light. */}
+      {light2 !== null ? (
+        <rectAreaLight
+          name={`light:${light2.id}:showcaseScreen`}
+          color={PALETTE[light2.color]}
+          intensity={light2.intensity}
+          width={light2.size[0]}
+          height={light2.size[1]}
+          position={[0, screenY, faceOffset + screen.depth + 0.01]}
+          /* §7 — a `rectAreaLight` emits along its own **−Z**, and the group's +Z is the
+             direction the board faces, so it is turned to face out of the wall. Without this
+             it lights the inside of the bend, which is a solid box: the light is mounted, the
+             uniforms are initialised, and the alley is exactly as dark as it was. */
+          rotation={[0, Math.PI, 0]}
+        />
+      ) : null}
+
+      {light3 !== null ? (
+        <pointLight
+          name={`light:${light3.id}:showcaseSign`}
+          color={PALETTE[light3.color]}
+          intensity={light3.intensity}
+          position={[titleSign.x, signY, faceOffset + titleSign.depth + light3.standoff]}
+          distance={light3.distance}
+          decay={light3.decay}
+        />
+      ) : null}
     </group>
   )
 }

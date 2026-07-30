@@ -112,34 +112,57 @@ function placeEmitters(tier: Tier): Emitter[] {
   const wetnessAt = puddleWetnessAt(tier)
   if (wetnessAt === null) return []
 
-  const wanted = RIPPLES[tier].emitters
   const random = mulberry32(RIPPLES.seed)
-  const [xMin, xMax] = RIPPLES.sampleX
-  const [zMin, zMax] = RIPPLES.sampleZ
   const minGapSq = RIPPLES.minSeparation ** 2
-
   const out: Emitter[] = []
-  for (let attempt = 0; attempt < RIPPLES.maxSampleAttempts && out.length < wanted; attempt++) {
-    const x = xMin + random() * (xMax - xMin)
-    const z = zMin + random() * (zMax - zMin)
 
-    // §6.2 stores roughness, so *low* is wet. §10.0's threshold sits inside the water
-    // rather than on the 14 px blurred transition, so no ring straddles a puddle edge.
-    if (wetnessAt(x, z) > RIPPLES.wetThreshold) continue
+  /**
+   * §10.0 — **two regions, and it was one rectangle wrong at both ends.**
+   *
+   * The alley region stops at §3's kerb inner edge rather than at the walls, so no ring
+   * expands on the pavement — a surface 12 cm above the water, and four times as wide since
+   * §3 widened the kerb. The carriageway region is new: §6.0 ran the reflector out to
+   * `z = 33` and put the far building and the traffic in that road as reflections, while
+   * the emitters still stopped at 23, so rain fell visibly into a mirror-flat street.
+   *
+   * The separation test runs across **all** emitters rather than per region, so a ring in
+   * the alley and one on the road cannot land on top of each other in the 3.2 m of ground
+   * the two regions face across.
+   */
+  for (const region of RIPPLES.sampleRegions) {
+    const wanted = region[tier]
+    const [xMin, xMax] = region.x
+    const [zMin, zMax] = region.z
+    let placed = 0
 
-    // §10.0 — 2.0 m clear of every emitter already placed. Squared, so no square roots in
-    // a loop that may run four hundred times at mount.
-    let tooClose = false
-    for (const placed of out) {
-      if ((placed.x - x) ** 2 + (placed.z - z) ** 2 < minGapSq) {
-        tooClose = true
-        break
+    for (
+      let attempt = 0;
+      attempt < RIPPLES.maxSampleAttempts && placed < wanted;
+      attempt++
+    ) {
+      const x = xMin + random() * (xMax - xMin)
+      const z = zMin + random() * (zMax - zMin)
+
+      // §6.2 stores roughness, so *low* is wet. §10.0's threshold sits inside the water
+      // rather than on the 14 px blurred transition, so no ring straddles a puddle edge.
+      if (wetnessAt(x, z) > RIPPLES.wetThreshold) continue
+
+      // §10.0 — clear of every emitter already placed. Squared, so no square roots in a
+      // loop that may run thousands of times at mount.
+      let tooClose = false
+      for (const other of out) {
+        if ((other.x - x) ** 2 + (other.z - z) ** 2 < minGapSq) {
+          tooClose = true
+          break
+        }
       }
-    }
-    if (tooClose) continue
+      if (tooClose) continue
 
-    out.push({ x, z, phase: random(), jitter: safeJitter(wetnessAt, x, z) })
+      out.push({ x, z, phase: random(), jitter: safeJitter(wetnessAt, x, z) })
+      placed++
+    }
   }
+
   return out
 }
 
