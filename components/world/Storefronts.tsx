@@ -21,6 +21,7 @@ import {
   apertureZ,
   doorwayZ,
   shutterDrop,
+  shutterRollRadius,
 } from '@/lib/storefronts'
 import { signBoxTexture } from '@/lib/textures/signBox'
 import { grainParams } from '@/lib/textures/surfaceGrain'
@@ -203,10 +204,13 @@ function buildPlacements() {
       scale: [0.01, APERTURE_HEIGHT, apWidth],
     })
 
-    // The shutter roll, at the head of the aperture.
+    /* The shutter roll, at the head of the aperture — **as thick as what is wound onto
+       it**. A shut unit stays at §3.4's empty-drum 0.16; an open one reaches 0.19, which
+       is one of the two things that say a shutter went up. */
+    const rollRadius = shutterRollRadius(unit)
     rolls.push({
-      position: [wall + dir * STOREFRONT.rollRadius, aperture.headY, apZ],
-      scale: [STOREFRONT.rollRadius, apWidth, STOREFRONT.rollRadius],
+      position: [wall + dir * rollRadius, aperture.headY, apZ],
+      scale: [rollRadius, apWidth, rollRadius],
       rotationX: Math.PI / 2,
     })
 

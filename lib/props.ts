@@ -614,12 +614,40 @@ const CRATES: readonly (WallPlacement & { count: number; standoff?: number })[] 
  * the walkable band with no clamp anywhere near it, which makes it the honest test of
  * §12.4's resolver — see §3.7.
  */
+/**
+ * §3.7 — **against the kerb, not down the middle of the road.**
+ *
+ * They were at `x = −1.30` and `−0.55`, which is the centre line of a 6.40 m carriageway:
+ * roadworks cordoned off in the middle of a street with nothing in the middle of it. Real
+ * cones stand where the thing being coned off is, and here that is the kerb. Each sits with
+ * its outer edge `CONE_KERB_GAP` clear of the kerb face — **beside the pavement, never on
+ * it**, which `audit()`'s `prop-straddles-kerb` rule also requires.
+ *
+ * They stay the honest test of §12.4's resolver that §3.7 wanted: `−2.97` puts a cone's
+ * inner face at 2.79, well inside §3's ±3.60 clamp, so the eye is still stopped by the box
+ * rather than by the clamp.
+ */
+const CONE_KERB_GAP = 0.05
+
+/** Outer edge `CONE_KERB_GAP` clear of the kerb, given the prop's own half-width. */
+const besideKerb = (halfX: number): number => -(KERB_INNER - CONE_KERB_GAP - halfX)
+
 const CONES: readonly { x: number; z: number }[] = [
-  { x: -1.3, z: -8.1 },
-  { x: -0.55, z: -7.35 },
+  { x: besideKerb(PROPS.cone.foot.size / 2), z: -8.1 },
+  { x: besideKerb(PROPS.cone.foot.size / 2) + 0.24, z: -7.35 },
 ]
 
-const BARRIER = { x: -0.95, z: -8.95, yawDeg: 74 }
+/* The barrier is turned 74°, so its half-width across the alley is neither its length nor
+   its depth — `halfExtents` is the only thing that knows, and it is what the audit measures
+   against too. */
+const BARRIER_YAW_DEG = 74
+const BARRIER = {
+  x: besideKerb(
+    halfExtents((BARRIER_YAW_DEG * Math.PI) / 180, [PROPS.barrier.board.length, 0.34]).halfX,
+  ),
+  z: -8.95,
+  yawDeg: BARRIER_YAW_DEG,
+}
 
 /**
  * Two, and both moved by `audit()` rather than by eye.
@@ -726,7 +754,13 @@ const EXTRA_PIPES: readonly WallPlacement[] = [
   { side: 'east', z: 3.6 },
   { side: 'east', z: 10.2 },
   { side: 'west', z: 12.1 },
-  { side: 'west', z: 16.4 },
+  /* §3.4 — 16.4 → 15.35. Unit 6's doorway landed at 16.32 when the west wall re-rolled, so
+     this pipe was running down the middle of a door: 0.08 m off its centre. `audit()` never
+     had a word for it — `prop-blocks-doorway` tests the *footprint* against the jambs and a
+     0.11 m pipe standing 0.06 m clear of the frame face genuinely does not block anything.
+     It is an occlusion, like the lantern rule, and 15.35 puts it where a downpipe belongs
+     anyway: in the 2.85 m joint between units 5 and 6, past the pier. */
+  { side: 'west', z: 15.35 },
 ]
 
 /** The §3.4 joints, per wall, excluding the three §2 slots no unit may enter. */

@@ -1,7 +1,15 @@
 'use client'
 
 import { Environment, Lightformer } from '@react-three/drei'
-import { ATMOSPHERE, HEMISPHERE_LIGHT, LIGHTFORMERS, PALETTE, v2, v3 } from '@/lib/world'
+import {
+  ATMOSPHERE,
+  HEMISPHERE_LIGHT,
+  LIGHTFORMERS,
+  PALETTE,
+  STREET_LIGHT_TRIM,
+  v2,
+  v3,
+} from '@/lib/world'
 
 /**
  * §5 — fog, background, and the environment that feeds the wet ground.
@@ -30,7 +38,11 @@ export default function Atmosphere() {
       <hemisphereLight
         color={HEMISPHERE_LIGHT.skyColor}
         groundColor={HEMISPHERE_LIGHT.groundColor}
-        intensity={HEMISPHERE_LIGHT.intensity}
+        /* §7's street trim. The hemisphere is the skyglow *between* §7.1's five pools, so
+           an exposure decision about the street has to reach it or the trim only dims the
+           bright parts and leaves the fill where it was — which is a contrast change, not
+           an exposure one. */
+        intensity={HEMISPHERE_LIGHT.intensity * STREET_LIGHT_TRIM}
       />
 
       {/*

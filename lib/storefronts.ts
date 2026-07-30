@@ -386,3 +386,22 @@ export function shutterDrop(unit: StorefrontUnit): number {
   if (unit.state === 'ajar') return full - STOREFRONT.ajarClearance
   return full - STOREFRONT.openClearance
 }
+
+/**
+ * §3.4 — the drum's radius for this unit, which **grows with the curtain wound onto it**.
+ *
+ * Every roll in the alley had the same 0.16 m radius whatever its state, so a shut shutter
+ * and an open one carried identical drums — and an open one has 1.55 m of steel up there
+ * that existed nowhere in the world. That is most of why an open unit read as a hole rather
+ * than as a shop: the two things that say *this shutter went up* are the gap and the thicker
+ * head, and only one of them was built.
+ *
+ * Standard spiral winding: area is conserved, so `π(r² − r₀²) = wound × slatDepth` and
+ * `r = √(r₀² + wound·slatDepth/π)`. A closed unit winds nothing and stays at 0.16; a fully
+ * open one reaches **0.19**. Small, and it is the difference between a drum and a dowel.
+ */
+export function shutterRollRadius(unit: StorefrontUnit): number {
+  const full = STOREFRONT.aperture.headY - STOREFRONT.aperture.baseY
+  const wound = full - shutterDrop(unit)
+  return Math.sqrt(STOREFRONT.rollRadius ** 2 + (wound * STOREFRONT.slatDepth) / Math.PI)
+}

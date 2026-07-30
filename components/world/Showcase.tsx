@@ -131,7 +131,7 @@ export default function Showcase({ projects }: { projects: readonly Project[] })
       new MeshStandardMaterial({
         emissive: PALETTE[SHOWCASE.titleSign.color],
         color: PALETTE.void,
-        emissiveIntensity: EMISSIVE.lightboxSign,
+        emissiveIntensity: EMISSIVE.projectTitleSign,
         roughness: MATERIALS.boardCase.roughness,
         metalness: MATERIALS.boardCase.metalness,
         envMapIntensity: MATERIALS.boardCase.envMapIntensity,
@@ -232,12 +232,12 @@ export default function Showcase({ projects }: { projects: readonly Project[] })
 
     if (prefersReducedMotion()) {
       // §13 — constant on. Not dimmed and not frozen mid-sequence.
-      titleMaterial.emissiveIntensity = EMISSIVE.lightboxSign
+      titleMaterial.emissiveIntensity = EMISSIVE.projectTitleSign
       return
     }
 
     titleMaterial.emissiveIntensity =
-      EMISSIVE.lightboxSign *
+      EMISSIVE.projectTitleSign *
       level *
       flickerLevel(state.clock.elapsedTime, NEON_FLICKER.phase.shopfront)
   })

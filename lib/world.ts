@@ -207,6 +207,17 @@ export const EMISSIVE = {
    * which is what a lit acrylic panel does.
    */
   lightboxSign: raise(1.2), //          1.20 → 1.56
+  /**
+   * §2.1 — the project title's own rung, split off `lightboxSign` at **1.05 → 1.23**.
+   *
+   * The two lightboxes in this world are read from different distances and that is the whole
+   * of it: §3.6's brand sign is 52 m down the alley through §5's fog at 0.14 transmittance,
+   * and this one is **four metres** from a visitor standing in front of it. One rung cannot
+   * serve both — at 1.56 the near one was a white slab with a magenta pool on the wall under
+   * it, and dropping the shared value to fix that would have taken the far one below what
+   * fog leaves of it.
+   */
+  projectTitleSign: raise(1.05), //     1.05 → 1.23
   openShutterSpill: raise(1.1), //      1.10 → 1.34
   /* Stays at 0.95. §3.1 calls it a *dark* backlit plate and §17's beat is that you
      notice it only when you turn round — barely-there is the specification. */
@@ -218,11 +229,22 @@ export const EMISSIVE = {
   /**
    * §2.1 / §8.1 — the screenshot, and **the one rung that can never cross the knee**.
    *
-   * It was 0. That did not merely stop it blooming, it stopped it being *lit*. 0.78 is a
-   * screen that is switched on, on the same side of 0.90 as fourteen sign boxes at 0.85 and
-   * a hundred and fifty facade windows at 0.55. A surface can be lit and sub-knee at once.
+   * It was 0. That did not merely stop it blooming, it stopped it being *lit*. A screen that
+   * is switched on belongs on the same side of 0.90 as fourteen sign boxes at 0.85 and a
+   * hundred and fifty facade windows at 0.55 — a surface can be lit and sub-knee at once.
+   *
+   * **0.78 → 0.45, and the reason is that this rung is applied to an image nobody authored.**
+   * Every other value on this ladder lights a surface whose colour §4 chose; this one lights
+   * whatever `CONTENT.md` points at, and two of the four projects are **white web pages**.
+   * A near-white texel at 0.78 emissive, on a 5.20 × 2.76 m panel four metres from the
+   * visitor, is 14 m² at the top of the range: measured, it lit the bend, the road under it
+   * and the wall either side, and the road reflection of it was the brightest thing in the
+   * alley. 0.45 keeps a dark UI legibly lit and stops a light one taking the frame.
+   *
+   * **This is the rung that has to survive a project it has never seen**, which is §17's
+   * *added to `CONTENT.md` with no component edited* pointed at brightness instead of layout.
    */
-  projectScreenshot: 0.78,
+  projectScreenshot: 0.45,
   boardFace: 0.7,
   facadeWindowBay: 0.55,
   /* §8 — the tube's 0.03 halo shell. Held at 0.6 although the tube it surrounds nearly
@@ -536,6 +558,14 @@ export const STOREFRONT = {
    */
   slatPitch: 0.09,
   slatDepth: 0.035,
+  /**
+   * The **empty** drum. What a shutter is wound onto with nothing on it.
+   *
+   * §3.4 gave every roll this radius regardless of state, so a shut unit and a fully-open
+   * one had identical drums — and the open one had 1.55 m of steel that existed nowhere.
+   * `storefrontRollRadius()` below adds it back: a shutter rolled up is *thicker at the
+   * head*, and that is most of what says "this one is open" before you look inside it.
+   */
   rollRadius: 0.16,
   /**
    * §2.1 gives the shopfront door 2.05; this is the ordinary version of that door.
@@ -582,9 +612,24 @@ export const STOREFRONT = {
   states: { closed: 9, ajar: 3, open: 2 },
   /** How far the shutter still hangs when ajar — light under it is the whole point. */
   ajarClearance: 0.62,
-  /** Rolled up to the head, but never fully gone. */
-  openClearance: 2.3,
-  litSignCount: 7,
+  /**
+   * §3.4 — how much opening an *open* shutter leaves. **2.30 → 1.55, because 2.30 left one
+   * slat and one slat is not a shutter.**
+   *
+   * `drop = 2.45 − clearance`, and at 2.30 that is 0.15 m — `floor(0.15 ÷ 0.09)` = **one**
+   * slat. This section has said *rolled up to the head, but never fully gone* since it was
+   * written, and what shipped was fully gone: a 2.55 × 2.30 flat panel of `void` with a
+   * 0.55 spill band at the bottom and nothing above it. Next to a neighbour carrying
+   * twenty-seven slats it reads as a hole somebody forgot to build.
+   *
+   * 1.55 leaves **0.90 m of curtain — ten slats** — over a 1.55 m opening, which is still
+   * two and a half times `ajarClearance`'s 0.62 and unmistakably a different state. The
+   * spill stays capped at `spillBandHeight`: this section's reason for that cap is that
+   * 2.30 m of lit `sodium` beat every content surface in the alley, and it still would.
+   */
+  openClearance: 1.55,
+  /** §3.4 — 7 → 8. See `litSignCount` in §16.16: the west wall's re-roll unlit a box. */
+  litSignCount: 8,
   /** §8.1 — 1.10 is over the knee, 0.85 is under it. Both placed against §17. */
   spillEmissive: EMISSIVE.openShutterSpill,
   signEmissive: EMISSIVE.storefrontSignBox,
@@ -1536,7 +1581,14 @@ export const SHOWCASE = {
    * under §9's 0.90 knee, so the ceiling that protects the scene is untouched.
    */
   screenshot: {
-    tint: '#A6B2C6',
+    /**
+     * §8's darkening multiply, `#A6B2C6` → **`#8792A6`**, 65% → 53% reflectance.
+     *
+     * This and `EMISSIVE.projectScreenshot` are the two terms that decide how bright a
+     * project reads, and both had been set against the dark UI of two of the four projects.
+     * The other two are white web pages, and a white page is what this pair has to survive.
+     */
+    tint: '#8792A6',
     multiply: 0.74,
     toneMapped: true,
     emissive: EMISSIVE.projectScreenshot,
@@ -1984,7 +2036,26 @@ export const LIGHTS = [
     type: 'rectArea',
     size: [SHOWCASE.screen.width, SHOWCASE.screen.height],
     color: 'signWhite',
-    intensity: 8,
+    /**
+     * **8 → 1.2, and the luminance × area derivation is not what set it.**
+     *
+     * Measured across 0 → 5 nits from the locked pose, the ground in front of the board goes
+     * **116 → 130 → 131**: this light saturates at about 1.2 and everything above that lands
+     * in one place — a **specular slab on the wet road** twenty metres down the alley, where
+     * 0 → 5 takes the reflection from 45 to 139 of 255 and clips it. The wall around the
+     * board does not move at all across the whole range, which is obvious once seen: the
+     * light faces *out* of the wall it is mounted on.
+     *
+     * **A `rectAreaLight` on §6's 0.06-roughness mirror is mostly a mirror of itself.** Its
+     * diffuse contribution is a few units of 255 and its specular contribution is a
+     * rectangle. That is exactly the reflection §6 exists to produce — it just has to be a
+     * reflection rather than a hole in the road, and 1.2 is where it stops clipping.
+     *
+     * The luminance × area arithmetic is kept above because it is how the *first* figure was
+     * got wrong, and because it still bounds the sane range. **It is not what chose 1.2**;
+     * a sweep against the surface the light actually reaches is.
+     */
+    intensity: 1.2,
     mountedOn: 'showcaseScreen',
     mobile: 'drop',
   },
@@ -2012,7 +2083,15 @@ export const LIGHTS = [
     id: 3,
     type: 'point',
     color: 'neonMagenta',
-    intensity: 150,
+    /**
+     * **150 → 95.** 150 put it level with §7.1's brightest alley light, which was the right
+     * comparison for a sign and the wrong one for *this* sign: every §3.5 sign is read from
+     * along the alley, and this one is read from four metres away by a visitor standing
+     * still. What it produced was a magenta pool on the wall brighter than the sign in it.
+     * 95 matches §7.1's light 8 — a mid-range alley light — and the surface is still the
+     * most-lit in the world, because it is the only one with two lights on it.
+     */
+    intensity: 95,
     mountedOn: 'showcaseSign',
     /** Clear air between the sign's face and the light. §3.1's gate light, verbatim. */
     standoff: 0.9,
@@ -2186,9 +2265,27 @@ export const lightIntensityFor = (
   light: { intensity: number; mobile: 'keep' | 'halve' },
   tier: Tier,
 ): number => {
-  if (tier === 'desktop') return light.intensity
-  return light.mobile === 'halve' ? light.intensity / 2 : light.intensity
+  const base = light.intensity * STREET_LIGHT_TRIM
+  if (tier === 'desktop') return base
+  return light.mobile === 'halve' ? base / 2 : base
 }
+
+/**
+ * §7 — **one factor on everything that lights the street, and it is applied here rather
+ * than to the eight authored numbers.**
+ *
+ * §7.1's 150/130/95/115/80 is a real decision about which signs are the bright ones, and
+ * §5's hemisphere is the skyglow between them; a 10% trim is a decision about the *whole*
+ * street's exposure and about nothing else. Editing eight values to express one intent is
+ * how a ratio drifts — §4.1 made the same argument about scaling five palette tokens by a
+ * single factor rather than re-picking them, and this is that in the other direction.
+ *
+ * **It deliberately does not reach §2.1's lights 2 and 3.** Those are the content surface,
+ * they are set against a viewer standing four metres away rather than against the alley,
+ * and they are trimmed separately and by different amounts. A factor named for the street
+ * that quietly moved the board too would be the drift this file exists to prevent.
+ */
+export const STREET_LIGHT_TRIM = 0.9
 
 /* ────────────────────────────────────────────────────────────────────────────
  * §8 — Materials
