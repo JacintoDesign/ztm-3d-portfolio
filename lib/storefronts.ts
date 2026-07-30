@@ -75,7 +75,14 @@ type Segment = { start: number; end: number }
  * the street and the box reads as a blank slab hung under the sign. The sign wins: it
  * carries a §11.4 string and the box carries nothing.
  */
-const NEON_CLEARANCE = 0.25
+/**
+ * §3.5's clear air either side of a projecting sign, and §3.7's beside a lit box.
+ *
+ * Exported because §3.7's lantern audit needs the same number: two clearances that drift apart
+ * are two rules, and only one of them would be the one in the brief.
+ */
+export const SIGN_CLEARANCE = 0.25
+const NEON_CLEARANCE = SIGN_CLEARANCE
 
 /** The wall minus the §2.1 / §2.2 / §2.3 slots, which no unit may enter. */
 function segmentsFor(wall: 'west' | 'east'): Segment[] {

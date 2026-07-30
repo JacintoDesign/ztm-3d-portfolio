@@ -29,6 +29,7 @@ import {
   audit,
   clampReport,
 } from '@/lib/props'
+import { lanternPaper } from '@/lib/textures/lanternPaper'
 import { roadGlowTexture } from '@/lib/textures/roadGlow'
 import { CONTACT_AO_DECAL, MATERIALS, PALETTE, PROPS } from '@/lib/world'
 
@@ -121,7 +122,9 @@ const SURFACE: Record<SurfaceKey, Material> = {
     emissiveIntensity: PROPS.foodCart.lamp.emissive,
   }),
   /* §8 — `side: DoubleSide` on the paper lantern, because a paper shade is lit from
-     inside and its far wall is part of what you see. */
+     inside and its far wall is part of what you see. §3.7's painted paper is attached in
+     the component, not here: this object is module scope and the tier is not known until a
+     component can call `resolveTier()`. */
   lanternGlow: standard(PALETTE.void, {
     emissive: PALETTE[PROPS.paperLantern.color],
     emissiveIntensity: PROPS.paperLantern.emissive,
@@ -221,6 +224,29 @@ function Instanced({
 export default function Props() {
   const tier = resolveTier()
   const { buckets, decals } = useMemo(() => buildBuckets(), [])
+
+  /**
+   * §3.7 — the lantern's painted paper, attached to the shared material once the tier is
+   * known. `SURFACE` is module scope and cannot call `resolveTier()`; the painter caches, so
+   * this runs one canvas for the page however many times the component re-renders.
+   *
+   * **`emissiveMap`, not `map`.** The shade's diffuse is `void` per §3.4's rule, so a `map`
+   * would modulate a near-black surface and change nothing. `emissiveMap` multiplies
+   * `emissive × emissiveIntensity` per texel, which is exactly what "the frame behind the
+   * paper is blocking the light here" is. Greyscale for the same reason: the colour is
+   * `lantern` and the map only says how much gets through.
+   *
+   * In `useMemo` rather than `useEffect` so the map is on the material before the first
+   * frame — an effect would show one frame of unribbed lanterns on every mount.
+   */
+  useMemo(() => {
+    const paper = lanternPaper(tier)
+    if (paper === null) return
+    const shade = SURFACE.lanternGlow as MeshStandardMaterial
+    if (shade.emissiveMap === paper) return
+    shade.emissiveMap = paper
+    shade.needsUpdate = true
+  }, [tier])
 
   /**
    * §3.6's painted radial pool, reused rather than repainted: it is already a smoothstep

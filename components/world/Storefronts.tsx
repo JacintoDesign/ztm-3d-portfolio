@@ -13,6 +13,7 @@ import {
 } from 'three'
 import { type Box, registerBoxes } from '@/lib/collision'
 import { expose } from '@/lib/debug'
+import { resolveTier } from '@/lib/device'
 import {
   STOREFRONT_UNITS,
   type StorefrontUnit,
@@ -21,6 +22,7 @@ import {
   doorwayZ,
   shutterDrop,
 } from '@/lib/storefronts'
+import { signBoxTexture } from '@/lib/textures/signBox'
 import { LAYOUT, MATERIALS, PALETTE, STOREFRONT, type ColorToken } from '@/lib/world'
 
 /**
@@ -135,7 +137,10 @@ function buildPlacements() {
   const awningSlabs: Placement[] = []
   const awningBars: Placement[] = []
   const darkSigns: Placement[] = []
-  const litSigns = new Map<ColorToken, Placement[]>()
+  /* §3.4 / §11.4 — one entry per lit box, in unit order, because each now carries a
+     different string from §11.4 and therefore its own texture and material. It was a
+     Map<ColorToken, Placement[]> while all seven were blank and interchangeable. */
+  const litSigns: { placement: Placement; color: ColorToken }[] = []
   const slats: Placement[][] = Array.from({ length: STOREFRONT.variants }, () => [])
   const boxes: Box[] = []
 
@@ -257,9 +262,7 @@ function buildPlacements() {
       if (unit.signColor === null) {
         darkSigns.push(sign)
       } else {
-        const bucket = litSigns.get(unit.signColor)
-        if (bucket === undefined) litSigns.set(unit.signColor, [sign])
-        else bucket.push(sign)
+        litSigns.push({ placement: sign, color: unit.signColor })
       }
     }
 
@@ -317,7 +320,39 @@ function buildPlacements() {
 }
 
 export default function Storefronts() {
+  const tier = resolveTier()
   const placements = useMemo(() => buildPlacements(), [])
+
+  /**
+   * §15.1 — how the lit sign boxes are grouped, and it is a tier decision.
+   *
+   * Desktop: one group per box, so each can carry its own §11.4 string. Mobile: one group per
+   * colour, which is what shipped before this pass — four draw calls instead of seven, and no
+   * strings. `boxIndex` is the §11.4 index for a single-box group and `null` for a colour
+   * group, which is what the material builder branches on.
+   */
+  const litGroups = useMemo(() => {
+    if (tier === 'desktop') {
+      return placements.litSigns.map(({ placement, color }, i) => ({
+        key: `lit${i}`,
+        color,
+        boxIndex: i as number | null,
+        placements: [placement],
+      }))
+    }
+    const byColor = new Map<ColorToken, Placement[]>()
+    for (const { placement, color } of placements.litSigns) {
+      const bucket = byColor.get(color)
+      if (bucket === undefined) byColor.set(color, [placement])
+      else bucket.push(placement)
+    }
+    return [...byColor].map(([color, group]) => ({
+      key: color,
+      color,
+      boxIndex: null as number | null,
+      placements: group,
+    }))
+  }, [placements, tier])
 
   const materials = useMemo(() => {
     /** §3.2 — three shutter variants. Three tints of the one `shutter` token, which is
@@ -354,22 +389,35 @@ export default function Storefronts() {
       }),
       /* §8.1 — 0.85, under the 0.90 threshold. Fourteen of these; on the bloom side
          they would out-glow the shopfront and break §17. */
-      litSigns: new Map(
-        [...placements.litSigns.keys()].map((token) => [
-          token,
-          standard(PALETTE.void, {
-            emissive: PALETTE[token],
-            emissiveIntensity: STOREFRONT.signEmissive,
-          }),
-        ]),
-      ),
+      /* §3.4 / §15.1 — **the painted faces are a desktop-only feature, and the draw-call
+         budget is why.** Seven strings means seven canvases means seven materials means
+         seven meshes, where colour-grouping gave four. Desktop absorbs the extra three
+         (96 of 140); mobile was at 90 of 90 before this pass and cannot.
+
+         So mobile keeps the colour-grouped boxes it already had — lit, coloured, wordless —
+         and desktop gets the strings. At mobile's 128 × 64 canvas, seen across an alley on a
+         phone, the glyphs were near-illegible anyway: this gives up something that was barely
+         arriving in exchange for staying inside a cap that §15 calls hard. It is §15's own
+         turn-down ladder applied where the ladder points.
+
+         The face is an `emissiveMap` only — the diffuse stays `void` per the rule above, so
+         the map says how much light leaves each texel and the material says what colour it
+         is. A coloured map would multiply the accent by itself. */
+      litSigns: litGroups.map((group) => {
+        const face = group.boxIndex === null ? null : signBoxTexture(group.boxIndex, tier)
+        return standard(PALETTE.void, {
+          emissive: PALETTE[group.color],
+          emissiveIntensity: STOREFRONT.signEmissive,
+          ...(face !== null ? { emissiveMap: face } : {}),
+        })
+      }),
       darkSign: standard(PALETTE[STOREFRONT.unlitSignColor]),
       awning: standard(PALETTE.shutter, {
         roughness: MATERIALS.norenFabric.roughness,
         metalness: MATERIALS.norenFabric.metalness,
       }),
     }
-  }, [placements])
+  }, [litGroups, tier])
 
   // §12.4 — boxes go on as the objects are placed, and come off with them.
   useEffect(() => registerBoxes(placements.boxes), [placements])
@@ -408,13 +456,13 @@ export default function Storefronts() {
       <Instanced name="storefront:spill" geometry={UNIT_BOX} material={materials.spill} placements={placements.spills} />
 
       <Instanced name="storefront:signBox" geometry={UNIT_BOX} material={materials.darkSign} placements={placements.darkSigns} />
-      {[...placements.litSigns].map(([token, bucket]) => (
+      {litGroups.map((group, i) => (
         <Instanced
-          key={`sign:${token}`}
-          name={`storefront:signBox:${token}`}
+          key={`sign:${group.key}`}
+          name={`storefront:signBox:${group.key}`}
           geometry={UNIT_BOX}
-          material={materials.litSigns.get(token) as Material}
-          placements={bucket}
+          material={materials.litSigns[i] as Material}
+          placements={group.placements}
         />
       ))}
 

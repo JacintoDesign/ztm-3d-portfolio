@@ -1,13 +1,28 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useCallback, useMemo } from 'react'
 import { useFrame } from '@react-three/fiber'
-import { BoxGeometry, MeshBasicMaterial, MeshStandardMaterial } from 'three'
+import {
+  BoxGeometry,
+  type InstancedMesh,
+  Matrix4,
+  MeshBasicMaterial,
+  MeshStandardMaterial,
+  Quaternion,
+  Vector3,
+} from 'three'
 import { resolveTier } from '@/lib/device'
+import { flickerLevel } from '@/lib/flicker'
 import { prefersReducedMotion } from '@/lib/reducedMotion'
-import { type NeonSign, NEON_SIGN_LIST } from '@/lib/signs'
+import {
+  type NeonSign,
+  NEON_SIGN_LIST,
+  signFacing,
+  signPanelCentre,
+  signWallX,
+} from '@/lib/signs'
 import { neonSignTexture } from '@/lib/textures/neonSign'
-import { LAYOUT, MATERIALS, NEON_FLICKER, NEON_SIGNS, PALETTE } from '@/lib/world'
+import { MATERIALS, NEON_FLICKER, NEON_SIGNS, PALETTE } from '@/lib/world'
 
 /**
  * §3.5 — the nine decorative neon signs.
@@ -24,20 +39,31 @@ import { LAYOUT, MATERIALS, NEON_FLICKER, NEON_SIGNS, PALETTE } from '@/lib/worl
 
 const UNIT_BOX = new BoxGeometry(1, 1, 1)
 
-/** §11.3 — one authored sequence, played identically on every run, then a steady hold. */
-const FLICKER_CYCLE_MS = NEON_FLICKER.sequence.length * NEON_FLICKER.stepMs
-const FLICKER_PERIOD_MS = FLICKER_CYCLE_MS + NEON_FLICKER.holdSec * 1000
+/**
+ * §3.5 — one material for all fifteen brackets, and that is a precondition rather than a
+ * tidiness. They are drawn as a single `InstancedMesh`, which can carry exactly one
+ * material; nine per-sign copies of the same `metalDark` was what made them nine draw calls.
+ */
+const BRACKET_MATERIAL = new MeshStandardMaterial({
+  color: PALETTE.metalDark,
+  roughness: MATERIALS.paintedMetal.roughness,
+  metalness: MATERIALS.paintedMetal.metalness,
+  envMapIntensity: MATERIALS.paintedMetal.envMapIntensity,
+})
 
-/** Into the alley: +X off the west wall, −X off the east. */
-const facing = (sign: NeonSign) => (sign.wall === 'west' ? 1 : -1)
-const faceX = (sign: NeonSign) =>
-  sign.wall === 'west' ? LAYOUT.alley.x[0] : LAYOUT.alley.x[1]
+/* Hoisted scratch for composing the bracket matrices once at mount. Not a frame loop, but
+   the same rule applies for the same reason: these are built inside a loop. */
+const TMP_POSITION = new Vector3()
+const TMP_QUATERNION = new Quaternion()
+const TMP_SCALE = new Vector3()
+
+/** §11.3 — the offset per flickering decorative sign, as a fraction of the period. */
+const FLICKER_PHASE: Record<number, number> = NEON_FLICKER.phase.decorativeSign
 
 type Built = {
   sign: NeonSign
   face: MeshStandardMaterial
   rim: MeshBasicMaterial
-  bracket: MeshStandardMaterial
   /** Panel extents on the world axes: thickness runs along X, out from the wall. */
   panel: { x: number; y: number; height: number; depth: number; bracketLength: number }
 }
@@ -55,6 +81,9 @@ function build(tier: ReturnType<typeof resolveTier>): Built[] {
        which is which. Deriving them from the orientation a second time here is how the
        three horizontal signs came out rotated 90°, standing tall and reading sideways. */
     const [depth, height] = sign.size
+    /* §7.1 — the same call that seats the dynamic light on this sign. Deriving the panel
+       centre twice is how a light ends up half a metre off the thing emitting it. */
+    const [panelX, panelY] = signPanelCentre(sign)
 
     return {
       sign,
@@ -74,15 +103,9 @@ function build(tier: ReturnType<typeof resolveTier>): Built[] {
          it *is* the light, and §9's bloom is what gives it the halo that §8's 0.03 shell
          would otherwise have to fake. See §3.5. */
       rim: new MeshBasicMaterial({ color: PALETTE[sign.color] }),
-      bracket: new MeshStandardMaterial({
-        color: PALETTE.metalDark,
-        roughness: MATERIALS.paintedMetal.roughness,
-        metalness: MATERIALS.paintedMetal.metalness,
-        envMapIntensity: MATERIALS.paintedMetal.envMapIntensity,
-      }),
       panel: {
-        x: faceX(sign) + facing(sign) * (sign.projection + NEON_SIGNS.thickness / 2),
-        y: sign.y + height / 2,
+        x: panelX,
+        y: panelY,
         height,
         depth,
         bracketLength: sign.projection,
@@ -101,7 +124,19 @@ export default function NeonSigns() {
    * this never reaches React state, because sixty renders a second to dim a sign costs
    * more than the sign does.
    */
-  const flickering = useMemo(() => signs.filter((built) => built.sign.flickers), [signs])
+  const flickering = useMemo(
+    () =>
+      signs
+        .filter((built) => built.sign.flickers)
+        .map((built) => ({
+          face: built.face,
+          /* §11.3 — the offset for this sign, by index. Without it every flickering thing
+             in the world stutters on the same frame and the street reads as switched
+             rather than as failing. */
+          phase: FLICKER_PHASE[built.sign.index] ?? 0,
+        })),
+    [signs],
+  )
 
   useFrame((state) => {
     if (prefersReducedMotion()) {
@@ -110,17 +145,60 @@ export default function NeonSigns() {
       return
     }
 
-    const ms = (state.clock.elapsedTime * 1000) % FLICKER_PERIOD_MS
-    const step = ms < FLICKER_CYCLE_MS ? Math.floor(ms / NEON_FLICKER.stepMs) : -1
-    const level = step === -1 ? 1 : (NEON_FLICKER.sequence[step] as number)
-    for (const { face } of flickering) {
-      face.emissiveIntensity = NEON_SIGNS.faceEmissive * level
+    for (const { face, phase } of flickering) {
+      face.emissiveIntensity =
+        NEON_SIGNS.faceEmissive * flickerLevel(state.clock.elapsedTime, phase)
     }
   })
 
+  /**
+   * §3.5 — every bracket in the alley, as one `InstancedMesh`.
+   *
+   * Verticals take two at ±`bracketOffsetY` and horizontals one on the centre line, so the
+   * count is 6 × 2 + 3 = 15. They were nine separate meshes and nine draw calls; sharing one
+   * geometry and one material makes them one, which is the −8 that bought §10's ripples the
+   * room to exist on a mobile tier sitting at 90 of 90.
+   *
+   * Static, so the matrices are written once when the mesh attaches. Nothing here runs per
+   * frame — a bracket that never moves has no business in `useFrame`.
+   */
+  const bracketMatrices = useMemo(() => {
+    const out: Matrix4[] = []
+    for (const { sign, panel } of signs) {
+      const offsets =
+        sign.orientation === 'vertical'
+          ? [+NEON_SIGNS.bracketOffsetY, -NEON_SIGNS.bracketOffsetY]
+          : [0]
+      for (const dy of offsets) {
+        out.push(
+          new Matrix4().compose(
+            TMP_POSITION.set(
+              signWallX(sign) + (signFacing(sign) * panel.bracketLength) / 2,
+              panel.y + dy,
+              sign.z,
+            ),
+            TMP_QUATERNION,
+            TMP_SCALE.set(panel.bracketLength, NEON_SIGNS.bracket, NEON_SIGNS.bracket),
+          ),
+        )
+      }
+    }
+    return out
+  }, [signs])
+
+  const attachBrackets = useCallback(
+    (mesh: InstancedMesh | null) => {
+      if (mesh === null) return
+      bracketMatrices.forEach((matrix, i) => mesh.setMatrixAt(i, matrix))
+      mesh.instanceMatrix.needsUpdate = true
+      mesh.computeBoundingSphere()
+    },
+    [bracketMatrices],
+  )
+
   return (
     <>
-      {signs.map(({ sign, face, rim, bracket, panel }) => (
+      {signs.map(({ sign, face, rim, panel }) => (
         <group key={sign.index} name={`neon:${sign.index}`}>
           {/* The tube rim: larger on the two long axes, thinner across, so the painted
               face stands out through it on both sides and the rim reads as the frame. */}
@@ -141,19 +219,15 @@ export default function NeonSigns() {
             position={[panel.x, panel.y, sign.z]}
             scale={[NEON_SIGNS.thickness, panel.height, panel.depth]}
           />
-          {/* Bracket back to the wall — §3.5, 0.05 square in `metalDark`. */}
-          <mesh
-            geometry={UNIT_BOX}
-            material={bracket}
-            position={[
-              faceX(sign) + (facing(sign) * panel.bracketLength) / 2,
-              panel.y,
-              sign.z,
-            ]}
-            scale={[panel.bracketLength, NEON_SIGNS.bracket, NEON_SIGNS.bracket]}
-          />
         </group>
       ))}
+
+      {/* §3.5 — all fifteen brackets, one call. */}
+      <instancedMesh
+        name="neon:brackets"
+        ref={attachBrackets}
+        args={[UNIT_BOX, BRACKET_MATERIAL, bracketMatrices.length]}
+      />
     </>
   )
 }

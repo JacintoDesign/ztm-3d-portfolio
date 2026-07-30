@@ -12,6 +12,7 @@
 import type { Orientation } from './textures/neonSign'
 import {
   DECORATIVE_SIGNAGE,
+  LAYOUT,
   NEON_SIGNS,
   NEON_RATIO,
   OVERHEAD,
@@ -146,6 +147,29 @@ function build(): NeonSign[] {
 }
 
 export const NEON_SIGN_LIST: readonly NeonSign[] = build()
+
+/** Into the alley: `+X` off the west wall, `−X` off the east. */
+export const signFacing = (sign: NeonSign): 1 | -1 => (sign.wall === 'west' ? 1 : -1)
+
+/** The wall face the sign is bracketed to. */
+export const signWallX = (sign: NeonSign): number =>
+  sign.wall === 'west' ? LAYOUT.alley.x[0] : LAYOUT.alley.x[1]
+
+/**
+ * The centre of the sign's lit panel, in world space.
+ *
+ * Exported rather than kept in `NeonSigns.tsx` because **§7.1's five dynamic lights sit
+ * on exactly this point**. Two derivations of one position is how a light ends up half a
+ * metre off the sign that is supposed to be emitting it — visible to nobody reading
+ * either file, and obvious on the wall.
+ */
+export function signPanelCentre(sign: NeonSign): [number, number, number] {
+  return [
+    signWallX(sign) + signFacing(sign) * (sign.projection + NEON_SIGNS.thickness / 2),
+    sign.y + sign.size[1] / 2,
+    sign.z,
+  ]
+}
 
 export type Banner = {
   index: number

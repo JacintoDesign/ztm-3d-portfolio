@@ -14,6 +14,7 @@ import {
 } from 'three'
 import { resolveTier } from '@/lib/device'
 import { colorRun } from '@/lib/signs'
+import { brandSignTexture } from '@/lib/textures/brandSign'
 import { facadeWindowTexture } from '@/lib/textures/facadeWindows'
 import {
   CROSS_STREET,
@@ -228,6 +229,57 @@ function GroundPanels() {
   )
 }
 
+/**
+ * §2.4 / §3.6 — the studio's name, once, on the far building.
+ *
+ * **§2.4's one named exception**, extending the allowance §3.1 makes for `終電`: the piece is
+ * permitted to be signed, in two places, both recorded. It is not a §11.4 string, because that
+ * list is explicitly *"never project-related"*.
+ *
+ * It stands where boards at `x = 2.25` and `5.15` used to be, and it is wider than both together,
+ * so §3.6's *"no gap exceeds 2.90 m"* still holds. `x = 3.70` is inside the 1.38 m band of that
+ * wall visible from both spawn and mid-alley through §3.1's slot — centred anywhere else, the name
+ * disappears for part of the approach.
+ *
+ * A `MeshBasicMaterial` at §3.6's own 1.25 gain rather than a rung on §8.1, matching the boards
+ * beside it: a basic material tops out at white and §5's fog mixes toward `fogColor` first, so the
+ * gain has to be linear and above 1 or the sign arrives grey. One draw call.
+ */
+function BrandSign() {
+  const tier = resolveTier()
+  const sign = farBuilding.brandSign
+
+  const material = useMemo(() => {
+    const map = brandSignTexture(tier)
+    if (map === null) return null
+    return new MeshBasicMaterial({
+      map,
+      /* The gain, applied to the material rather than per instance — there is only one of these,
+         so `instanceColor` would be machinery for a single quad. */
+      color: new Color(panels.gain, panels.gain, panels.gain),
+      toneMapped: true,
+    })
+  }, [tier])
+
+  if (material === null) return null
+
+  return (
+    <mesh
+      name="street:brandSign"
+      geometry={PANEL_GEOMETRY}
+      material={material}
+      position={[
+        sign.x,
+        sign.centreY,
+        farBuilding.faceZ - groundBand.proud - sign.proud,
+      ]}
+      /* A plane faces +Z; the building looks back down the alley, so it turns to face −Z. */
+      rotation={[0, Math.PI, 0]}
+      scale={[sign.width, sign.height, 1]}
+    />
+  )
+}
+
 /* ── The far building's window bays ─────────────────────────────────────────── */
 
 /** §3.3's own rule, applied to this wall's height: 14.0 gives three floors. */
@@ -344,6 +396,7 @@ export default function CrossStreet() {
       />
 
       <GroundPanels />
+      <BrandSign />
 
       {bayMaterials.map((material, variant) => (
         <BayRow key={variant} variant={variant} geometry={geometry} material={material} />

@@ -192,7 +192,10 @@ export function puddleMask(tier: Tier): CanvasTexture | null {
   const cached = cache.get(tier)
   if (cached !== undefined) return cached
 
-  const texture = new CanvasTexture(paint(tier))
+  const canvas = paintedCanvas(tier)
+  if (canvas === null) return null
+
+  const texture = new CanvasTexture(canvas)
   // Data, not colour. Tagging this sRGB would push every roughness value through a
   // gamma curve and quietly make the whole floor wetter than the brief says.
   texture.colorSpace = NoColorSpace
@@ -205,4 +208,76 @@ export function puddleMask(tier: Tier): CanvasTexture | null {
 
   cache.set(tier, texture)
   return texture
+}
+
+/**
+ * §10.0 — the mask's second job: telling §10's ripple emitters where the water is.
+ *
+ * **Sampled from the painted canvas, not from `wetnessWeight`.** The weight function
+ * describes the *bias* — centre channel, gutters, thinning at the kerb — and the canvas
+ * describes the *blobs* that were actually dealt from it. A ring has to expand inside a real
+ * puddle, not merely in a wet-ish region, or it contradicts the one document that says where
+ * the puddles are.
+ *
+ * One `getImageData` on first call, cached for the page. Nothing here runs per frame; the
+ * emitters resolve their positions once at mount.
+ *
+ * Returns the mask value in `[0, 1]` — §6.2's roughness, so **low means wet** (0.06 inside
+ * puddles, 0.55 on dry patches). Out-of-range coordinates read dry, which keeps the caller
+ * from having to clamp before asking.
+ */
+export function puddleWetnessAt(tier: Tier): ((x: number, z: number) => number) | null {
+  if (typeof document === 'undefined') return null
+
+  const cached = samplerCache.get(tier)
+  if (cached !== undefined) return cached
+
+  const canvas = paintedCanvas(tier)
+  if (canvas === null) return null
+
+  const ctx = canvas.getContext('2d')
+  if (ctx === null) return null
+
+  const { width, height } = canvas
+  const { data } = ctx.getImageData(0, 0, width, height)
+
+  /* §6.2 — the mask maps 1:1 onto the reflector strip, no UV repeat, so world position
+     converts straight to a texel. The plane is rotated -90° about X, which is what puts
+     texture V along -Z: the same relationship `Ground.tsx` relies on for the scroll. */
+  const [x0, x1] = REFLECTOR_STRIP.x
+  const [z0, z1] = REFLECTOR_STRIP.z
+
+  const sampler = (x: number, z: number): number => {
+    const u = (x - x0) / (x1 - x0)
+    const v = (z - z0) / (z1 - z0)
+    if (u < 0 || u > 1 || v < 0 || v > 1) return PUDDLE_MASK.roughnessDry
+
+    const px = Math.min(width - 1, Math.floor(u * width))
+    // V runs opposite to the row order, matching the plane's -90° rotation about X.
+    const py = Math.min(height - 1, Math.floor((1 - v) * height))
+    return (data[(py * width + px) * 4] ?? 255) / 255
+  }
+
+  samplerCache.set(tier, sampler)
+  return sampler
+}
+
+const samplerCache = new Map<Tier, (x: number, z: number) => number>()
+
+/**
+ * The painted canvas behind the texture, cached separately.
+ *
+ * `CanvasTexture.image` is the canvas, so this could read it back off the texture — but that
+ * couples the sampler to the texture having been built, and §10's emitters mount before
+ * §6's ground on a cold cache. Painting is idempotent and cached either way.
+ */
+const canvasCache = new Map<Tier, HTMLCanvasElement>()
+
+function paintedCanvas(tier: Tier): HTMLCanvasElement | null {
+  if (typeof document === 'undefined') return null
+  const cached = canvasCache.get(tier)
+  if (cached !== undefined) return cached
+  const canvas = paint(tier)
+  canvasCache.set(tier, canvas)
+  return canvas
 }

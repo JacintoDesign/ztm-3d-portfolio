@@ -13,11 +13,16 @@ import { ATMOSPHERE, BUDGET, CAMERA, GL } from '@/lib/world'
 import Alley from './Alley'
 import Atmosphere from './Atmosphere'
 import CrossStreet from './CrossStreet'
+import Effects from './Effects'
 import FacadeWindows from './FacadeWindows'
 import Ground from './Ground'
+import Lights from './Lights'
 import NeonSigns from './NeonSigns'
 import Overhead from './Overhead'
 import Props from './Props'
+import Rain from './Rain'
+import StationGate from './StationGate'
+import Ripples from './Ripples'
 import Storefronts from './Storefronts'
 import Traffic from './Traffic'
 
@@ -79,10 +84,16 @@ export default function World() {
         <Player />
         <Atmosphere />
         <Alley />
+        {/* §3.1 — the station gate the visitor turns round to see. §17's first line depends on it. */}
+        <StationGate />
         {/* §3.3 / §3.4 / §3.5 — all sit on the alley envelope, so they follow it. */}
         <FacadeWindows />
         <Storefronts />
         <NeonSigns />
+        {/* §7.1 — the alley's five dynamic lights, each on one of the signs above. They
+            mount after the signs as documentation, not as mechanism: the seating is
+            resolved from `NEON_SIGN_LIST` at module load, not from the scene graph. */}
+        <Lights />
         <Overhead />
         {/* §3.7 — the ground-level inventory. After the storefronts because it stands in
             front of them, and the first thing in this world whose collision boxes are
@@ -98,6 +109,15 @@ export default function World() {
           <Traffic />
         </Suspense>
         <Ground />
+        {/* §10 / §10.0 — rain landing on §6.2's puddles. After the ground it sits on and
+            before the rain, which is alpha-blended over everything including these. */}
+        <Ripples />
+        {/* §10 — last, and transparent. Two alpha-blended layers sort against everything
+            already in the scene, so they are submitted after all of it. */}
+        <Rain />
+        {/* §9 — bloom and vignette only. It goes after everything it operates on, and
+            note that mounting it takes tone mapping off the renderer: see Effects.tsx. */}
+        <Effects />
       </Canvas>
 
       {/* §12.3 — 2D overlay, so it lives outside the Canvas. Being a sibling of the

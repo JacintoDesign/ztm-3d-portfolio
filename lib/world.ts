@@ -104,6 +104,86 @@ export const NEON_RATIO = {
 } as const
 
 /* ────────────────────────────────────────────────────────────────────────────
+ * §8.1 — Emissive intensity ladder
+ *
+ * Out of section order, and deliberately: this is the single source for every emissive
+ * value in the world, and fifteen of its consumers are declared further down this file.
+ * A `const` referenced before its initialiser throws at module load, so the table has to
+ * come first.
+ * ──────────────────────────────────────────────────────────────────────────── */
+
+/**
+ * §9's bloom threshold, named here because §8.1's whole structure is defined against it
+ * and the raise below has to know where it is.
+ */
+export const BLOOM_KNEE = 0.9
+
+/**
+ * §8.1 — raise a rung by scaling its **distance from the knee**, not its value.
+ *
+ * §8.1 is not a list of brightnesses; it is a set of decisions about which side of 0.90
+ * each thing sits on and by how much — "just", "edge", "deliberately". Multiplying the
+ * values would move the station plate from 1.06× the knee to 2.3× it, turning a rung whose
+ * entire annotation is *"edge, deliberately"* into one that plainly blooms: every number
+ * larger and the ladder's meaning gone. Anchoring at the knee raises the top and leaves the
+ * bottom exactly where it was authored.
+ *
+ * Sub-knee rungs are returned untouched, and that is load-bearing rather than incidental.
+ * They are under 0.90 *because* they are lit rather than glowing — fourteen storefront sign
+ * boxes crossing it would bloom the whole lower facade, and §2.1's screenshot must never
+ * bloom at all. The knee is a design boundary; a raise moves things further in the
+ * direction they were already going and nothing across it.
+ */
+const EMISSIVE_RAISE = 2.2
+const raise = (authored: number): number =>
+  authored <= BLOOM_KNEE ? authored : BLOOM_KNEE + (authored - BLOOM_KNEE) * EMISSIVE_RAISE
+
+/**
+ * §8.1 — the emissive intensity ladder.
+ *
+ * Each rung was previously written out again inside `NEON_SIGNS`, `STOREFRONT`, `OVERHEAD`,
+ * `PROPS`, `SHOPFRONT`, `VENDING`, `PAYPHONE`, `FACADE_WINDOWS` and §3.6's vehicle table —
+ * fifteen literals for fourteen rungs, with nothing keeping them equal to this table.
+ * Raising the ladder is one edit or it is not a ladder. Those constants now read from here.
+ *
+ * The authored figure is kept beside each rung, because §16.9 refers to them and because
+ * the raise is only legible next to what it was applied to.
+ */
+export const EMISSIVE = {
+  neonTubes: raise(3.2), //             3.20 → 5.96
+  vehicleHeadlight: raise(2.6), //      2.60 → 4.64
+  verticalSigns: raise(2.4), //         2.40 → 4.20
+  selectionButtons: raise(2.1), //      2.10 → 3.54
+  payphoneLamp: raise(1.9), //          1.90 → 3.10
+  vendingFrontPanel: raise(1.6), //     1.60 → 2.44
+  vehicleTailLamp: raise(1.55), //      1.55 → 2.33
+  /* Authored 1.30 → 1.50. Eleven of these are the warm spine of the alley and were
+     reading as dull red shapes rather than as lit paper. §3.7. */
+  paperLanterns: raise(1.5), //         1.50 → 2.22
+  lightboxSurroundStrip: raise(1.4), // 1.40 → 2.00
+  /* Authored 0.95 → 1.30, and it no longer shares a rung with the station plate. The
+     old match was about *material* — both are read-through cloth, not tube — which put
+     the three largest lit surfaces above eye level one hundredth of a step over the
+     bloom knee. A banner is read from forty metres and a plate from four. §8.1. */
+  overheadBanner: raise(1.3), //        1.30 → 1.78
+  taxiRoofSign: raise(1.2), //          1.20 → 1.56
+  openShutterSpill: raise(1.1), //      1.10 → 1.34
+  /* Stays at 0.95. §3.1 calls it a *dark* backlit plate and §17's beat is that you
+     notice it only when you turn round — barely-there is the specification. */
+  stationPlate: raise(0.95), //         0.95 → 1.01, still edge, deliberately
+  /* Held under the knee. Not candidates for the raise — see `raise` above. */
+  storefrontSignBox: 0.85,
+  facadeWindowBay: 0.55,
+  infoPanelBacklight: 0.7,
+  projectScreenshot: 0,
+  /* §8 — the tube's 0.03 halo shell. Held at 0.6 although the tube it surrounds nearly
+     doubled: its job is the soft gradient at the tube's edge, and it is under the knee so
+     that the tube blooms and the halo does not. Scaled with the tube it would cross 0.90
+     and put a second bloom source around all nine signs. */
+  neonTubeHalo: 0.6,
+} as const
+
+/* ────────────────────────────────────────────────────────────────────────────
  * §3 — Layout
  * ──────────────────────────────────────────────────────────────────────────── */
 
@@ -148,7 +228,7 @@ export const LAYOUT = {
   },
   ends: {
     /** §3.1 — the station ticket gate, shutter down. Behind you at spawn. */
-    north: { z: -23.0, platePlateY: 4.2 },
+    north: { z: -23.0, plateY: 4.2 },
     /**
      * §3.1 — the alley bends left. A 6 m return wall angled off the axis so no
      * vanishing point is ever visible. Its modelled form is still open (§16.2);
@@ -238,7 +318,7 @@ export const FACADE_WINDOWS = {
   unlitColor: 'void',
   baseColor: 'facade',
   /** §8.1 — under the 0.90 bloom threshold, between infoPanelBacklight 0.70 and 0. */
-  emissiveIntensity: 0.55,
+  emissiveIntensity: EMISSIVE.facadeWindowBay,
   /** §11.4's precedent: assigned by index, never randomised. Six bays cycle A B C A B C. */
   variants: 3,
   /**
@@ -298,8 +378,8 @@ export const STOREFRONT = {
   openClearance: 2.3,
   litSignCount: 7,
   /** §8.1 — 1.10 is over the knee, 0.85 is under it. Both placed against §17. */
-  spillEmissive: 1.1,
-  signEmissive: 0.85,
+  spillEmissive: EMISSIVE.openShutterSpill,
+  signEmissive: EMISSIVE.storefrontSignBox,
   /**
    * §3.4 — the spill is a band on the shop floor, not the whole opening. An open shutter
    * showing 2.30 m of lit panel is a 2.55 × 2.30 billboard of flat `sodium`, and it beat
@@ -355,13 +435,29 @@ export const NEON_SIGNS = {
    * the sign box on it, which stands 0.14 further at 0.49. A sign starting at 0.30 hangs
    * inside the fascia it is supposed to be mounted on.
    */
-  projection: [0.55, 1.15],
+  /*
+   * The floor of 0.55 is derived and cannot move. The *top* closed from 1.15: a 0.05 bar
+   * cantilevered more than a metre off a wall to hold a lit box is not how signage is
+   * mounted, and it reads as a panel floating near a building rather than fixed to it.
+   * Shortening compresses the range down onto its derived floor, never below it.
+   */
+  projection: [0.55, 0.72],
   bracket: 0.05,
+  /**
+   * §3.5 — two brackets on a vertical sign, one on a horizontal, and the load is why.
+   *
+   * A horizontal panel is 0.52 high and a single central bar spans most of it. A vertical
+   * panel runs up to 2.26 on a 0.44 width, and one bar at its centre leaves a metre
+   * unsupported above and below — it looks like a sign about to rotate. ±0.28 keeps both
+   * fixings inside the panel's own height at every one of the six verticals, the shortest
+   * included.
+   */
+  bracketOffsetY: 0.28,
   mountY: [2.9, 5.2],
   /** §8 — the tube. `meshBasicMaterial`, colour at full, standing 0.03 proud all round. */
   rim: 0.03,
   /** §8.1 — vertical signs. */
-  faceEmissive: 2.4,
+  faceEmissive: EMISSIVE.verticalSigns,
   /** §11.4 — signs take strings 0 through 8, by index. Banners continue from 9. */
   stringOffset: 0,
   canvas: { desktop: [128, 512], mobile: [64, 256] },
@@ -390,7 +486,7 @@ export const OVERHEAD = {
     wireY: 6.9,
     z: [-12.0, 2.0, 16.0],
     /** §8.1 — the station plate's rung. Read-through cloth, not tube. */
-    emissive: 0.95,
+    emissive: EMISSIVE.overheadBanner,
     /** §11.4 — the signs took 0..8. */
     stringOffset: 9,
     canvas: { desktop: [512, 128], mobile: [256, 64] },
@@ -493,7 +589,7 @@ export const CROSS_STREET = {
        * else — the far side was built, lit, and statistically never in frame. No gap here
        * exceeds **2.90 m**, so whatever the slot lands on, it lands on a sign.
        */
-      count: 22,
+      count: 20,
       /**
        * Three size classes cycling by index — §3.3's and §3.4's precedent, and here it
        * is what stops the run reading as a picket fence. Twenty-two identical rectangles
@@ -535,8 +631,44 @@ export const CROSS_STREET = {
       gain: 1.25,
       x: [
         -28.35, -25.45, -22.55, -20.7, -17.8, -14.9, -13.05, -10.15, -7.25, -5.4, -2.5,
-        0.4, 2.25, 5.15, 8.05, 9.9, 12.8, 15.7, 17.55, 20.45, 23.35, 25.2,
+        /* 2.25 and 5.15 came out: §3.6's brand sign stands in the gap they leave, and it is
+           wider than both of them together, so no bare wall is exposed. */
+        0.4, 8.05, 9.9, 12.8, 15.7, 17.55, 20.45, 23.35, 25.2,
       ],
+    },
+
+    /**
+     * §2.4 / §3.6 — the studio's name, once, on the far building.
+     *
+     * **§2.4's one named exception.** Its rule is that the surroundings carry nothing, and it
+     * still holds for every *project* name; this is the piece being signed, which is the same
+     * allowance §3.1 makes for `終電` — the one other place the world names itself. It is not a
+     * §11.4 string, because that list is explicitly *"never project-related"*.
+     *
+     * **`x = 3.70` is the only load-bearing number.** §3.1 shows this wall through a 3.36 m slot
+     * and the visible window moves with the visitor: `[1.42, 5.40]` from spawn, `[1.66, 6.13]`
+     * from mid-alley, and the intersection across that whole half of the walk is just
+     * **`[3.29, 4.67]`**. Centred anywhere else the name vanishes for part of the approach.
+     *
+     * It is a glimmer from spawn (0.086 transmittance at 52.2 m) and sharp from the bend (0.892).
+     * §5's density was derived twice and settled; §3.6 already says the far side reads properly
+     * only from the last twelve metres, and this is that sentence applied to the one named thing.
+     */
+    brandSign: {
+      rows: ['JACINTO', 'DESIGN'],
+      /** §4's signature over §4's spice — the pairing that reads as branding, not as a shopfront. */
+      rowColors: ['neonMagenta', 'neonCyan'],
+      width: 3.4,
+      height: 1.6,
+      x: 3.7,
+      centreY: 2.6,
+      proud: 0.03,
+      /**
+       * 512 across 3.40 m is 151 px/m — coarse for this world and correct here. §11.1's 4 px/cm
+       * asks 1360, pads to 2048, and costs 16 MB with mipmaps against 1.06 MB of headroom. The
+       * sign is never seen closer than 11 m and always through 0.11 to 0.91 of fog.
+       */
+      canvas: { desktop: [512, 256], mobile: [256, 128] },
     },
   },
 } as const satisfies {
@@ -654,7 +786,7 @@ export const TRAFFIC = {
     sideProud: 0.01,
     noseProud: 0.01,
     color: 'signWhite',
-    emissive: 2.6,
+    emissive: EMISSIVE.vehicleHeadlight,
   },
   /** §8.1 — 1.55, over the knee but soft. Dimmer than the headlights, as they are. */
   tailLamp: {
@@ -664,14 +796,14 @@ export const TRAFFIC = {
     sideProud: 0.01,
     noseProud: 0.01,
     color: 'lantern',
-    emissive: 1.55,
+    emissive: EMISSIVE.vehicleTailLamp,
   },
   /**
    * §8.1 — 1.20. **Nothing carries this rung now.** It belonged to the box-built taxi's
    * 行灯, and none of the three models in `public/` is a taxi. Kept because the rung costs
    * nothing to leave on the ladder and inventing a roof light for a Range Rover would.
    */
-  roofSign: { depth: 0.2, lateral: 0.46, height: 0.18, color: 'sodium', emissive: 1.2 },
+  roofSign: { depth: 0.2, lateral: 0.46, height: 0.18, color: 'sodium', emissive: EMISSIVE.taxiRoofSign },
   /**
    * §3.6 — the light on the road is painted, not lit. §7's cap is ten dynamic lights and
    * all ten are spent inside the alley; six vehicles would want eighteen more.
@@ -753,7 +885,7 @@ export const PROPS = {
     post: { radius: 0.03, y: [1.16, 2.02] },
     canopy: { length: 2.1, depth: 1.0, thickness: 0.08 },
     /** Faces down, under the canopy. §8.1's 1.10 — over the knee, under the lanterns. */
-    lamp: { length: 1.7, depth: 0.7, y: 1.98, color: 'sodium', emissive: 1.1 },
+    lamp: { length: 1.7, depth: 0.7, y: 1.98, color: 'sodium', emissive: EMISSIVE.openShutterSpill },
     bodyColor: 'shutter',
     metalColor: 'metalDark',
     wheelColor: 'void',
@@ -852,7 +984,7 @@ export const PROPS = {
     arm: { length: 0.34, size: 0.045, y: 3.46 },
     drop: { radius: 0.008, length: 0.1 },
     color: 'lantern',
-    emissive: 1.3,
+    emissive: EMISSIVE.paperLanterns,
     armColor: 'metalDark',
   },
 
@@ -953,7 +1085,7 @@ export const SHOWCASE = {
    * The glow around the window comes from the surround, never from the image.
    */
   screenshot: { tint: '#A6B2C6', multiply: 0.68, toneMapped: true, emissive: 0 },
-  surroundStrip: { width: 0.04, emissiveIntensity: 1.4 },
+  surroundStrip: { width: 0.04, emissiveIntensity: EMISSIVE.lightboxSurroundStrip },
   /** Resting state when a screenshot fails to load. No spinner, no error, no white. */
   restingColor: '#0E121A',
   transitionMs: { toBlack: 140, hold: 90, fadeUp: 260 },
@@ -966,8 +1098,8 @@ export const BIO_STATION = {
   x: 4.1,
   z: 6.0,
   facing: '-X',
-  frontPanel: { width: 0.96, height: 1.42, baseY: 0.44, emissiveIntensity: 1.6 },
-  buttons: { grid: [3, 4], size: 0.07, emissiveIntensity: 2.1 },
+  frontPanel: { width: 0.96, height: 1.42, baseY: 0.44, emissiveIntensity: EMISSIVE.vendingFrontPanel },
+  buttons: { grid: [3, 4], size: 0.07, emissiveIntensity: EMISSIVE.selectionButtons },
   interactRadius: 2.2,
   idle: { breatheHz: 0.5, breatheAmplitude: 0.004 },
 } as const
@@ -980,7 +1112,7 @@ export const CONTACT_STATION = {
   z: 14.0,
   facing: '+X',
   awning: { width: 1.6, depth: 1.1, undersideY: 2.6, undersideEmissiveIntensity: 0.85 },
-  handsetLamp: { emissiveIntensity: 1.9 },
+  handsetLamp: { emissiveIntensity: EMISSIVE.payphoneLamp },
   interactRadius: 2.0,
   /** Never more often than this. */
   idleRingIntervalSec: 34,
@@ -1011,21 +1143,48 @@ export const ATMOSPHERE = {
   toneMappingExposure: 1.05,
   outputColorSpace: 'srgb',
   colorManagement: true,
-  /** Built from Lightformers only. Baked once at mount — never re-rendered per frame. */
-  environment: { resolution: 128, frames: 1 },
+  /**
+   * Built from Lightformers only. Baked once at mount — never re-rendered per frame.
+   *
+   * `fill` is §5.1's uniform environment: the flat colour the cube map returns in every
+   * direction that no lightformer covers. **It is what the four removed formers were
+   * really doing**, minus their ability to form a shape.
+   *
+   * The hue is §7 light 1's `skyColor` `#121A2B` — this document's own statement of what
+   * is overhead — restated here rather than referenced because `LIGHTS` is declared two
+   * hundred lines below this and a reference would be a temporal dead zone.
+   *
+   * **The level was solved twice.** Matching the frame's mean luminance to what §5.1's
+   * four removed formers were producing gave `#4D649A`, and it was the wrong target: the
+   * old mean was concentrated in three saturated patches, and spreading the same total
+   * evenly put most of it on the floor. A wet road mirrors the sky at grazing incidence,
+   * so a uniformly bright sky is a uniformly bright road — §6's dark mirror came back as
+   * a pale sheet. `#33445F` is set against the road instead of against the mean: it
+   * halves the reflected sky and leaves the alley legible. §5.1.
+   */
+  environment: { resolution: 128, frames: 1, fill: '#33445F' },
 } as const
 
 /**
  * §5.1 — environment lightformers.
  * These exist to feed the wet-ground reflections and the metal, not to light the scene
  * directly. Positions are [x, y, z].
+ *
+ * **One of the original five.** The other four were `neonMagenta`, `sodium`, `neonCyan`
+ * rectangles outside the walls and a `lantern` ring past the bend, and §7.1 removed them:
+ * an `<Environment>` bakes from the origin and is sampled by *direction*, so everything
+ * in it sits at infinity, and its reflection in a 0.18-roughness floor is positioned by
+ * the camera rather than by the world. They slid across the ground as the visitor walked
+ * — a saturated red disc and two coloured slabs with nothing above any of them, and
+ * nothing that could ever be put above them.
+ *
+ * Number 4 stays because it is not a colour: `void` across the top of the alley is the
+ * dark ceiling this street actually has, it gives the metal a gradient to be shiny
+ * against, and it casts no shape because it contains none. The light those four were
+ * faking is now §7.1's five point lights, on signs that exist.
  */
 export const LIGHTFORMERS = [
-  { form: 'rect', scale: [4, 10], position: [-6, 5, -4], color: 'neonMagenta', intensity: 2.4 },
-  { form: 'rect', scale: [4, 10], position: [6, 5, 8], color: 'sodium', intensity: 1.8 },
-  { form: 'rect', scale: [3, 8], position: [-6, 4, 14], color: 'neonCyan', intensity: 1.2 },
   { form: 'rect', scale: [12, 2], position: [0, 11, 0], color: 'void', intensity: 0.4 },
-  { form: 'ring', scale: [6, 6], position: [0, 3, 22], color: 'lantern', intensity: 0.9 },
 ] as const satisfies readonly {
   form: 'rect' | 'ring'
   scale: readonly [number, number]
@@ -1041,13 +1200,69 @@ export const LIGHTFORMERS = [
 
 export type Tier = 'desktop' | 'mobile'
 
+/**
+ * sRGB hex → linear luminance, which is the space three's shaders work in.
+ *
+ * Needed for exactly one thing (`REFLECTION_MIX_STRENGTH` below) and deliberately not
+ * exported: this file's job is to state the brief's values, not to become a colour library.
+ */
+function linearLuminance(hex: string): number {
+  const int = parseInt(hex.replace('#', ''), 16)
+  const channel = (byte: number): number => {
+    const s = byte / 255
+    return s <= 0.04045 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4
+  }
+  return (
+    0.2126 * channel((int >> 16) & 0xff) +
+    0.7152 * channel((int >> 8) & 0xff) +
+    0.0722 * channel(int & 0xff)
+  )
+}
+
+/**
+ * §6.0 — the reflection gain, and why `mixStrength` is derived from it rather than authored.
+ *
+ * drei's reflector does not add the planar reflection, it *multiplies it into the albedo*:
+ *
+ *   diffuseColor.rgb = diffuseColor.rgb * ((1.0 - min(1.0, mirror)) + newMerge.rgb * mixStrength)
+ *
+ * `diffuseColor` is `asphaltWet`, whose linear luminance is 0.00303 — so `mixStrength` is
+ * not a fraction of the reflection, it is a fraction *divided by the road's albedo*. At the
+ * brief's original 8.0 the reflection reached the screen at 1.7% and the road showed nothing
+ * but the sky, measured flat to 0.37 of 255 across the whole alley width.
+ *
+ * The meaningful quantity is the product, so the product is what §6 states. **The derivation
+ * is load-bearing**: `mixStrength` is `1/albedo` in disguise, so a future change to
+ * `asphaltWet` would otherwise rescale every reflection in the world by the same factor it
+ * changed the road's colour — silently, and looking like a lighting bug.
+ */
+export const REFLECTION_GAIN = 1.35
+
+/**
+ * §6 — 1.35 ÷ 0.00303 ≈ 446. Unity gain would be 330.
+ *
+ * Read from `PALETTE.asphaltWet` and not from a repeated literal, since the whole reason
+ * this is derived is so that the two cannot come apart.
+ */
+export const REFLECTION_MIX_STRENGTH = REFLECTION_GAIN / linearLuminance(PALETTE.asphaltWet)
+
 export const REFLECTOR = {
   desktop: {
     resolution: 1024,
     blur: [420, 100],
-    mixBlur: 0.85,
-    mixStrength: 8.0,
-    mixContrast: 1.2,
+    /* §6.0 — `blurFactor = mixBlur × roughness × roughnessMap.g`, so this is divided by the
+       roughness twice before it reaches the blur. The brief's original 0.85 gave 0.9% blur
+       in the puddles and 8.4% on the dry patches, which left §6.2's mask effectively absent
+       from the reflection. 4.0 puts the dry patches near 40% and keeps the puddles sharp. */
+    mixBlur: 4.0,
+    mixStrength: REFLECTION_MIX_STRENGTH,
+    /* §6.0 — `newMerge = (merge − 0.5) × mixContrast + 0.5` is a recentre about 0.5. This
+       alley's reflection lives at 0.01–0.10, entirely on the low side of that pivot, so
+       anything above 1.0 subtracts a constant that `mixStrength` then multiplies by 446.
+       At the brief's original 1.20 the road's mean at 9 m collapsed from 24.1 to 8.3 while
+       the highlights stayed. 1.0 makes `newMerge = merge`, which is the only setting under
+       which the gain above means what it says. */
+    mixContrast: 1.0,
     depthScale: 1.1,
     minDepthThreshold: 0.4,
     maxDepthThreshold: 1.25,
@@ -1061,9 +1276,12 @@ export const REFLECTOR = {
   mobile: {
     resolution: 512,
     blur: [240, 60],
-    mixBlur: 0.95,
-    mixStrength: 6.5,
-    mixContrast: 1.2,
+    mixBlur: 4.5,
+    /* §6 — the same gain on both tiers. §6.2's turn-down ladder is resolution, then blur,
+       then distortion; `mixStrength` was never in it, and this is the dial that decides
+       whether the road carries the alley at all. Mobile gives up sharpness, not the picture. */
+    mixStrength: REFLECTION_MIX_STRENGTH,
+    mixContrast: 1.0,
     depthScale: 1.1,
     minDepthThreshold: 0.4,
     maxDepthThreshold: 1.25,
@@ -1226,57 +1444,93 @@ export const LIGHTS = [
     decay: 2,
     mobile: 'keep',
   },
-  {
-    id: 6,
-    type: 'point',
-    color: 'sodium',
-    intensity: 3.4,
-    position: [3.4, 4.6, -14.0],
-    distance: 12.0,
-    decay: 2,
-    mobile: 'halve',
-  },
-  {
-    id: 7,
-    type: 'point',
-    color: 'neonMagenta',
-    intensity: 3.0,
-    position: [-3.4, 4.2, 2.0],
-    distance: 11.0,
-    decay: 2,
-    mobile: 'halve',
-  },
-  {
-    id: 8,
-    type: 'point',
-    color: 'neonCyan',
-    intensity: 2.2,
-    position: [3.4, 4.4, 11.0],
-    distance: 10.0,
-    decay: 2,
-    mobile: 'drop',
-  },
-  {
-    id: 9,
-    type: 'point',
-    color: 'lantern',
-    intensity: 2.6,
-    position: [-3.4, 3.4, 19.0],
-    distance: 9.0,
-    decay: 2,
-    mobile: 'drop',
-  },
-  {
-    id: 10,
-    type: 'point',
-    color: 'sodium',
-    intensity: 1.8,
-    position: [0, 3.0, -21.5],
-    distance: 8.0,
-    decay: 2,
-    mobile: 'drop',
-  },
 ] as const
+
+/**
+ * §7 light 11 — the station gate, and the only cool light in the alley.
+ *
+ * **It lights the wall you turn round to see.** §17's first line is *you turn round and the
+ * shutter is down; you understand what happened without being told*, which cannot happen on
+ * an unlit wall. It is seated on §3.1's `終電` plate rather than authored as a coordinate,
+ * for §7.1's reason: a light two metres from its emitter still looks like a light, so the
+ * drift is silent. `lib/lights.ts` resolves the position from `STATION_PLATE_PANEL`.
+ *
+ * **`signWhite` is deliberate.** §17 reserves warmth for the three things you can touch and
+ * §4 makes cyan a spice; a ticket gate is fluorescent, municipal and unwelcoming, which is
+ * the note this end of the street plays against forty metres of neon. At 70 cd over 9 m it
+ * washes the gate and the dead machines and reaches nothing else — the nearest sign light is
+ * 2.5 m away at z = −20.65.
+ *
+ * Not a member of `LIGHTS` because that array is §7's authored table and this is seated on
+ * an object, the same separation `ALLEY_LIGHTS` already makes for 6 to 10.
+ */
+export const GATE_LIGHT = {
+  id: 11,
+  color: 'signWhite',
+  intensity: 70,
+  distance: 9.0,
+  decay: 2,
+  mobile: 'keep',
+} as const satisfies {
+  id: number
+  color: ColorToken
+  intensity: number
+  distance: number
+  decay: number
+  mobile: 'keep' | 'halve'
+}
+
+/**
+ * §7.1 — lights 6 to 10, the alley's own.
+ *
+ * **Neither a position nor a colour, and that is the point.** Each of these sits on one
+ * of §3.5's nine neon signs, and §3.5's signs are *generated* — wall, `z`, mount height
+ * and projection are all resolved at load. A light written as a coordinate drifts the
+ * moment that generator moves, and drifts silently, because a light two metres from its
+ * sign still looks like a light. Written as a sign index it cannot drift at all: the
+ * light lands on that sign's panel centre, at that sign's own emissive colour, through
+ * the same function `NeonSigns.tsx` uses to place the panel.
+ *
+ * §7's old colour column was a palette plan for an empty alley, and two of its five
+ * named light that no surface within nine metres could have emitted.
+ *
+ * `lib/lights.ts` resolves these against `NEON_SIGN_LIST`. The spread — signs 0, 1, 4,
+ * 6 and 8 — runs the pools continuously from z ≈ −28.6 to +29 with no gap, and puts one
+ * 1.15 m from §12.1's spawn.
+ *
+ * **The intensities are ×44 of what §7 first authored, and §7.1 called it before it was
+ * measured:** *"a pool on the ground would want an order of magnitude more, and that number
+ * should not be picked before §9's bloom exists."* It exists, so it was picked. The ratio
+ * between the five was a real decision about which signs are the bright ones and is held to
+ * within 3%; only the scale was wrong. At 3.4 cd, 97% of the west facade sat below a
+ * luminance of 3 out of 255 — those walls were not dim, they were absent. These are candela,
+ * and 150 for a square metre of neon is still well under what real signage radiates.
+ */
+export const ALLEY_LIGHTS = [
+  { id: 6, sign: 1, intensity: 150, distance: 12.0, decay: 2, mobile: 'halve' },
+  { id: 7, sign: 4, intensity: 130, distance: 11.0, decay: 2, mobile: 'halve' },
+  { id: 8, sign: 6, intensity: 95, distance: 10.0, decay: 2, mobile: 'keep' },
+  { id: 9, sign: 8, intensity: 115, distance: 9.0, decay: 2, mobile: 'keep' },
+  { id: 10, sign: 0, intensity: 80, distance: 8.0, decay: 2, mobile: 'keep' },
+] as const satisfies readonly {
+  id: number
+  sign: number
+  intensity: number
+  distance: number
+  decay: number
+  mobile: 'keep' | 'halve'
+}[]
+
+/**
+ * §7 — the order lights are surrendered in when the mobile cap bites, highest id first.
+ *
+ * `mobile: 'drop'` used to live on lights 8, 9 and 10 as a flag. It was arithmetic
+ * mistaken for a preference: dropping three of ten is how §7 reached §15's seven, and
+ * applied to a world with six built lights it dropped half of them and left a phone with
+ * two lit points in forty-four metres of alley. The cap is the rule; this is only the
+ * order it is applied in.
+ */
+export const LIGHT_SURRENDER_ORDER = [10, 9, 8] as const
 
 /**
  * Light #1. Named because it is the only one of the ten that belongs to the atmosphere
@@ -1284,13 +1538,16 @@ export const LIGHTS = [
  */
 export const HEMISPHERE_LIGHT = LIGHTS[0]
 
-/** Resolve a light's intensity for a tier, or null if it drops. */
+/**
+ * Resolve a light's intensity for a tier. §7 halves 6 and 7 on mobile; nothing else
+ * changes with the tier. Whether a light is mounted at all is the cap's business, not
+ * this function's — see `lib/lights.ts`.
+ */
 export const lightIntensityFor = (
-  light: { intensity: number; mobile: 'keep' | 'halve' | 'drop' },
+  light: { intensity: number; mobile: 'keep' | 'halve' },
   tier: Tier,
-): number | null => {
+): number => {
   if (tier === 'desktop') return light.intensity
-  if (light.mobile === 'drop') return null
   return light.mobile === 'halve' ? light.intensity / 2 : light.intensity
 }
 
@@ -1299,7 +1556,22 @@ export const lightIntensityFor = (
  * ──────────────────────────────────────────────────────────────────────────── */
 
 export const MATERIALS = {
-  /** Reflector material — see §6. */
+  /**
+   * Reflector material — see §6.
+   *
+   * **`envMapIntensity` is stated here because its absence was a value.** Every other
+   * row of §8 gives one; this row said only *"see §6"*, and §6 gives roughness and the
+   * reflector settings but never this. So the ground took three's default of **1.0** —
+   * the highest environment response of any surface in the world, on the surface §4
+   * paints darkest, and 2.5× the facade beside it.
+   *
+   * With §5.1's old shaped formers that produced three bright patches. With §5.1's
+   * uniform fill it produced an evenly lit pale road — snow, not wet asphalt. **The
+   * ground is meant to be dark and to be a mirror**, and those are not in tension: at
+   * 0.10 the environment contributes a sheen instead of a wash, and what is left to see
+   * on the road is what the road is reflecting. §6 says the ground is the picture; this
+   * is what decides whether the picture is the alley or the sky.
+   */
   wetAsphalt: { metalness: 0.0 },
   concrete: { roughness: 0.72, metalness: 0.0, envMapIntensity: 0.6 },
   facade: { roughness: 0.85, metalness: 0.0, envMapIntensity: 0.4 },
@@ -1312,26 +1584,8 @@ export const MATERIALS = {
    */
   glass: { roughness: 0.08, metalness: 0.0, transparent: true, opacity: 0.22 },
   norenFabric: { roughness: 0.92, metalness: 0.0, doubleSide: true },
-  paperLantern: { roughness: 0.9, metalness: 0.0, emissiveIntensity: 1.3, doubleSide: true },
-  neonTube: { roughness: 0.3, metalness: 0.0, basic: true, haloWidth: 0.03, haloIntensity: 0.6 },
-} as const
-
-/**
- * §8.1 — the emissive intensity ladder.
- * Bloom's threshold is 0.90. This is what sits either side of it, and the ordering is
- * the point: the project screenshot is the one thing that must never cross.
- */
-export const EMISSIVE = {
-  neonTubes: 3.2,
-  verticalSigns: 2.4,
-  selectionButtons: 2.1,
-  payphoneLamp: 1.9,
-  vendingFrontPanel: 1.6,
-  lightboxSurroundStrip: 1.4,
-  paperLanterns: 1.3,
-  stationPlate: 0.95,
-  infoPanelBacklight: 0.7,
-  projectScreenshot: 0,
+  paperLantern: { roughness: 0.9, metalness: 0.0, emissiveIntensity: EMISSIVE.paperLanterns, doubleSide: true },
+  neonTube: { roughness: 0.3, metalness: 0.0, basic: true, haloWidth: 0.03, haloIntensity: EMISSIVE.neonTubeHalo },
 } as const
 
 /* ────────────────────────────────────────────────────────────────────────────
@@ -1367,6 +1621,15 @@ export const POST = {
   vignette: { offset: 0.28, darkness: 0.85, mobile: true },
   /** No SMAA pass — not worth a full-screen pass here. */
   smaa: false,
+  /**
+   * §9.1 — the composer itself, which §9 did not have to describe until it existed.
+   *
+   * **`multisampling` carries §9's `antialias` flag, because `gl.antialias` stops
+   * reaching the scene the moment a composer is mounted**: the scene is rendered into a
+   * half-float target and the canvas is only ever shown a full-screen quad. Four samples
+   * is what a browser typically grants for `antialias: true`; mobile's `false` is 0.
+   */
+  multisampling: { desktop: 4, mobile: 0 },
 } as const
 
 /** §9 — Canvas gl flags. Antialias is the only one that differs by tier. */
@@ -1401,14 +1664,189 @@ export const RAIN = {
   color: 'rain',
   /** Not additive — additive rain at this density turns the alley to milk. */
   additive: false,
+  /**
+   * §13 — the near layer's 0.35 comes down to this and the far layer is already there.
+   * Count halves. **Speed is untouched**: slower rain reads as broken, not as calm.
+   */
+  reducedMotion: { opacity: 0.22, countScale: 0.5 },
 } as const
 
+/**
+ * §10.1 — the three figures the built form needs, none of them authored.
+ *
+ * A separate export rather than fields on `RAIN`, because every one of them is arithmetic
+ * on a value above: a second copy in the object could disagree with its own source.
+ */
+
+/** Streak length ÷ width, from §10's painted texture: an 8 × 64 image is 1 : 8. */
+export const RAIN_STREAK_ASPECT = RAIN.streakTexture[1] / RAIN.streakTexture[0]
+
+/**
+ * §10.1 — the streak's two dimensions, from §10's `pointSize` **and its counts**.
+ *
+ * The aspect above is only half the derivation, and taking it as the whole thing is a
+ * mistake worth recording: `pointSize` × aspect makes a 0.06 streak 0.48 long, which is
+ * **eight times the area** of the 0.06-square sprite §10's density was written for. §10
+ * sets 2 600 far streaks at opacity 0.22 — figures that only mean what they were chosen
+ * to mean if each streak covers `pointSize²`. At eight times that, forty metres of alley
+ * accumulates enough alpha to turn the wet road into a pale sheet, and §10's own warning
+ * (*"if it reads as a storm, it is too dense"*) is met without a single count changing.
+ *
+ * So: hold the **area** at `pointSize²` and the **aspect** at 1 : 8, and solve.
+ *
+ *     width = pointSize ÷ √8      length = pointSize × √8
+ *
+ * Near comes out **0.021 × 0.170**, far **0.014 × 0.113**.
+ *
+ * **0.170 is worth a second look, because it was not aimed at.** A drop falling at §10's
+ * 9.0 m/s draws 0.15 m across one frame at 60 fps — which is what a rain streak physically
+ * *is*, a drop smeared over an exposure. Two independent derivations, one from the
+ * texture and the density, one from the fall speed and the frame rate, landing 12% apart.
+ */
+export const RAIN_STREAK = {
+  near: {
+    width: RAIN.near.pointSize / Math.sqrt(RAIN_STREAK_ASPECT),
+    length: RAIN.near.pointSize * Math.sqrt(RAIN_STREAK_ASPECT),
+  },
+  far: {
+    width: RAIN.far.pointSize / Math.sqrt(RAIN_STREAK_ASPECT),
+    length: RAIN.far.pointSize * Math.sqrt(RAIN_STREAK_ASPECT),
+  },
+} as const
+
+/**
+ * How far off vertical the streak lies, in radians — `atan(0.6 ÷ 9.0)` ≈ 3.81°.
+ *
+ * The rain travels at that angle, so the streak is turned to match it. A vertical streak
+ * drifting sideways is the one detail here that reads as wrong without anyone being able
+ * to say why.
+ */
+export const RAIN_LEAN = Math.atan(RAIN.windDriftX / RAIN.fallSpeed)
+
+/**
+ * Where each box sits.
+ *
+ * **The near box follows the camera in `x` and `z` only.** §12.1 fixes the eye at 1.68
+ * and nothing but head bob moves it, so following in `y` would buy nothing and would push
+ * four metres of the box below the floor, where a third of the layer falls through the
+ * world unseen. Its base is the ground.
+ *
+ * **The far box is §3's alley**, not a new figure: §10's 46 is `LAYOUT.alley.length` and
+ * its 14 is the west facade height. Only the 30 of width is §10's own, and it is there to
+ * carry rain across §3.6's opening as well as the alley.
+ */
+export const RAIN_BOX = {
+  near: { baseY: LAYOUT.ground.y },
+  far: { centre: [0, LAYOUT.facadeHeight.west / 2, 0] },
+} as const satisfies {
+  near: { baseY: number }
+  far: { centre: readonly [number, number, number] }
+}
+
+/**
+ * §10 / §10.0 — the ripple emitters, and the rule about *where* they go.
+ *
+ * The positions come from §6.2's puddle mask, not from a scatter, and that is the whole
+ * of this block. A ring expanding on a dry island contradicts — in the most visible way
+ * available — the one document that says where the puddles are.
+ *
+ * Sampling is against the **painted canvas**, not the weight function that generated it:
+ * the function describes the *bias*, the canvas describes the *blobs*, and a ring has to
+ * land inside an actual blob. One `getImageData` at mount, seeded, nothing per frame.
+ *
+ * §13 removes these rather than freezing them. A ring's radius is its only state, so a
+ * frozen ring is a bullseye painted on the road.
+ */
 export const RIPPLES = {
-  desktop: { emitters: 12 },
-  mobile: { emitters: 6 },
-  decalDiameter: 0.9,
-  ringIntervalSec: 1.8,
+  /* §10 — 12 → 64 and 6 → 28. Built at twelve the rings measured 0.007% of the frame and
+     were invisible standing over a puddle: §10's figures were written for a matte road,
+     and §6.0 turned the ground into the mirror §6 always claimed. One InstancedMesh either
+     way, 128 triangles, and §10 specifies a shader — so the count was buying nothing. */
+  /* §10.0.1 — 64 → 48 and 28 → 21, down 25%. The count was raised to 64 to make the rings
+     visible at all against §6.0's mirror; with two generations alive and per-cycle jitter each
+     emitter now reads as continuous rain rather than as one blinking spot, so the count that
+     made twelve visible is more than the picture needs. Draw calls do not move at any count. */
+  desktop: { emitters: 48 },
+  mobile: { emitters: 21 },
+  decalDiameter: 0.85,
+  /* Still longer than the 1.4 s life, so rings overlap slightly instead of the floor
+     going quiet between them. 64 at 1.1 s is 58 impacts a second across the alley. */
+  ringIntervalSec: 1.1,
   ringLifeSec: 1.4,
+  /** §10.0 — it is water, and §4 already has the token for water. */
+  color: 'rain',
+  /** §10.0 — between §10's steam at 0.08 and its far rain at 0.22. Twelve of these
+      overlap down the centre channel, and §10.1's lesson was that transparent things
+      accumulate along the view direction. */
+  peakOpacity: 0.3,
+  /**
+   * §10.0.1 — how many ring generations are alive on one emitter at once.
+   *
+   * **Derived, not chosen:** `ceil(ringLifeSec ÷ ringIntervalSec)` = `ceil(1.4 ÷ 1.1)` = 2. It
+   * exists because the cycle wraps on the *interval* while the age divides by the *life*, so a
+   * single generation could never exceed age 0.786 — every ring was cut off at 79% of its life,
+   * the `discard` guarding age > 1.0 was dead code, and each emitter restarted instantly in the
+   * same place. Generation k carries the birth and k−1 the tail that was being deleted.
+   */
+  generations: 2,
+  /** §10.0.1 — fraction of the life spent ramping in. A real impact appears abruptly, so short:
+      this exists only to kill the pop *in*, now that the pop *out* is gone. */
+  birthFrac: 0.05,
+  /** §10.0.1 — ±fraction on a ring's reach, re-rolled every cycle so a ring never repeats the
+      one before it. This is *"not all uniform shapes"*. */
+  sizeVariation: 0.25,
+  /** §10.0.1 — radial perturbation amplitude. A ripple on a moving film is not a circle, and a
+      perfect one is the detail that reads as drawn. */
+  wobble: 0.12,
+  /**
+   * §10.0.1 — the ladder of centre-travel radii, in metres, tried largest first.
+   *
+   * Each emitter probes eight points around itself at each rung and keeps the largest radius
+   * still wet on all eight, so the jitter is **measured against that emitter's own puddle**
+   * rather than assumed. A global bound honest enough for the worst emitter is about 0.07 m and
+   * invisible; measuring per emitter buys most of them five times that. An emitter in a narrow
+   * blob earns 0.05 or nothing, which is correct — it is the one that would walk onto dry
+   * asphalt and contradict §10.0's placement rule.
+   */
+  jitterLadder: [0.36, 0.26, 0.18, 0.1, 0.05],
+  /** §10.0 — an annulus, not a disc. A *fraction* of the current radius, so the ring
+      thins as it grows, which is what a spreading wavefront does. */
+  ringThickness: 0.16,
+  /** §10.0 — §6.2 paints 0.06 inside puddles and 0.55 on dry patches with a 14 px blur
+      between. 0.20 is inside the water rather than on the transition, so no ring
+      straddles an edge. */
+  wetThreshold: 0.2,
+  /**
+   * §10.0 — the alley, not the strip. §6.1 runs the reflector 3 m behind each end wall and
+   * 1.5 m past each side wall so its seams are never in frame; that margin is hidden
+   * geometry, and a ring out there is one nobody can see, spent out of a budget of twelve.
+   * The first build put two of its twelve behind the station gate.
+   */
+  sampleX: [-4.5, 4.5],
+  sampleZ: [-23.0, 23.0],
+  /**
+   * §10.0 — minimum metres between emitters. 2.0 was set when there were twelve; §6.2 leaves
+   * roughly 250 m² of water in the alley and 64 emitters do not fit in it at that spacing.
+   *
+   * Without it the sampler follows §6.2's centre bias straight into a clump: the first build
+   * put four rings inside 2.4 m and left a 15 m stretch of alley with none, which reads as a
+   * patch of rain rather than as rain. **Where the water is does not decide where a ring is
+   * worth drawing.**
+   */
+  minSeparation: 1.1,
+  /** §11.1's precedent — a fixed seed, so the emitters sit in the same puddles every run. */
+  seed: 0x9d2b41,
+  /**
+   * A rejection sampler needs a bound, and this one scales with the count rather than with
+   * confidence. Each accept makes the next one harder — every emitter placed is another
+   * 1.1 m exclusion disc — so the 64th candidate is rejected far more often than the first.
+   * 6000 leaves ample room; the cap exists only so a pathological mask cannot hang mount.
+   *
+   * Running out is not a failure worth throwing over: the emitters that were placed still
+   * work, and a thinner scattering of rings beats a blank floor or a frozen page. Same call
+   * §10.1 made about the rain.
+   */
+  maxSampleAttempts: 6000,
 } as const
 
 export const STEAM = {
@@ -1449,6 +1887,85 @@ export const TYPE_SIZES = {
 } as const
 
 /**
+ * §3.1 — the station `終電` plate over the shuttered gate, and §7's light 11 sits on it.
+ *
+ * **It is built with its light and not before.** The gate wall had nothing lighting it and
+ * the fix is a light — but §7.1's rule is that a glowing thing needs a visible source, and
+ * this plate had been deferred as *surroundings work* since the shell. A light at y = 4.2
+ * with nothing at y = 4.2 would have been exactly the unmotivated glow §7.1 deleted four
+ * lightformers for.
+ *
+ * The panel is sized from §11.2's 0.55 glyph rather than authored: two characters plus
+ * 0.26 of padding either side. Written as arithmetic so a change to the type size moves the
+ * panel with it.
+ */
+/**
+ * §3.1 — the station gate: one full-width roller shutter and the closure notice on it.
+ *
+ * **§17's first line was false until this existed.** *"You turn round and the shutter is down"* —
+ * §3.1 had said *roller shutter down* since the shell and the north wall was a bare facade box.
+ *
+ * The slats are §3.4's geometry at §3.4's own pitch, not §8's `normalRepeat`. A repeat scales with
+ * the surface it is on; a pitch does not, and the pitch is a property of the shutter rather than of
+ * the opening — so a 9.00 m gate gets the same 0.09 m slats as a 3.60 m shop, because they are the
+ * same product. §3.4's note records the same reasoning for the five shop widths.
+ */
+export const STATION_GATE = {
+  width: LAYOUT.alley.width,
+  /** Head clears the 4.20 plate with 0.80 to spare. */
+  headY: 3.4,
+  slatPitch: STOREFRONT.slatPitch,
+  slatDepth: STOREFRONT.slatDepth,
+  /**
+   * §3.1 — the closure notice, carrying the shinkansen pictogram *and* §11.4's index 21 on one
+   * canvas, so it is one texture and one material.
+   *
+   * 2.10 is where a station actually posts a closure notice, and it is the only height on this
+   * wall a visitor reads at 3.0 m without looking up — the plate above is for looking up at.
+   */
+  notice: {
+    width: 1.15,
+    height: 0.72,
+    centreY: 2.1,
+    proud: 0.04,
+    stringIndex: 21,
+    /** §8.1's station-plate rung, reused rather than extended: same municipal backlight. */
+    emissive: EMISSIVE.stationPlate,
+    color: 'signWhite',
+    canvas: { desktop: [512, 256], mobile: [256, 128] },
+  },
+} as const satisfies { notice: { color: ColorToken; [k: string]: unknown }; [k: string]: unknown }
+
+/** §3.1 — ⌊3.40 ÷ 0.09⌋. Derived, so a pitch change moves the count with it. */
+export const STATION_GATE_SLAT_COUNT = Math.floor(STATION_GATE.headY / STATION_GATE.slatPitch)
+
+export const STATION_PLATE = {
+  glyphHeight: TYPE_SIZES.stationPlate.height,
+  pad: 0.26,
+  thickness: 0.06,
+  /** §11.4 index 13 — the only place in the world that says it. */
+  stringIndex: 13,
+  emissive: EMISSIVE.stationPlate,
+  color: 'signWhite',
+} as const satisfies { color: ColorToken; [key: string]: unknown }
+
+/**
+ * §3.1 — the plate's built dimensions and pose, derived rather than authored.
+ *
+ * The face clears the north end wall by the wall's own half-thickness plus the plate's, so
+ * it stands proud of the gate instead of z-fighting it.
+ */
+export const STATION_PLATE_PANEL = {
+  width: STATION_PLATE.glyphHeight * 2 + STATION_PLATE.pad * 2,
+  height: STATION_PLATE.glyphHeight + STATION_PLATE.pad * 2 * 0.6,
+  centre: [
+    0,
+    LAYOUT.ends.north.plateY,
+    LAYOUT.ends.north.z + LAYOUT.wallThickness / 2 + STATION_PLATE.thickness / 2,
+  ],
+} as const satisfies { width: number; height: number; centre: readonly [number, number, number] }
+
+/**
  * §11.3 — neon flicker. Applied to the shopfront sign and to decorative signs 3 and 7.
  * Hand-authored and fixed, not random per frame: it is identical every run, which is
  * what stops it reading as noise. Reduced motion holds it at a constant 1.
@@ -1458,6 +1975,21 @@ export const NEON_FLICKER = {
   stepMs: 22,
   holdSec: 6.5,
   appliesToDecorativeSignIndices: [3, 7],
+  /** §11.3 — the three banners flicker too, at 1.78 they are hard to miss doing it. */
+  appliesToBannerIndices: [0, 1, 2],
+  /**
+   * §11.3 — phase, as a fraction of the period, per flickering thing.
+   *
+   * Without these the effect inverts. The stutter is 242 ms inside a 6.742 s period, so
+   * everything reading the same clock stutters on the same frame: five objects blinking in
+   * perfect unison, which reads as the street being switched rather than as five failing
+   * tubes. Spread so no two coincide.
+   */
+  phase: {
+    shopfront: 0.0,
+    decorativeSign: { 3: 0.17, 7: 0.53 },
+    banner: [0.31, 0.68, 0.86],
+  },
 } as const
 
 /**
@@ -1480,7 +2012,34 @@ export const DECORATIVE_SIGNAGE = [
   '自動販売機',
   '禁煙',
   '終電',
+  /* 14 – 20 — §3.4's seven lit sign boxes, one each by index. These are what a single
+     small premises says about itself, where 0–13 are what the street says about itself:
+     yakitori, sushi, oden, a standing bar, Chinese, a snack bar, sweets. The seven
+     *unlit* boxes take nothing — an unlit box is `shutter` with no emissive term, and a
+     slab you cannot read is exactly what a shut shop's sign box is. */
+  '焼鳥',
+  'すし',
+  'おでん',
+  '立呑',
+  '中華',
+  'スナック',
+  '甘味',
+  /* 21 — §3.1's gate notice. The railway's own phrase: *service has ended* is what a gate posts
+     when the last train has gone, where 営業終了 (*business has ended*) is what a shop posts. It
+     pairs with 終電 on the plate two metres above without repeating it — the plate names the thing
+     that left and this says what that means for you. Index 2 営業中 was not an option: it means
+     OPEN, and it is already on a neon sign. */
+  '運転終了',
 ] as const
+
+/**
+ * §11.4 / §3.4 — where the sign-box strings start in `DECORATIVE_SIGNAGE`.
+ *
+ * Written as an offset rather than as a sliced copy of the list, for the same reason
+ * §3.5's `stringOffset` is: the list is the source, and a second array of the same words
+ * is a second place for them to drift.
+ */
+export const SIGN_BOX_STRING_OFFSET = 14
 
 /* ────────────────────────────────────────────────────────────────────────────
  * §12 — Navigation
@@ -1648,8 +2207,20 @@ export const BUDGET = {
     fps: 60,
     drawCalls: 140,
     triangles: 350_000,
-    textureMemoryMB: 14,
-    dynamicLights: 10,
+    /**
+     * §15 — 14 → 18. §3.5 flagged the overrun and ruled the budget itself was what should
+     * be revisited, once; this is that once. The world stands at 16.94 MB and every lever
+     * §3.5 listed costs more than the overrun did — and §10.0 has since given the puddle
+     * mask a second job, so shrinking the largest consumer now degrades the ripples too.
+     *
+     * 18 rather than 17 because a ceiling set to today's total is raised again by the next
+     * thing to arrive, and §16 item 6 (the project screenshots) is known not to fit at all.
+     * **Mobile is the figure that describes a real constraint, and it did not move.**
+     */
+    textureMemoryMB: 18,
+    /** §7 — 10 → 11. Ten was *exactly* full (1 hemisphere + §2's four + the alley's five),
+        so §3.1's station gate had no slot. Moved by one, because one is what was missing. */
+    dynamicLights: 11,
     timeToFirstFrameSec: 1.5,
   },
   mobile: {

@@ -43,6 +43,21 @@ export default function Atmosphere() {
         ground's fault.
       */}
       <Environment resolution={ATMOSPHERE.environment.resolution} frames={ATMOSPHERE.environment.frames}>
+        {/*
+          §5.1 — the uniform fill, and the reason this file no longer hangs four coloured
+          rectangles outside the walls.
+
+          `<Environment>` portals its children into a private scene and bakes a cube map
+          from it, so a background on *that* scene is returned for every direction: an
+          environment with no shape, no edge and no position. That is the whole of why it
+          is allowed where the four formers were not — there is nothing in it that can
+          read as an object, so there is nothing that needs something above it.
+
+          It also has to be here rather than expressed as a brighter light. §7.1 measured
+          it: the environment was carrying 68% of the frame, and it was carrying it
+          through *reflection* in §6's wet ground, which no amount of hemisphere reaches.
+        */}
+        <color attach="background" args={[ATMOSPHERE.environment.fill]} />
         {LIGHTFORMERS.map((lf, i) => (
           <Lightformer
             key={i}

@@ -24,7 +24,7 @@
 
 import type { Box } from './collision'
 import { NEON_SIGN_LIST } from './signs'
-import { STOREFRONT_UNITS, doorwayZ } from './storefronts'
+import { SIGN_CLEARANCE, STOREFRONT_UNITS, doorwayZ } from './storefronts'
 import { BOUNDS, LAYOUT, PROPS, STOREFRONT, type ColorToken } from './world'
 
 /* ────────────────────────────────────────────────────────────────────────────
@@ -523,9 +523,9 @@ const POLES: readonly WallPlacement[] = [
 /**
  * §3.2's eleven, above §3.4's sign boxes.
  *
- * Placed clear of the §3.5 signs that share their height band: signs 1 to 6 all reach
- * into `y ∈ [3.24, 3.60]` where the shades hang, and a lantern inside one of those z
- * spans intersects a projecting sign. `audit()` checks that too.
+ * Placed clear of the §3.5 signs that share their height band — signs 1, 2, 3 and 5 reach into
+ * `y ∈ [3.000, 3.360]` where the shades actually hang — **and clear of §3.4's lit sign boxes**,
+ * which sit at `y ∈ [2.85, 3.55]` and so contain the shade's whole height. `audit()` checks both.
  */
 const LANTERNS: readonly WallPlacement[] = [
   { side: 'east', z: -19.6 },
@@ -534,9 +534,16 @@ const LANTERNS: readonly WallPlacement[] = [
   { side: 'east', z: -11.9 },
   { side: 'west', z: -7.4 },
   { side: 'east', z: -2.2 },
-  { side: 'west', z: 2.6 },
+  /* §3.7 — 2.6 → 0.85 and 12.6 → 10.75. At their old z these two hung 65 mm in front of a
+     §3.4 lit sign box and dead centre on it vertically (shade centre y 3.18 against box centre
+     3.20), so they blanked the middle of a painted face — nothing intersected, it was pure
+     occlusion. 0.85 puts the first over the shutter aperture of the one OPEN shop in the alley,
+     which is a better place for a paper lantern than in front of a sign anyway. The second had
+     to go down rather than up: the gap between the box edge and §2.3's payphone slot is 0.105 m
+     wide. Both off-round, per this section's "nothing is evenly spaced". */
+  { side: 'west', z: 0.85 },
   { side: 'east', z: 8.6 },
-  { side: 'west', z: 12.6 },
+  { side: 'west', z: 10.75 },
   { side: 'east', z: 16.8 },
   { side: 'west', z: 18.2 },
 ]
@@ -900,6 +907,32 @@ export function audit(): AuditFinding[] {
         findings.push({
           rule: 'lantern-in-neon-sign',
           detail: `${prop.key} at z ${prop.position[2]} intersects sign ${sign.index} at ${sign.z.toFixed(2)}`,
+        })
+      }
+    }
+  }
+
+  /* §3.7 — a lantern hanging in front of a §3.4 lit sign box. The fifth rule above catches a
+     lantern inside a §3.5 sign; this is the same fault against the other thing at that height,
+     and it matters more, because §3.4's layout is *generated*: a seed change or a fifth unit
+     width silently re-rolls every box z and the next collision arrives unannounced. Two were
+     found by eye rather than by this rule, which is exactly the gap §16.7 recorded when audit()
+     moved three props before anything was drawn. */
+  for (const prop of STREET_PROPS) {
+    if (prop.kind !== 'paperLantern') continue
+    const side: Side = prop.position[0] < 0 ? 'west' : 'east'
+    for (const unit of STOREFRONT_UNITS) {
+      if (unit.wall !== side) continue
+      if (!unit.signBox || unit.signColor === null) continue
+
+      const boxTop = STOREFRONT.signBox.baseY + STOREFRONT.signBox.height
+      if (STOREFRONT.signBox.baseY > shadeTop || boxTop < shadeBottom) continue
+
+      const halfZ = STOREFRONT.signBox.width / 2 + shade.radius + SIGN_CLEARANCE
+      if (Math.abs(doorwayZ(unit) - prop.position[2]) < halfZ) {
+        findings.push({
+          rule: 'lantern-over-sign-box',
+          detail: `${prop.key} at z ${prop.position[2]} occludes unit ${unit.index}'s lit box at ${doorwayZ(unit).toFixed(2)}`,
         })
       }
     }

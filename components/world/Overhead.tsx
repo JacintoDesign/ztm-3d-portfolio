@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useMemo } from 'react'
+import { useFrame } from '@react-three/fiber'
 import {
   BoxGeometry,
   CylinderGeometry,
@@ -10,9 +11,11 @@ import {
   Vector3,
 } from 'three'
 import { resolveTier } from '@/lib/device'
+import { flickerLevel } from '@/lib/flicker'
+import { prefersReducedMotion } from '@/lib/reducedMotion'
 import { BANNERS } from '@/lib/signs'
 import { neonSignTexture } from '@/lib/textures/neonSign'
-import { LAYOUT, MATERIALS, OVERHEAD, PALETTE } from '@/lib/world'
+import { LAYOUT, MATERIALS, NEON_FLICKER, OVERHEAD, PALETTE } from '@/lib/world'
 
 /**
  * §3.1 / §3.5 — the overhead mat: 34 cable spans between y 6.50 and 9.00, three of them
@@ -163,6 +166,30 @@ export default function Overhead() {
       }),
     [tier],
   )
+
+  /**
+   * §11.3 — the banners flicker, with a phase offset each.
+   *
+   * **The offsets are the whole point.** The stutter is 242 ms inside a 6.742 s period, so
+   * three banners reading the same clock stutter on the same frame — which does not read as
+   * three failing tubes but as somebody switching the street. §11.3 assigns 0.31, 0.68, 0.86.
+   *
+   * One frame callback for all three, mutating `emissiveIntensity` on the material directly.
+   * This never reaches React state: sixty renders a second to dim a banner costs more than
+   * the banner does.
+   */
+  useFrame((state) => {
+    if (prefersReducedMotion()) {
+      // §13 — constant 1. Not dimmed and not frozen mid-sequence: on.
+      for (const { material } of banners) material.emissiveIntensity = OVERHEAD.banner.emissive
+      return
+    }
+    banners.forEach(({ material }, i) => {
+      const phase = NEON_FLICKER.phase.banner[i] ?? 0
+      material.emissiveIntensity =
+        OVERHEAD.banner.emissive * flickerLevel(state.clock.elapsedTime, phase)
+    })
+  })
 
   const attachCables = useCallback(
     (mesh: InstancedMesh | null) => {
