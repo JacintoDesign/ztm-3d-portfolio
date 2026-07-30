@@ -772,7 +772,7 @@ The rest of the §3.2 inventory that stands on the ground: **4 dead vending mach
 
 | Measured | | |
 |---|---|---|
-| Desktop peak | **94** of §15's 140 | at the north clamp, whole alley in frame |
+| Desktop peak | **96** of §15's 140 | at the north clamp, whole alley in frame |
 | **Mobile peak** | **88 of 90** | at spawn |
 | Triangles | 134 k desktop / 113 k mobile | of 350 k / 220 k — not close |
 | Collision boxes | 38 prop boxes of 66 in the world | see below |
@@ -959,9 +959,17 @@ The ground is two surfaces, not one.
 | | Value |
 |---|---|
 | Base plane | **70 × 70** at `y = 0`, plain material in `asphalt`, overscan hidden by fog (§3) — and, past the bend, carrying §3.6's cross street |
-| **Reflector strip** | **12 × 59** — `x ∈ [-6, 6]`, `z ∈ [-26, 33]` — at **`y = 0.004`**. Was 12 × 52; §6.0 ran it out to take §3.6's carriageway |
+| **Reflector strip** | An **L**, at **`y = 0.004`**: the alley `x ∈ [-6, 6]` from `z = -26` to a cut parallel to §3.1's bend face, plus an arm `x ∈ [1.35, 6]` running on to `z = 33` for §3.6's carriageway. Was a 12 × 52 rectangle, then 12 × 59 — see below for why it stopped being one |
 
 **Reflections render at half the ground width only**; beyond `x = ±6` the fog has it anyway. Neither seam is ever in frame: the walls at `x = ±4.5` stand 1.5 m inside the x-edge, and the z-edge sits 3 m behind each end wall.
+
+**The strip stops 0.35 m short of §3.1's bend wall, and it is the reflection that requires it rather than the shape.** A planar mirror at grazing incidence looks *along* itself. For a floor point 0.2 m in front of that wall, seen from a 1.68 m eye seven metres back, the reflected ray leaves the surface heading **down**, passes about **3 cm under the wall's foot**, rises back through the floor plane a few centimetres past it and carries on to §3.6's far building — so the last strip of floor before the wall was reflecting the cross street, its lit boards and its traffic. Seen from the alley it read exactly as a **slot under the wall**, which is what it was reported as.
+
+**Nothing standing on the floor can block it.** The ray is below `y = 0` for the whole of that journey, and drei's reflector clips everything under the mirror plane out of the reflection pass — verified by dropping the wall two metres into the ground and watching the leak stay. The wall is not the lever; **whether reflective floor is there at all is the only lever.**
+
+**The cut runs parallel to the wall, not square to the alley.** The bend is at 20°, so a straight cut would leave 0.20 m of matte floor at the wall's east end and 2.25 m at its west — a wedge, which is the shape a mistake makes. Parallel, it is a constant band that reads as the shadow line at the foot of a wall, and §6.2 already says sheltered ground stays dry. The cut is **derived from `BEND`**, not authored: two descriptions of one wall drift the moment the angle changes.
+
+**One mesh, one material, one reflection pass — four triangles instead of two.** §16.14 rejected a second reflector because `MeshReflectorMaterial` renders the whole scene again and a second one doubles §15's most expensive pass. That argument is untouched: the arm through §3.1's opening is a second *quad in the same geometry*, and it is safe out there for the reason the alley is not — through the mouth there is no wall to see under.
 
 **The 4 mm lift is depth-buffer arithmetic, not a look choice.** At the §12.1 near/far of `0.10` / `90.0`, depth precision at the far end of the alley is around a millimetre — the conventional 1 mm separation z-fights at 40 m, exactly where nobody thinks to look for it. 4 mm clears it and stays an order of magnitude under the gutter's own 0.03 depth, so nothing about it is visible.
 
@@ -1663,7 +1671,7 @@ Three things moved it off 35.61:
 
 Against that, this pass adds **§3.7's vending rack** at 256 × 512 / 128 × 256 (+0.67 / +0.17), the only new texture in it. §3.4's two new grain classes cost **zero**: a cloned `Texture` shares its `Source`, so a per-class repeat is another sampler on an image that is already resident.
 
-**Draw calls, measured as the frame maximum across spawn, the north clamp, mid-alley and the mouth: 94 of 140 desktop, 88 of 90 mobile.** Mobile was 95 and had been over this cap for three sections while the lever §3.7 named went unspent. It is spent:
+**Draw calls, measured as the frame maximum across spawn, the north clamp, mid-alley and the mouth: 96 of 140 desktop, 88 of 90 mobile.** §3.6's traffic moves, so the desktop peak varies by a call or two with which vehicles are in frame. Mobile was 95 and had been over this cap for three sections while the lever §3.7 named went unspent. It is spent:
 
 | | |
 |---|---|
@@ -1945,6 +1953,10 @@ All of §3.7. Free choices: every dimension in its table except the vending mach
 **An `open` shutter was showing one slat, and raising it to ten did not fix it.** `⌊0.15 ÷ 0.09⌋` = 1, against a neighbour carrying twenty-seven. The repair — ten slats over a 1.55 m opening — was reported back as *still a hole*, and that is the useful part: **an open shutter shows you the shop, and this world has no shop interiors.** Every dial available (clearance, spill height, roll radius) only tunes how much of the missing room is on display. The state is retired; §3.4 runs 11 closed / 3 ajar, and `ajar` was always carrying the beat `open` was for at 0.62 m of opening. **When two rounds of tuning a value both fail, the value is not the problem.** The roll radius derivation is kept, because it was right on its own terms.
 
 **A standpipe was running down the middle of a doorway and no rule could see it.** `prop-blocks-doorway` tests a footprint against the jambs, and a 0.11 m pipe standing 0.06 m clear of the frame face genuinely does not block anything — it is an occlusion, like the lantern rule, not an obstruction. Moved to the joint between units, which is where a downpipe goes anyway. **Recorded rather than ruled**, because the rule that would catch it is the same one §3.7 already has for lanterns and masts, and a fourth clearance rule over the same wall is a thing to add when it has fired twice rather than once.
+
+**You could see the cross street through the bottom of the showcase wall, and it was a reflection.** Reported as a slot under the wall, and it looked like one: a band of §3.6's lit boards running the wall's whole length at floor level. It is the mirror at grazing incidence — the reflected ray from the floor just in front of the wall passes 3 cm under its foot and reaches the far building. §6.1 has the geometry and the fix.
+
+**Four wrong diagnoses before the right one, and the reason is worth keeping.** Hiding the ground planes changed nothing, so it looked like direct geometry; widening the wall changed nothing, so it looked like a leak past its ends; dropping the wall two metres into the floor changed nothing, so it looked like it was not the wall at all. **All three tests were void: R3F re-applies `visible` on every render, so nothing declarative ever actually got hidden.** The imperatively-created meshes *did* hide, which is why the props and §3.6's panels answered honestly and the ground never did — a false negative that pointed away from the answer for four rounds. Toggling `layers` instead survives the re-render, and the first honest test named the reflector immediately. **A debugging tool that silently does nothing is worse than no tool**, and this one only failed on half the scene.
 
 **And the cones were cordoning off the middle of the road.** They were at `x = −1.30` and `−0.55`, which is the centre line of a carriageway with nothing in it. Cones stand where the thing being coned off is, and here that is the kerb — 0.05 m clear of it, beside the pavement and never on it, which `prop-straddles-kerb` requires anyway. They stay §3.7's honest test of §12.4's resolver: a cone's inner face at 2.79 is still well inside §3's ±3.60 clamp.
 
