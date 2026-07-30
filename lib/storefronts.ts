@@ -13,7 +13,15 @@
 import { NEON_SIGN_LIST } from './signs'
 import { DOORWAY_SURROUND, STOREFRONT, type ColorToken } from './world'
 
-export type ShutterState = 'closed' | 'ajar' | 'open'
+/**
+ * §3.4 — **two states, and there used to be three.**
+ *
+ * `open` is retired. It showed you the shop, and this world has no shop interiors, so what
+ * stood behind a raised shutter was a `void` slab with a lit band at its foot — a hole
+ * beside neighbours carrying twenty-seven slats each. `ajar` carries the same beat at 0.62 m
+ * of opening: a strip of lit floor rather than a room that is not there. See `STOREFRONT.states`.
+ */
+export type ShutterState = 'closed' | 'ajar'
 
 export type StorefrontUnit = {
   /** 0..13, in placement order: west wall north to south, then east. */
@@ -245,7 +253,7 @@ function signColors(total: number): ColorToken[] {
  * The fourteen units, resolved once at module load.
  *
  * Placement runs first and the per-unit properties are dealt afterwards, across both
- * walls at once. Dealing them per wall instead would put every open shutter on one side
+ * walls at once. Dealing them per wall instead would put every ajar shutter on one side
  * whenever the counts did not divide evenly.
  */
 function build(): StorefrontUnit[] {
@@ -253,11 +261,10 @@ function build(): StorefrontUnit[] {
   const placements = [...placeWall('west', random), ...placeWall('east', random)]
   const total = placements.length
 
-  const { closed, ajar, open } = STOREFRONT.states
+  const { closed, ajar } = STOREFRONT.states
   const states: ShutterState[] = [
     ...Array<ShutterState>(closed).fill('closed'),
     ...Array<ShutterState>(ajar).fill('ajar'),
-    ...Array<ShutterState>(open).fill('open'),
   ].slice(0, total)
   const dealtStates = shuffle(states, random)
 
@@ -382,9 +389,7 @@ export function apertureZ(unit: StorefrontUnit): number {
 /** How far the shutter hangs below the aperture head, by state. */
 export function shutterDrop(unit: StorefrontUnit): number {
   const full = STOREFRONT.aperture.headY - STOREFRONT.aperture.baseY
-  if (unit.state === 'closed') return full
-  if (unit.state === 'ajar') return full - STOREFRONT.ajarClearance
-  return full - STOREFRONT.openClearance
+  return unit.state === 'ajar' ? full - STOREFRONT.ajarClearance : full
 }
 
 /**

@@ -362,7 +362,7 @@ The §3.2 inventory line, built out: **14 shuttered storefronts, 7 per wall, 3 s
 | Plinth | 0.10 high × 0.20 deep, `concrete`, **standing on §3's kerb at `y ∈ [0.12, 0.22]`** | free — the base height is not, see below |
 | Aperture | full unit width less 0.30 each side, `y ∈ [0.10, 2.55]`, recessed **0.35** | free |
 | Shutter | slats **0.09** pitch, instanced boxes — see below | free |
-| Shutter roll | cylinder at the aperture head, r **0.16 empty → 0.19 fully wound** — derived, see below | free |
+| Shutter roll | cylinder at the aperture head, r **0.16 empty → 0.17 ajar** — derived from what is wound on it | free |
 | Doorway | **0.90 × 2.05**, recessed **0.45**, at one end of the unit, side alternating | 2.05 is an ordinary door — see §16.12 on where the number came from |
 | Doorway jambs | **0.12** wide, flush to the opening, both sides, plus a lintel over | free |
 | **Doorway surround** | **1.14** — `0.90 + 2 × 0.12`. **Derived, and it is what the doorway occupies** | below |
@@ -390,13 +390,15 @@ The whole assembly — panel, both jambs, lintel — now ends flush on the pier'
 
 **And the plinth was invisible — for four sections, in every screenshot, without anyone noticing.** It is 0.10 high and it sat at `y ∈ [0, 0.10]`; §3's kerb is 0.12 high and runs under the whole wall. **The plinth was entirely inside the kerb.** This section has described *"a step at the base of the whole unit, sitting on the kerb"* since it was written, and the code put it *in* the kerb, and the difference is 2 cm and a preposition. Its base is now the kerb top, which is also the surface every §3.7 prop now stands on — one height, stated once, read by both.
 
-**States: 9 closed, 3 ajar, 2 open.** Ajar is the shutter down to 0.62 with light under it, which is the shape a half-shut alley shop actually makes; open is the shutter rolled up. Both ajar and open get a **spill plane** recessed in the aperture. Nine of fourteen shut, and nobody in any of them — §1 says nobody else is here, and the count is what keeps that true.
+**States: 11 closed, 3 ajar. There is no `open`.** Ajar is the shutter down to 0.62 with light under it, which is the shape a half-shut alley shop actually makes, and it gets a **spill plane** recessed in the aperture. Eleven of fourteen shut, and nobody in any of them — §1 says nobody else is here, and the count is what keeps that true.
 
-**Open was 2.30 of clearance, which is one slat, and one slat is not a shutter.** `drop = 2.45 − clearance`, so at 2.30 the curtain was 0.15 m — `⌊0.15 ÷ 0.09⌋` = **one**. This section has said *rolled up to the head, but never fully gone* since it was written and what shipped was fully gone: a 2.55 × 2.30 flat panel of `void` with a 0.55 spill band at the bottom and nothing above it, next to a neighbour carrying twenty-seven slats. It read as a hole somebody forgot to build.
+**It was 9 / 3 / 2, and the two open units were a mistake this section made twice.** The first version left 2.30 m of clearance, which is `⌊0.15 ÷ 0.09⌋` = **one slat** — a 2.55 × 2.30 flat panel of `void` with a `sodium` band at its foot, standing next to neighbours carrying twenty-seven slats each. Raising the curtain to ten slats made it a smaller hole.
 
-**1.55 leaves 0.90 m of curtain — ten slats — over a 1.55 m opening**, which is still two and a half times `ajarClearance` and unmistakably a different state. **The spill stays capped at 0.55** and that cap is not up for revision: this section's reason for it is that 2.30 m of lit `sodium` beat every content surface in the alley, and it still would.
+**The state was writing a cheque this world cannot cash.** An open shutter shows you *the shop*, and there are no shop interiors here: §3.4's vocabulary is boxes and cylinders, and a room behind a raised shutter is neither. Every value that could be tuned — clearance, spill height, roll radius — tunes *how much of the missing room shows*. The honest move is to stop writing the cheque.
 
-**And the roll grows with what is wound onto it, which is the other half of reading as open.** Every drum in the alley was 0.16 whatever its state, so a shut shutter and an open one had identical heads — and an open one has 1.55 m of steel up there that existed nowhere in the world. Spiral winding conserves area, so `r = √(r₀² + wound × slatDepth ÷ π)`: a closed unit winds nothing and stays at **0.16**, a fully open one reaches **0.19**. Small, derived, and the difference between a drum and a dowel. **The two things that say a shutter went up are the gap and the thicker head**, and only one of them was built.
+**`ajar` already carries the whole beat `open` was for.** This section's own sentence is *light under it is the whole point*, and 0.62 m of opening is a strip of lit floor rather than a room that is not there. **Nothing is lost in light**: the spill is on every non-closed unit either way, and three of them still have it. The state comes back the day this world has interiors, by adding one number.
+
+**One thing from the failed repair is kept, because it is right on its own: the roll grows with what is wound onto it.** Every drum in the alley was 0.16 m whatever its state, so a shut shutter and a half-shut one had identical heads. Spiral winding conserves area, so `r = √(r₀² + wound × slatDepth ÷ π)`: a closed unit winds nothing and stays at **0.16** and an ajar one reaches **0.17**. Small, derived, and the difference between a drum and a dowel.
 
 **Slats are geometry, not the §8 normal map.** §8 gives the roller shutter `normalRepeat` 24 × 1, and that value cannot survive this section: unit widths run 3.60 to 6.20, a material's repeat is shared across every instance using it, so one repeat across five widths puts the rib pitch anywhere from 0.15 to 0.26 m — a corrugation that visibly coarsens as you walk. Instanced slat boxes at a fixed **0.09** world pitch hold the same pitch on every unit and on every shutter height, and cost one draw call per variant. The `normalRepeat` figure stays in §8 for surfaces that are one size.
 
@@ -770,7 +772,7 @@ The rest of the §3.2 inventory that stands on the ground: **4 dead vending mach
 
 | Measured | | |
 |---|---|---|
-| Desktop peak | **95** of §15's 140 | at the north clamp, whole alley in frame |
+| Desktop peak | **94** of §15's 140 | at the north clamp, whole alley in frame |
 | **Mobile peak** | **88 of 90** | at spawn |
 | Triangles | 134 k desktop / 113 k mobile | of 350 k / 220 k — not close |
 | Collision boxes | 38 prop boxes of 66 in the world | see below |
@@ -1661,7 +1663,7 @@ Three things moved it off 35.61:
 
 Against that, this pass adds **§3.7's vending rack** at 256 × 512 / 128 × 256 (+0.67 / +0.17), the only new texture in it. §3.4's two new grain classes cost **zero**: a cloned `Texture` shares its `Source`, so a per-class repeat is another sampler on an image that is already resident.
 
-**Draw calls, measured as the frame maximum across spawn, the north clamp, mid-alley and the mouth: 95 of 140 desktop, 88 of 90 mobile.** Mobile was 95 and had been over this cap for three sections while the lever §3.7 named went unspent. It is spent:
+**Draw calls, measured as the frame maximum across spawn, the north clamp, mid-alley and the mouth: 94 of 140 desktop, 88 of 90 mobile.** Mobile was 95 and had been over this cap for three sections while the lever §3.7 named went unspent. It is spent:
 
 | | |
 |---|---|
@@ -1940,7 +1942,7 @@ All of §3.7. Free choices: every dimension in its table except the vending mach
 
 **The street trim is one factor and not eight edits.** §7.1's 150 / 130 / 95 / 115 / 80 is a decision about which signs are the bright ones; *the street is 10% too bright* is a decision about exposure. Multiplying at the point the intensity resolves keeps those two separable — the same argument §4.1 made for scaling five palette tokens rather than re-picking them. Measured, −10% on the input is **−13% on the wall**, because these surfaces sit where ACES is still close to linear.
 
-**An `open` shutter was showing one slat.** `⌊0.15 ÷ 0.09⌋` = 1, against a neighbour carrying twenty-seven, and §3.4 has said *rolled up to the head, but never fully gone* since it was written. The other half of the same fault: every drum in the alley was 0.16 m whatever its state, so the 1.55 m of steel an open shutter has wound up there existed nowhere. Both fixed, and the roll's radius is now derived from what is on it. **The two things that say a shutter went up are the gap and the thicker head.**
+**An `open` shutter was showing one slat, and raising it to ten did not fix it.** `⌊0.15 ÷ 0.09⌋` = 1, against a neighbour carrying twenty-seven. The repair — ten slats over a 1.55 m opening — was reported back as *still a hole*, and that is the useful part: **an open shutter shows you the shop, and this world has no shop interiors.** Every dial available (clearance, spill height, roll radius) only tunes how much of the missing room is on display. The state is retired; §3.4 runs 11 closed / 3 ajar, and `ajar` was always carrying the beat `open` was for at 0.62 m of opening. **When two rounds of tuning a value both fail, the value is not the problem.** The roll radius derivation is kept, because it was right on its own terms.
 
 **A standpipe was running down the middle of a doorway and no rule could see it.** `prop-blocks-doorway` tests a footprint against the jambs, and a 0.11 m pipe standing 0.06 m clear of the frame face genuinely does not block anything — it is an occlusion, like the lantern rule, not an obstruction. Moved to the joint between units, which is where a downpipe goes anyway. **Recorded rather than ruled**, because the rule that would catch it is the same one §3.7 already has for lanterns and masts, and a fourth clearance rule over the same wall is a thing to add when it has fired twice rather than once.
 

@@ -608,26 +608,27 @@ export const STOREFRONT = {
     clearOfBendZ: 17.0,
   },
   serviceGap: 1.8,
-  /** §3.4 — nine shut and nobody in any of them. §1: nobody else is here. */
-  states: { closed: 9, ajar: 3, open: 2 },
+  /**
+   * §3.4 — **eleven shut, three ajar, and no `open` state at all.** §1: nobody else is here.
+   *
+   * It was 9 / 3 / 2, and the two open units were a mistake this section made twice. An open
+   * shutter shows you *the shop*, and this world has no shop interiors: §3.4's vocabulary is
+   * boxes and cylinders, so what stood behind a raised shutter was a `void` slab with a
+   * `sodium` band at its foot — a 2.55 × 2.30 hole beside neighbours carrying twenty-seven
+   * slats each. Raising the curtain to ten slats made it a smaller hole.
+   *
+   * **The state was writing a cheque the world cannot cash**, and the honest move is to stop
+   * writing it rather than to keep tuning how much of the hole shows. `ajar` already carries
+   * the whole beat `open` was for — §3.4's own sentence is *light under it is the whole
+   * point* — at 0.62 m of opening, which is a strip of lit floor rather than a room that
+   * isn't there. Nothing is lost in light: the spill is on every non-closed unit either way,
+   * and three of them still have it.
+   *
+   * It comes back the day this world has interiors, by adding one number.
+   */
+  states: { closed: 11, ajar: 3 },
   /** How far the shutter still hangs when ajar — light under it is the whole point. */
   ajarClearance: 0.62,
-  /**
-   * §3.4 — how much opening an *open* shutter leaves. **2.30 → 1.55, because 2.30 left one
-   * slat and one slat is not a shutter.**
-   *
-   * `drop = 2.45 − clearance`, and at 2.30 that is 0.15 m — `floor(0.15 ÷ 0.09)` = **one**
-   * slat. This section has said *rolled up to the head, but never fully gone* since it was
-   * written, and what shipped was fully gone: a 2.55 × 2.30 flat panel of `void` with a
-   * 0.55 spill band at the bottom and nothing above it. Next to a neighbour carrying
-   * twenty-seven slats it reads as a hole somebody forgot to build.
-   *
-   * 1.55 leaves **0.90 m of curtain — ten slats** — over a 1.55 m opening, which is still
-   * two and a half times `ajarClearance`'s 0.62 and unmistakably a different state. The
-   * spill stays capped at `spillBandHeight`: this section's reason for that cap is that
-   * 2.30 m of lit `sodium` beat every content surface in the alley, and it still would.
-   */
-  openClearance: 1.55,
   /** §3.4 — 7 → 8. See `litSignCount` in §16.16: the west wall's re-roll unlit a box. */
   litSignCount: 8,
   /** §8.1 — 1.10 is over the knee, 0.85 is under it. Both placed against §17. */
