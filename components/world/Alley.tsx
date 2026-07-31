@@ -10,7 +10,7 @@ import {
 } from 'three'
 import { resolveTier } from '@/lib/device'
 import { grainParams } from '@/lib/textures/surfaceGrain'
-import { BEND, BEND_PLINTH, LAYOUT, MATERIALS, PALETTE } from '@/lib/world'
+import { BEND, BEND_KERB, BEND_PLINTH, LAYOUT, MATERIALS, PALETTE } from '@/lib/world'
 
 /**
  * §3 — the alley envelope: facades, end walls, kerbs.
@@ -109,14 +109,13 @@ const endWallHeight = facadeHeight.west
 const endWallWidth = alley.width + wallThickness * 2
 
 /**
- * §3 / §3.1 — the two kerbs and the bend's plinth, as one instanced set.
+ * §3 / §3.1 — the two side kerbs, the bend's kerb and the bend's plinth, as one instanced
+ * set. Built once at module scope: none of it moves and none of it depends on the tier.
  *
- * Built once at module scope: none of it moves and none of it depends on the tier.
- *
- * **The plinth stands where §6.1's reflector stops**, its depth read from the same constant,
- * so the gap between mirror and wall is filled by a solid step rather than by floor. That
- * gap had been showing the base plane — brighter than the mirror beside it, a lit sliver the
- * length of the wall, reported as a slot under it. There is no ground there to see now.
+ * **The pavement turns the corner.** §3's kerbs stopped dead at `z = ±23`, so the bend —
+ * the one wall a visitor stands and *looks* at — had no pavement, while every other wall in
+ * the alley had one. That was also what §6.1's reflector had nothing to stop against: the
+ * mirror now stops where the pavement starts, which is where it stops on the side walls.
  */
 const KERB_MATRICES = (() => {
   const at = new Object3D()
@@ -130,20 +129,23 @@ const KERB_MATRICES = (() => {
     matrices.push(at.matrix.clone())
   }
 
-  /* Centred on the bend's *face* pushed half its own depth into the alley, and turned with
-     the wall — the same frame §2.1's board mounts in, read from `BEND` rather than
-     re-derived, because two descriptions of one wall drift the moment the angle changes. */
+  /* The bend's kerb and its plinth, both centred on the bend's *face* pushed half their own
+     depth into the alley and turned with the wall — the same frame §2.1's board mounts in,
+     read from `BEND` rather than re-derived, because two descriptions of one wall drift the
+     moment the angle changes. */
   const [fx, fz] = BEND.faceCentre
   const [ix, iz] = BEND.inward
-  at.position.set(
-    fx + ix * (BEND_PLINTH.depth / 2),
-    BEND_PLINTH.height / 2,
-    fz + iz * (BEND_PLINTH.depth / 2),
-  )
-  at.rotation.set(0, BEND.angleRad, 0)
-  at.scale.set(BEND.length, BEND_PLINTH.height, BEND_PLINTH.depth)
-  at.updateMatrix()
-  matrices.push(at.matrix.clone())
+
+  const alongBend = (depth: number, height: number, baseY: number) => {
+    at.position.set(fx + ix * (depth / 2), baseY + height / 2, fz + iz * (depth / 2))
+    at.rotation.set(0, BEND.angleRad, 0)
+    at.scale.set(BEND.length, height, depth)
+    at.updateMatrix()
+    matrices.push(at.matrix.clone())
+  }
+
+  alongBend(BEND_KERB.depth, BEND_KERB.height, 0)
+  alongBend(BEND_PLINTH.depth, BEND_PLINTH.height, BEND_PLINTH.baseY)
 
   return matrices
 })()
@@ -202,10 +204,10 @@ export default function Alley() {
         scale={[BEND.length, endWallHeight, wallThickness]}
       />
 
-      {/* §3 — the two kerbs, and §3.1's bend plinth. **One `InstancedMesh` for all three**:
-          they are the same box in the same `concrete`, and the only thing that had ever kept
-          the kerbs apart was being written as two elements. Three instances therefore cost
-          one draw call where two used to cost two. */}
+      {/* §3 — the two side kerbs, §3.1's bend kerb and its plinth. **One `InstancedMesh` for
+          all four**: they are the same box in the same `concrete`, and the only thing that had
+          ever kept the kerbs apart was being written as two elements. Four instances therefore
+          cost one draw call where two used to cost two. */}
       <instancedMesh ref={attachKerbs} args={[UNIT_BOX, material.kerb, KERB_MATRICES.length]} />
     </>
   )

@@ -702,25 +702,43 @@ export const STOREFRONT = {
 export const DOORWAY_SURROUND = STOREFRONT.doorway.width + 2 * STOREFRONT.doorway.jambWidth
 
 /**
- * §3.1 — the bend wall's plinth, and it is doing two jobs.
+ * §3 / §3.1 — **the pavement turns the corner.**
  *
- * The first is the one §3.4 already gives every unit on the side walls: *a step at the base
- * of the whole unit*. §3.1 calls the bend **a return wall of shuttered doors**, so it is the
- * same kind of wall and it was the only one in the alley standing straight on the floor.
+ * §3's kerbs run down both side walls and stopped dead at `z = ±23`, so the bend — the one
+ * wall a visitor stands and looks at — had no pavement at all. Everything else in the alley
+ * stands on one: §3.4's fourteen plinths, §3.7's twenty props, both facades.
  *
- * The second is why it is here now. §6.1's reflector stops short of this wall, and the
- * matte floor that was left in the gap is **brighter than the mirror beside it** — measured,
- * a thin lit sliver running the wall's whole length that reads as a slot under it, which is
- * what it was reported as twice. The plinth is a solid box occupying exactly that gap:
- * `depth` is what §6.1's cut reads, so **there is no floor between them to be seen at all**
- * — not a darker floor, no floor.
+ * **It is also what closes §6.1's gap, and it is the third attempt at that.** A planar
+ * mirror at grazing incidence reflects things behind the wall (§6.1), so the reflective
+ * floor has to stop short of it. Stopping it left bare base plane, which came out *brighter*
+ * than the mirror — a lit sliver reading as a slot. Filling that with a 0.40 m plinth fixed
+ * it close up and left a bright band at middle distance, because a 0.40 m strip at the foot
+ * of a 14 m wall is not a pavement, it is a seam.
  *
- * **The height matches §3.4's plinths on the side walls**, `kerb + plinth`, so the step runs
- * round the alley at one level instead of the bend having a skirting of its own.
+ * **A kerb at §3's own width is not a seam; it is the pavement, and the eye already knows
+ * what it is** from forty metres of it down both sides. `depth` is `LAYOUT.kerb.width`, so
+ * the two cannot be different numbers, and §6.1's cut reads this — the mirror stops where
+ * the pavement starts, which is where it stops on the side walls too.
+ *
+ * **The 2 mm.** The bend kerb overlaps the side kerbs where they meet, and two boxes with
+ * tops at exactly the same height z-fight along the whole join. Two millimetres of drop puts
+ * the side kerb on top: below the ~1 mm depth precision this world has at range, and four
+ * hundred times smaller than the step it is part of.
+ */
+export const BEND_KERB = {
+  depth: LAYOUT.kerb.width,
+  height: LAYOUT.kerb.height - 0.002,
+} as const
+
+/**
+ * §3.1 — the bend wall's plinth, standing on `BEND_KERB` exactly as §3.4's fourteen stand
+ * on §3's side kerbs. Same depth, same height, same base: the step runs round the alley at
+ * one level rather than the bend having a skirting of its own.
  */
 export const BEND_PLINTH = {
-  depth: 0.4,
-  height: LAYOUT.kerb.height + STOREFRONT.plinth.height,
+  depth: STOREFRONT.plinth.depth,
+  height: STOREFRONT.plinth.height,
+  baseY: LAYOUT.kerb.height,
 } as const
 
 /**
@@ -1906,14 +1924,25 @@ export const REFLECTOR_STRIP = {
    * alley** — a straight cut would leave 0.20 m of matte at the wall's east end and 2.25 m
    * at its west, and that wedge is exactly the shape a mistake makes.
    *
-   * **It is §3.1's plinth depth, and that is the whole of it.** The first version left the
-   * base plane showing in the gap, on the argument that dry ground at the foot of a wall is
-   * what §6.2 describes anyway. Measured, the base plane there comes out **brighter** than
-   * the mirror beside it — a lit sliver running the wall's length, reported as a slot under
-   * the wall for the second time. Reading the plinth's depth means the gap is filled by a
-   * solid step rather than by floor: **there is no ground between them left to be seen.**
+   * **It is §3.1's kerb depth, and it took three goes to get there.** Leaving bare base
+   * plane in the gap was worse than the leak — `asphalt` at the mirror's own roughness comes
+   * out *brighter* than the mirror, a lit sliver reading as the same slot. Filling it with a
+   * 0.40 m plinth fixed that close up and left a bright band at middle distance, because a
+   * 0.40 m strip at the foot of a 14 m wall is not a pavement, it is a seam.
+   *
+   * At `LAYOUT.kerb.width` it is the pavement, the same one running down both side walls,
+   * and **the mirror stops where the pavement starts — which is exactly where it stops on
+   * the side walls.** The rule was already in the world; the bend was the only wall it had
+   * never been applied to.
+   *
+   * **Less 5 cm, so the mirror runs *under* the kerb rather than butting against it.** Cut
+   * flush, the reflector's edge and the kerb's inner face are the same line in plan, and one
+   * line is where floating-point disagreement puts a hairline of base plane at grazing
+   * incidence — visible on some frames and not others, which is the worst kind. Tucked, the
+   * overlap is hidden by a 0.118 m step from any eye above it, and reflective floor that
+   * cannot be seen cannot leak.
    */
-  bendClearance: BEND_PLINTH.depth,
+  bendClearance: BEND_KERB.depth - 0.05,
   /**
    * The arm's west edge, just past the bend wall's east corner at `x = 1.309`, so no
    * reflective floor is ever in the wall's shadow. §10's carriageway ripple region reads
