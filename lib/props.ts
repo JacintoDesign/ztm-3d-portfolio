@@ -25,7 +25,7 @@
 import type { Box } from './collision'
 import { NEON_SIGN_LIST } from './signs'
 import { SIGN_CLEARANCE, STOREFRONT_UNITS, doorwayZ } from './storefronts'
-import { BOUNDS, LAYOUT, PROPS, STOREFRONT, type ColorToken } from './world'
+import { BIO_STATION, BOUNDS, LAYOUT, PROPS, STOREFRONT, type ColorToken } from './world'
 
 /* ────────────────────────────────────────────────────────────────────────────
  * Shapes
@@ -57,6 +57,8 @@ export type SurfaceKey =
   | 'vendingFront'
   | 'cartLamp'
   | 'lanternGlow'
+  /** §2.2's noren. `matte` in §4's `lantern` — cloth, not paper, so it does not glow. */
+  | 'noren'
 
 export type Part = {
   primitive: PrimitiveKey
@@ -235,7 +237,10 @@ function vendingMachineParts(): Part[] {
 
 /** §3.7 — the one thing here that lights up, at §8.1's open-shutter rung. */
 function foodCartParts(): Part[] {
-  const { wheel, deck, worktop, post, canopy, lamp } = PROPS.foodCart
+  /* No `lamp`: §2.2 replaced §3.7's single canopy slab with five panels, which are sized and
+     placed by `BIO_STATION.canopyPanels` rather than by `PROPS.foodCart.lamp`. The token
+     stays in `PROPS` because `Props.tsx`'s `cartLamp` material family reads its colour. */
+  const { wheel, deck, worktop, post, canopy } = PROPS.foodCart
 
   const deckHeight = deck.y[1] - deck.y[0]
   const postHeight = post.y[1] - post.y[0]
@@ -246,22 +251,187 @@ function foodCartParts(): Part[] {
     box('shutter', [0, deck.y[0] + deckHeight / 2, 0], [deck.length, deckHeight, deck.depth]),
     box('metalDark', [0, deck.y[1] + worktop.thickness / 2, 0], [worktop.length, worktop.thickness, worktop.depth]),
     box('shutter', [0, canopy.thickness / 2 + post.y[1], 0], [canopy.length, canopy.thickness, canopy.depth]),
-    /* Faces down, under the canopy. §3.4's rule holds here too: the accent lives in the
-       emissive term and the diffuse stays `void`, or the panel reads as orange paint. */
-    box('cartLamp', [0, lamp.y, 0], [lamp.length, 0.02, lamp.depth]),
   ]
 
-  for (const sx of [-1, 1] as const) {
-    /* Rotated about **X**, not Z: a cylinder's axis is +Y, and X takes it to +Z — the
-       cart's own width, which is where an axle goes. About Z it would lie along the
-       cart's length instead, which is a roller, not a wheel. */
+  /**
+   * §2.2's detail pass — everything below is **free**.
+   *
+   * `Props.tsx` bakes this section into one merged geometry per material family, so a part
+   * that reuses a token already in the cart costs vertices and **no draw call**. That is the
+   * whole reason a detail pass on this object was affordable: the alternative — modelling it
+   * in `Stations.tsx` as its own meshes — would have spent the two calls §15 has left on
+   * mobile before the mailbox bank got any.
+   *
+   * The cart's *textured* lit faces (the sign band and the stats board) are not here. They
+   * need a canvas, and they share one atlas with §2.3's labels in `Stations.tsx` so that
+   * every lit label in both stations is one draw call between them.
+   */
+
+  /**
+   * §2.2 — five lit panels across the canopy underside, replacing §3.7's single 1.7 × 0.7
+   * slab. Same total lit area, same `cartLamp` token, same zero draw calls — but a row of
+   * separate panels reads as *lamps in a canopy* where one slab read as a glowing ceiling,
+   * which is the difference between the reference and what was there.
+   *
+   * §3.4's rule holds: the accent lives in the emissive term and the diffuse stays `void`,
+   * or the panels read as orange paint.
+   */
+  {
+    const { count, width, depth, y } = BIO_STATION.canopyPanels
+    const pitch = canopy.length / count
+    for (let i = 0; i < count; i++) {
+      parts.push(box('cartLamp', [(i - (count - 1) / 2) * pitch, y, 0], [width, 0.02, depth]))
+    }
+  }
+
+  /* An apron below the worktop, so the deck reads as a counter with a lip rather than as a
+     box. Stands proud — §3.7's own rule after the vending panels z-fought. */
+  parts.push(
+    box('metalDark', [0, deck.y[1] - 0.09, deck.depth / 2 + 0.015], [deck.length + 0.04, 0.06, 0.03]),
+  )
+
+  /**
+   * §2.2's intricacy pass. **Every part below reuses a token the cart already had, so all of
+   * it costs vertices and no draw call** — which is the condition that makes detail worth
+   * adding at all. §3.7's merge-by-material is what pays for it.
+   */
+
+  /* Rafters under the canopy, running front-to-back. A canopy with no framing is a slab
+     floating on four posts; four beams are what make it a roof. */
+  {
+    const rafterCount = 4
+    const pitch = canopy.length / (rafterCount + 1)
+    for (let i = 1; i <= rafterCount; i++) {
+      parts.push(
+        box(
+          'metalDark',
+          [(i - (rafterCount + 1) / 2) * pitch, post.y[1] - 0.03, 0],
+          [0.05, 0.05, canopy.depth * 0.92],
+        ),
+      )
+    }
+  }
+
+  /* The fascia the sign band mounts on, and a lip under it. `Stations.tsx` puts the lit
+     ラーメン quad 12 mm in front of this — the band needs something to be *on*. */
+  parts.push(
+    box('shutter', [0, 2.02, canopy.depth / 2 - 0.02], [canopy.length, 0.3, 0.05]),
+    box('metalDark', [0, 1.86, canopy.depth / 2 - 0.02], [canopy.length, 0.03, 0.07]),
+  )
+
+  /**
+   * Noren — four short curtain panels hanging from the canopy, at the ends only.
+   *
+   * **The middle stays open, and that is the whole gesture.** A yatai's noren is hung out
+   * when the stall is serving and parted where the customer stands; a full curtain would
+   * close the one object in this world that is meant to read as *somebody is here*.
+   */
+  {
+    const panels = [-0.92, -0.68, 0.68, 0.92]
+    for (const x of panels) {
+      parts.push(box('noren', [x, 1.6, canopy.depth / 2 - 0.08], [0.2, 0.42, 0.012]))
+    }
+  }
+
+  /**
+   * Menu slats on the cart's back panel, above the worktop — wooden tags, not text. §2.4
+   * requires that: they are shape, and the cart's only words are §11.4's kana on the band.
+   *
+   * **`crateTimber`, and `signWhite` was measured wrong.** At 62% reflectance directly under
+   * light 4 they came out as three glowing white bars — fluorescent tubes, not menu tags. The
+   * fault is §4.1's, again: a token is *what fraction of light a surface returns*, and the
+   * brightest one in the palette put under the brightest light in the alley returns all of it.
+   */
+  for (const [i, x] of [-0.42, -0.2, 0.02].entries()) {
     parts.push(
-      cyl('void', [sx * (deck.length / 2 - 0.28), wheel.radius, 0], [
-        wheel.radius * 2,
-        wheel.width,
-        wheel.radius * 2,
-      ], [Math.PI / 2, 0, 0]),
+      box('crateTimber', [x, 1.52 + (i % 2) * 0.04, -deck.depth / 2 + 0.03], [0.13, 0.34, 0.012]),
     )
+  }
+
+  /* Two bowls and a chopstick pot beside the urn. The counter clutter is the difference
+     between a stall that is open and a stall that is a shape. */
+  {
+    const topY = deck.y[1] + worktop.thickness
+    parts.push(
+      cyl('signWhite', [-0.2, topY + 0.035, 0.08], [0.15, 0.07, 0.15]),
+      cyl('signWhite', [-0.04, topY + 0.035, -0.04], [0.15, 0.07, 0.15]),
+      cyl('metalDark', [0.62, topY + 0.07, -0.1], [0.07, 0.14, 0.07]),
+    )
+  }
+
+  /**
+   * **Two wheels at one end, two legs at the other — which is what a yatai is.**
+   *
+   * It had one wheel at each end, both on the centreline, and it did not balance because it
+   * *could* not: two points on a line hold nothing up. A stall cart is a barrow — an axle with
+   * a pair of wheels at one end so it can be tipped and pushed, and two legs at the other that
+   * it stands on when it is parked and serving. This one is parked.
+   *
+   * The wheel pair is on the **west** end, so a visitor arriving from spawn walks up to the
+   * legs first and the wheels read as the far end of a thing that was pushed here.
+   */
+  {
+    const endX = deck.length / 2 - 0.28
+    const trackZ = deck.depth / 2 - 0.10
+
+    for (const sz of [-1, 1] as const) {
+      /* Axis along local Z, so the wheels roll along the cart's length — the direction it
+         would be pushed down the alley. A cylinder's axis is `+Y`; `X` by a quarter turn
+         takes it to `+Z`. */
+      parts.push(
+        cyl('void', [-endX, wheel.radius, sz * trackZ], [wheel.radius * 2, wheel.width, wheel.radius * 2], [
+          Math.PI / 2,
+          0,
+          0,
+        ]),
+        cyl('metalDark', [-endX, wheel.radius, sz * trackZ], [0.09, wheel.width + 0.012, 0.09], [
+          Math.PI / 2,
+          0,
+          0,
+        ]),
+      )
+
+      /* A leg, its foot, and a brace back up to the deck. Legs on their own read as pins. */
+      parts.push(
+        cyl('metalDark', [endX, deck.y[0] / 2, sz * trackZ], [0.06, deck.y[0], 0.06]),
+        cyl('void', [endX, 0.012, sz * trackZ], [0.12, 0.024, 0.12]),
+      )
+    }
+
+    /* The axle between the wheels, and a cross-brace between the legs. */
+    parts.push(
+      cyl('metalDark', [-endX, wheel.radius, 0], [0.05, trackZ * 2, 0.05], [Math.PI / 2, 0, 0]),
+      box('metalDark', [endX, 0.1, 0], [0.04, 0.04, trackZ * 2]),
+    )
+  }
+
+  /* A base plate under each post — the same trick §2.1 used for the bolted sign: a fixing is
+     what stops a primitive reading as a primitive. */
+  for (const sx of [-1, 1] as const) {
+    for (const sz of [-1, 1] as const) {
+      parts.push(
+        box('metalDark', [sx * postInsetX, post.y[0] + 0.015, sz * postInsetZ], [0.09, 0.03, 0.09]),
+      )
+    }
+  }
+
+  /* The urn and two cups on the worktop — the counter clutter that says somebody is here.
+     The reference's single cue, and it costs four cylinders inside an existing bucket. */
+  {
+    const topY = deck.y[1] + worktop.thickness
+    const { radius, height } = BIO_STATION.urn
+    parts.push(cyl('metalDark', [-0.55, topY + height / 2, -0.06], [radius * 2, height, radius * 2]))
+    for (const [cx, cz] of [
+      [0.28, 0.1],
+      [0.44, -0.02],
+    ] as const) {
+      parts.push(cyl('shutter', [cx, topY + 0.05, cz], [0.09, 0.1, 0.09]))
+    }
+  }
+
+  /* The four canopy posts. The wheels used to be built in this loop, one at each end on the
+     centreline — see the undercarriage above for why they are not. */
+  for (const sx of [-1, 1] as const) {
     for (const sz of [-1, 1] as const) {
       parts.push(
         cyl('metalDark', [sx * postInsetX, post.y[0] + postHeight / 2, sz * postInsetZ], [
@@ -553,16 +723,28 @@ type WallPlacement = { side: Side; z: number }
 const VENDING: readonly WallPlacement[] = [
   { side: 'east', z: -17.6 },
   { side: 'west', z: -13.6 },
-  { side: 'east', z: 2.4 },
+  /**
+   * **2.4 → 6.0, into the slot §3.4 reserved and §2.2 stopped needing.** The east wall has
+   * had a 2.52 m gap at `z ∈ [5.10, 6.90]` since §3.4, held open for a vending machine that
+   * was going to be the bio station. §2.2 moved the bio station to the food cart, which left
+   * a reservation with nothing to reserve — a hole in the shopfront run with no cause a
+   * visitor could see. Filling it with a machine that was already on this wall costs one
+   * number and no wall regeneration.
+   */
+  { side: 'east', z: 6.0 },
   { side: 'west', z: 7.4 },
 ]
 
 /**
- * §3.7 — east wall at the far end, past §2.3's payphone.
+ * §2.2 / §3.7 — east wall at the far end, four metres from §2.1's board.
  *
- * The last thing before the bend and the first warm thing in the alley that is not a
- * destination. §7's lantern light at `(−3.4, 3.4, +19)` lays its red pool directly
- * opposite, which is the contrast this placement is for.
+ * **This placement is now the bio station**, and it did not move to become one: §3.7 put a
+ * lit cart here as scenery, and §2.2 later noticed that the object best fitting the role had
+ * been standing in the alley, lit and unused, for four sections. The geometry, the position
+ * and the collision box stay here; §2.2 reads them rather than restating them.
+ *
+ * §7's lantern light at `(−3.4, 3.4, +19)` lays its red pool directly opposite, which is the
+ * contrast this placement was always for.
  */
 const CART: WallPlacement = { side: 'east', z: 19.0 }
 
@@ -1079,15 +1261,20 @@ export function audit(): AuditFinding[] {
     }
   }
 
+  /* §2.4 — nothing in the surroundings may stand in the air in front of a content surface.
+     **Read from `contentSlots`, not `reserved`**: the east wall still has a slot the layout
+     was generated around, but §2.2 moved the bio station to the food cart and nothing is
+     going in it, so a machine standing there is filling a hole rather than blocking a
+     surface. A rule that cannot tell those apart forbids the fix for the gap it caused. */
   for (const prop of STREET_PROPS) {
     if (prop.kind === 'guardrail') continue
     const side: Side = prop.position[0] < 0 ? 'west' : 'east'
     const box = boxFor(prop)
-    for (const [lo, hi] of STOREFRONT.reserved[side]) {
+    for (const [lo, hi] of STOREFRONT.contentSlots[side]) {
       if (box.minZ < hi && box.maxZ > lo) {
         findings.push({
-          rule: 'prop-in-reserved-slot',
-          detail: `${prop.key} enters the §2 slot [${lo}, ${hi}] on the ${side} wall`,
+          rule: 'prop-in-content-slot',
+          detail: `${prop.key} enters §2's slot [${lo}, ${hi}] on the ${side} wall`,
         })
       }
     }
@@ -1319,4 +1506,8 @@ export const PROP_TOKENS: Readonly<Record<SurfaceKey, ColorToken>> = {
   vendingFront: 'signWhite',
   cartLamp: PROPS.foodCart.lamp.color,
   lanternGlow: PROPS.paperLantern.color,
+  /* §2.2 — the same red as §3.5's lanterns, and deliberately *not* the same surface. A noren
+     is dyed cotton hanging in front of a lamp; `lanternGlow` emits, this reflects. Sharing
+     the token and splitting the family is the distinction §3.7 already draws for `binDrum`. */
+  noren: PROPS.paperLantern.color,
 }

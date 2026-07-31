@@ -13,11 +13,16 @@ import { CANVAS_PAINTER, PALETTE, PROPS, type Tier } from '@/lib/world'
  * four.
  *
  * **`map` only. There is no emissive term anywhere on this and that is the whole design.**
- * §3.7 says the bio station is the one lit machine in the alley and lighting the rest costs
- * it its meaning; that rule stands. What was wrong was never the light — it was the
- * **albedo**. The panel was a `void` slab at 0.4% reflectance, which is not *an unlit drinks
- * machine*, it is a hole cut in a machine, and §4.1 already found and named that exact fault
- * at wall scale: a hex in §4 is an albedo, not a pixel.
+ * What was wrong was never the light — it was the **albedo**. The panel was a `void` slab at
+ * 0.4% reflectance, which is not *an unlit drinks machine*, it is a hole cut in a machine,
+ * and §4.1 already found and named that exact fault at wall scale: a hex in §4 is an albedo,
+ * not a pixel.
+ *
+ * **All four machines are dead now and the rule that made them so has gone.** This existed
+ * to keep four machines unlit so §2.2's fifth could mean something; §2.2 has since moved the
+ * bio station to §3.7's food cart, so there is no fifth machine and nothing to distinguish
+ * from. The painter is unchanged, because what it worked out — that a surface is legible
+ * from its albedo and not from a glow — never depended on that rule.
  *
  * So the cans are painted at the reflectance real drinks cans have — 35–55% — and §7's
  * hemisphere, the alley lights and the gate light do the rest. The distinction from §2.2

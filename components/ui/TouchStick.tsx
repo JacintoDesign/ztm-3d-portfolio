@@ -3,7 +3,7 @@
 import { useEffect, useRef } from 'react'
 import { resolveTier } from '@/lib/device'
 import { setStick } from '@/lib/input'
-import { canControl } from '@/lib/store'
+import { canControl, useCanControl } from '@/lib/store'
 import { WALK } from '@/lib/world'
 
 /**
@@ -33,6 +33,10 @@ export default function TouchStick() {
    * behaviour of the tier rule rather than a quirk of this component.
    */
   const isTouch = resolveTier() === 'mobile'
+
+  /* The reactive form, because this decides what is *drawn*. The handlers keep the direct
+     `canControl()` read — they run inside a gesture, not inside a render. */
+  const walkable = useCanControl()
 
   useEffect(() => {
     const pad = padRef.current
@@ -119,6 +123,19 @@ export default function TouchStick() {
   return (
     <div
       ref={padRef}
+      /**
+       * **Hidden whenever it cannot move the visitor.**
+       *
+       * Its handlers have always been gated on `canControl()`, so in `'locked'` and
+       * `'overlay'` it was already inert — but it stayed on screen, and §2.1.2's project
+       * controls sit in the same bottom-left corner. On a phone that put a dead 120 px disc
+       * under the pager. **A control that is visible and does nothing is worse than one that
+       * is gone**: it reads as the way out of a view whose actual way out is beside it.
+       *
+       * Faded rather than unmounted, so the pointer capture in the effect above is never torn
+       * down mid-gesture, and `visibility` follows so it cannot be tapped through at zero
+       * opacity.
+       */
       // Everything this control does, the keyboard also does — and a thumb-driven
       // analogue stick is not operable by a screen reader. §12.7's nav is the reachable
       // path, so this stays out of the accessibility tree rather than pretending.
@@ -131,6 +148,9 @@ export default function TouchStick() {
         // indicator under the thumb.
         left: `calc(${WALK.stick.insetPx}px + env(safe-area-inset-left))`,
         bottom: `calc(${WALK.stick.insetPx}px + env(safe-area-inset-bottom))`,
+        opacity: walkable ? 1 : 0,
+        visibility: walkable ? 'visible' : 'hidden',
+        transition: 'opacity 180ms ease-out',
       }}
     >
       <div

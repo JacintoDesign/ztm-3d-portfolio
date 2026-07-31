@@ -3,9 +3,9 @@
 import { useEffect } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { expose } from '@/lib/debug'
-import { pollLockRelease } from '@/lib/lockedView'
+import { isLocked, lockOwner, pollLockRelease } from '@/lib/lockedView'
 import { getInRange, nearestInRange, setInRange, stationCount } from '@/lib/stations'
-import { canControl } from '@/lib/store'
+import { canControl, getMode } from '@/lib/store'
 import { position } from './Player'
 
 /**
@@ -53,9 +53,20 @@ export default function Interact(): null {
   useFrame(() => {
     pollLockRelease()
 
-    /* The prompt is hidden while locked or in an overlay: it says "press E to view", and
-       both of those states are already past that. */
-    if (!canControl()) {
+    /**
+     * **In range is computed while `'play'` *and* while §12.6 has parked you at a stop.**
+     *
+     * This used to clear it whenever `canControl()` was false, on the argument that the
+     * prompt says *press E to view* and both non-play modes are past that. That was true when
+     * `'locked'` only ever meant §2.1.1's board, which brings its own controls. §12.6's tour
+     * now locks the camera at §2.2's cart and §2.3's bank too — and there the prompt is the
+     * only thing on screen telling a visitor what they have arrived at. Clearing it left
+     * every arrival ending in silence.
+     *
+     * `'overlay'` still clears: a panel is open and covering the thing the prompt is about.
+     * A `'showcase'` lock still clears too, because §2.1.2's pager is showing instead.
+     */
+    if (getMode() === 'overlay' || (isLocked() && lockOwner() === 'showcase')) {
       setInRange(null)
       return
     }

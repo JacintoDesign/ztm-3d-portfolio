@@ -1,6 +1,8 @@
 'use client'
 
 import dynamic from 'next/dynamic'
+import type { About } from '@/lib/about'
+import type { Contact } from '@/lib/contact'
 import type { Project } from '@/lib/projects'
 
 /**
@@ -18,7 +20,15 @@ import type { Project } from '@/lib/projects'
  */
 const World = dynamic(() => import('./World'), { ssr: false })
 
-/** §2.1's projects pass straight through; this wrapper still holds one flag and no logic. */
-export default function WorldMount({ projects }: { projects: readonly Project[] }) {
-  return <World projects={projects} />
+/** All three payloads pass straight through; this wrapper still holds one flag and no logic. */
+export default function WorldMount({
+  projects,
+  about,
+  contact,
+}: {
+  projects: readonly Project[]
+  about: About
+  contact: Contact
+}) {
+  return <World projects={projects} about={about} contact={contact} />
 }

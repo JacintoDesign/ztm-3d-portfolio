@@ -23,3 +23,48 @@ canvas {
      as a scroll on touch and the camera stutters or stops mid-turn. */
   touch-action: none;
 }
+
+/*
+ * §2.2 / §2.3 — the overlays' scrollbar.
+ *
+ * The one piece of chrome in this world the browser draws for us, and it defaulted to the
+ * light theme: a white bar down the side of a near-black card, brighter than anything on the
+ * panel including the type. It is the only surface here whose colour is *not* in lib/world.ts
+ * — a scrollbar cannot read a TypeScript module — so it is expressed in the two properties
+ * that can carry it, kept deliberately generic so it stays a shade of the panel rather than a
+ * fifth palette.
+ *
+ * Both syntaxes, because they are not interchangeable: `scrollbar-color` is the standard and
+ * is what Firefox uses; the `::-webkit-` pseudo-elements are what Chrome and Safari use, and
+ * Chrome ignores `scrollbar-color` for width. Neither alone covers the browsers this ships to.
+ */
+.scroll-dark {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(255 255 255 / 0.18) transparent;
+}
+
+.scroll-dark::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.scroll-dark::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scroll-dark::-webkit-scrollbar-thumb {
+  background-color: rgb(255 255 255 / 0.16);
+  /* Inset by a transparent border, so the thumb reads as floating in the gutter rather
+     than filling it — which is what stops a 10 px bar looking like a second border. */
+  border: 3px solid transparent;
+  background-clip: padding-box;
+  border-radius: 999px;
+}
+
+.scroll-dark::-webkit-scrollbar-thumb:hover {
+  background-color: rgb(255 255 255 / 0.3);
+}
+
+.scroll-dark::-webkit-scrollbar-corner {
+  background: transparent;
+}

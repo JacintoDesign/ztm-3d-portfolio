@@ -6,6 +6,12 @@
 
 **Heading:** A self-taught developer making quality education accessible.
 
+**Role:** Senior Developer at CBC · Instructor at Zero to Mastery
+
+**Tagline:** Design-led. Engineering-true. Built for the dark.
+
+**Location:** Toronto, Canada
+
 ### Stats
 
 - **8+** — Years as senior developer
@@ -18,19 +24,19 @@
 
 ### 01 — The spark
 
-I'm a Senior Developer at the Canadian Broadcasting Corporation with a passion for technology that started at age 12 when I built my first computer.
+I'm a Senior Developer at the Canadian Broadcasting Corporation, with a passion for technology that started at age 12 when I built my first computer. Everything since has been some version of taking a thing apart to find out how it works.
 
 ### 02 — The leap
 
-As a self-taught developer who landed a Senior Developer role after just 4 months of online learning, I understand the challenges of breaking into tech.
+As a self-taught developer who landed a senior role after just four months of online learning, I understand the challenges of breaking into tech from the outside — the doubt, the gaps you cannot see yet, and how much of it comes down to having someone show you the shape of the thing.
 
 ### 03 — The craft
 
-At the CBC, I work on election night television programming and design and build HTML graphics for the Olympics — front-end work that runs live on national broadcasts.
+At the CBC I work on election night television programming, and design and build HTML graphics for the Olympics — front-end work that runs live on national broadcasts, where the deadline is airtime and there is no second take.
 
 ### 04 — Teaching
 
-With 5 years of teaching experience in Canada and South Korea, I now combine my technical skills and educational background as an instructor for Zero to Mastery Academy.
+With five years of teaching experience in Canada and South Korea, I now combine my technical background with my classroom one as an instructor for Zero to Mastery Academy, where the students are the people I was ten years ago.
 
 ### 05 — The mission
 
@@ -44,9 +50,9 @@ I'm dedicated to creating high-quality, affordable courses that help students bu
 
 **Title:** The Vibe Coding Bootcamp: Become an AI-Augmented Developer
 
-**Blurb:** An AI-first path into tech — master tools like Cursor, Copilot,
-Claude and Gemini, direct your vision, build real projects, and create a
-job-ready portfolio. Live on Zero to Mastery.
+**Blurb:** An AI-first path into tech — master Cursor, Copilot, Claude and
+Gemini, direct the work, and ship a job-ready portfolio. Live on Zero to
+Mastery.
 
 **URL:** https://zerotomastery.io/courses/learn-vibe-coding/
 
@@ -116,6 +122,24 @@ to bottom.
 
 ## Contact
 
-**Email / form destination:** contact@jacinto.design
+**Heading:** Let's build something.
 
-Form posts and is tested end to end before ship.
+**Supporting:** Have a project, a course idea, or just want to say hello? My
+inbox is always open.
+
+**Location:** Toronto, Canada
+
+### Channels
+
+One mailbox per channel, in this order. Adding a line here adds a box to the
+wall and a row to the overlay — nothing in `components/` knows how many there
+are.
+
+- **Email** — contact@jacinto.design — mailto:contact@jacinto.design
+- **Website** — jacinto.design — https://jacinto.design
+- **LinkedIn** — in/jacintowong — https://www.linkedin.com/in/jacintowong/
+- **GitHub** — JacintoDesign — https://github.com/JacintoDesign
+- **Medium** — @jacintowong — https://jacintowong.medium.com
+- **CodePen** — jacintodesign — https://codepen.io/jacintodesign
+
+A contact form is not built. The channels above are the surface.

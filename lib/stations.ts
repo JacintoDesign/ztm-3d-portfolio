@@ -68,6 +68,15 @@ export function nearestInRange(x: number, z: number): Station | null {
 
 export const stationCount = (): number => stations.length
 
+/**
+ * Every registered station, for `lib/guidedPath.ts`'s `stationAudit`.
+ *
+ * **A copy, not the array.** The registry is mutated by `registerStation`'s remover, and a
+ * caller holding the live array would see it change under a loop. Reading is cheap and rare;
+ * `nearestInRange` is the hot path and it reads the array directly.
+ */
+export const registeredStations = (): readonly Station[] => [...stations]
+
 /* ── Which station is in range — the one reactive part ─────────────────────── */
 
 let inRange: Station | null = null

@@ -36,15 +36,53 @@ export const isLocked = (): boolean => getMode() === 'locked'
  * wherever the visitor happens to be standing, and a cut would leave them no way to tell
  * whether they moved or the world did.
  */
-export function lockTo(to: Pose, nowMs: number): void {
+/**
+ * Who asked for the lock.
+ *
+ * **§2.1.2's controls are the reason this exists.** They appear whenever the mode is
+ * `'locked'`, which was unambiguous while §2.1.1 was the only thing that could lock — and
+ * stopped being so the moment §12.6's tour reused the same primitive. Without an owner, the
+ * project pager and its OPEN button appear while the camera is gliding to a food cart.
+ */
+export type LockOwner = 'showcase' | 'guidedPath'
+
+let owner: LockOwner = 'showcase'
+
+/** Read directly; the DOM reads it through `useMode()` re-rendering on the transition. */
+export const lockOwner = (): LockOwner => owner
+
+export function lockTo(
+  to: Pose,
+  nowMs: number,
+  durationMs?: number,
+  by: LockOwner = 'showcase',
+  onArrive?: () => void,
+): void {
   if (isLocked()) return
+  owner = by
 
   const motion = prefersReducedMotion() ? SHOWCASE_LOCK.reducedMotion : SHOWCASE_LOCK
 
   poseTo(
     { x: position.x, z: position.z, yaw: look.yaw, pitch: look.pitch },
     to,
-    { nowMs, durationMs: motion.durationMs, ease: motion.ease },
+    {
+      nowMs,
+      /**
+       * §12.6's legs are a *distance* problem and §2.1.1's is not, which is why this is an
+       * override rather than a second policy. The showcase lock always travels to one pose
+       * and 1.1 s suits it; the guided path's legs run 2.1 to 38.6 m, and one duration across
+       * that range is either a crawl or 15 m/s. `lib/guidedPath.ts` derives its own from
+       * §12.6's glide speed and passes it in — the caller owning motion policy is the same
+       * split `lib/pose.ts` already makes with this file.
+       *
+       * **Reduced motion still wins.** A caller asking for 3.9 s gets `reducedMotion`'s
+       * duration anyway, because §13 is not something a caller may opt out of.
+       */
+      durationMs: prefersReducedMotion() ? motion.durationMs : (durationMs ?? motion.durationMs),
+      ease: motion.ease,
+      onArrive,
+    },
   )
 
   tickAtLock = movementTick()

@@ -10,7 +10,7 @@ Units are **metres** and **radians unless a degree sign is present**. Colours ar
 
 ## 1. The world in one paragraph
 
-A single back alley off a Shinjuku side street, forty-six metres end to end, nine metres wide, walled at both ends. Behind you, the station ticket gate with its shutter down — you missed it. Ahead, the alley bends into fog and never resolves. It has been raining for an hour and has just stopped; the asphalt is a mirror and every sign in the alley is in it, upside down and softer. There is no sky: fourteen-metre facades on both sides, a mat of overhead cable, and fog that closes the last fifteen metres. Nobody else is here. Three things in the alley are lit warmer than the rest — a board at the bend, a vending machine, a payphone — and those three are the portfolio.
+A single back alley off a Shinjuku side street, forty-six metres end to end, nine metres wide, walled at both ends. Behind you, the station ticket gate with its shutter down — you missed it. Ahead, the alley bends into fog and never resolves. It has been raining for an hour and has just stopped; the asphalt is a mirror and every sign in the alley is in it, upside down and softer. There is no sky: fourteen-metre facades on both sides, a mat of overhead cable, and fog that closes the last fifteen metres. Nobody else is here. Three things in the alley are lit warmer than the rest — a board at the bend, a food cart, a bank of mailboxes — and those three are the portfolio.
 
 **Crossable in under a minute:** 46 m at 2.6 m/s ≈ 18 seconds end to end.
 
@@ -21,11 +21,11 @@ A single back alley off a Shinjuku side street, forty-six metres end to end, nin
 | Role | Object | Where |
 |---|---|---|
 | **Showcase surface** | **The board** — a lit board on the bend, screenshot over text, with a vertical neon sign above it and two door plates on it | The bend, `t = 0.00` |
-| **Bio station** | **The vending machine** — a lit drinks machine glowing warm in a dark stretch | East wall, `z = +6.0` |
-| **Contact station** | **The payphone** — a green NTT box under a small awning | West wall, `z = +14.0` |
+| **Bio station** | **The food cart** — a yatai under a lit canopy, the one place in the alley somebody is | East wall, `z = +19.0` |
+| **Contact station** | **The mailbox bank** — six labelled boxes projecting from the wall, one per channel | West wall, `z = +14.0` |
 | **Surroundings** | The alley. **Carries nothing.** | Everywhere else |
 
-The zigzag is deliberate: bio right, contact left, showcase straight ahead at the end — the first two visible from each other, the third closing the alley and visible from spawn.
+**The three are clustered at the far end, and the zigzag they used to make is gone.** Bio right, contact left, showcase closing the alley — that reading survives, but over eight metres rather than fifteen, because §2.1's board moved to the bend and the other two followed the objects that were already near it. What paid for the spread was the walk, and **the walk was never what §17 tests**: a stranger on a phone finds contact through §12.7's nav in ten seconds without walking at all. Clustering costs a visitor who wants to stroll almost nothing — §12.6's tour still covers 46 m — and it means whichever surface you reach first, the other two are in frame.
 
 ### 2.1 The board (showcase surface)
 
@@ -123,31 +123,74 @@ Paging, the position indicator and *open* live in a **2D overlay drawn over the 
 
 **This does not become the top nav.** §12.7's nav is always present after the gate; this appears with the lock and goes with it, so `Escape` closing the lock also closes these — one thing on screen, one way out.
 
-### 2.2 The vending machine (bio station)
+### 2.2 The food cart (bio station)
 
 Reads the About material from `CONTENT.md` — eyebrow, heading, stats, the five story panels, latest course, currently building.
 
-| Part | Value |
-|---|---|
-| Body | 1.12 w × 0.82 d × 1.94 h, `x = +4.10`, `z = +6.0`, facing `-X` |
-| Lit front panel | 0.96 × 1.42, base `y = 0.44`, emissive `#FFD9A0` at intensity **1.60** |
-| Selection buttons | 3 × 4 grid of 0.07 lit squares, `#FF6FA5` / `#3BD9FF` alternating, intensity 2.10 |
-| Interact | Radius **2.20** — opens the bio overlay |
-| Idle | Compressor hum, and a 0.5 Hz × 0.004 brightness breathe on the front panel |
-
-The machine's product rows are painted onto the panel texture as anonymous cans and bottles. **No project names, no headshot, no text on the exterior beyond decorative kana from §11.4.** The content lives in the overlay.
-
-### 2.3 The payphone (contact station)
-
-Reads the contact channels from `CONTENT.md` (`contact@jacinto.design`) plus the social links.
+**It was a vending machine, and the cart is better for a reason worth keeping.** §3.7 already put a food cart on the east wall at `z = +19.0`, four metres from §2.1's board, and it was already **the only lit object on that stretch** — a canopy lamp over an empty counter. A bio station is *the place in the world where somebody is*, and a yatai at 3am is that; a vending machine is the opposite of it. Nothing is built to make this change: the object exists, and it is promoted from scenery to a station.
 
 | Part | Value |
 |---|---|
-| Box | 0.62 w × 0.54 d × 1.36 h on a 0.28 plinth, `x = -4.16`, `z = +14.0`, facing `+X` |
-| Awning above | 1.60 × 1.10, underside at `y = 2.60`, underside emissive `#3BD9FF` at 0.85 |
-| Handset light | Small internal lamp `#2FE08A`, emissive intensity 1.90 |
-| Interact | Radius **2.00** — opens the contact overlay |
-| Idle | A single ring every 34 s, −22 dB, if audio is unlocked. Never more often. |
+| Cart | §3.7's `foodCart` — 2.1 × 1.0 × 2.1, `x = +3.80`, `z = +19.0`, facing `-X` |
+| **Sign band** | 1.05 × 0.30 **on the front of the bar**, `y = 0.72`, emissive at §8.1's `bioStationPanel` |
+| Undercarriage | **Two wheels on one end, two legs on the other**, on a 0.58 track, plus an axle and a cross-brace |
+| **Canopy panels** | 5 lit panels 0.30 × 0.34 across the canopy underside at `y = 1.98`, same rung — replacing the single 1.7 × 0.7 lamp slab |
+| Canopy framing | 4 rafters front-to-back, a fascia the sign band mounts on, and a lip under it |
+| **Noren** | 4 cloth panels 0.20 × 0.42 hanging at the canopy's **ends only** — §4's `lantern` as `matte`, so it reflects where §3.5's paper emits |
+| Counter | An urn, two bowls, two cups and a chopstick pot on the worktop; three timber menu tags on the back panel |
+| Fixings | A hub on each wheel, a base plate under each post |
+| Interact | Radius **3.20** — opens the bio overlay |
+
+**Everything in the detail pass reuses a token the cart already had, so all of it costs vertices and no draw call.** §3.7's merge-by-material is what pays for it, and that is the condition under which detail is worth adding at all: the alternative — modelling the cart in `Stations.tsx` as its own meshes — would have spent §15's whole mobile headroom before §2.3 got any.
+
+**The noren leaves the middle open, and that is the gesture.** A yatai's curtain is hung out when the stall is serving and parted where the customer stands; a full curtain would close the one object in this world that exists to read as *somebody is here*.
+
+**The sign came off the canopy and onto the bar, which is where a stall's sign is.** At `y = 2.02` on the fascia it was a shopfront sign — a yatai's plate hangs on the counter you stand at, under the lamps rather than above them, and up there it also read as floating behind the corner posts. It is narrower with it: 1.05 against a 1.90 m counter rather than 1.60 spanning a whole canopy, because a plate that runs the full width of the thing it is bolted to **is** a fascia again. It also mounts off the *deck's* front face, not the prop's footprint face — the footprint is sized to the overhanging canopy, and a plate placed on it floats 0.11 m in front of the counter.
+
+**It had one wheel at each end on the centreline, and it could not have balanced.** Two points on a line hold nothing up. A stall cart is a barrow: an axle with a **pair** of wheels at one end so it can be tipped and pushed, and two legs at the other that it stands on when it is parked and serving — which this one is. The wheel pair is on the west end, so a visitor arriving from spawn meets the legs first and the wheels read as the far end of something that was pushed here.
+
+**The menu tags are `crateTimber` and `signWhite` was measured wrong.** At 62% reflectance directly under light 4 they came out as three glowing white bars — fluorescent tubes, not menu tags. §4.1's finding arriving a third time: a token is *what fraction of light a surface returns*, and the brightest one in the palette under the brightest light in the alley returns all of it.
+
+**The stats board was built and taken off again, and this section's original rule was right.** §2.2 has always said *no text on the exterior beyond decorative kana*; the stats were argued onto a 0.70 × 0.40 board at 0.62 m as the hook that makes a stranger press `E`. Built, they read as **a poster stuck to a food cart** — the object already says what it is, and a lit yatai in a dark alley does not need a statistic to be approached. All of it is in the overlay, which is where the rule had it.
+
+**The stools went with it.** Two stools in the road at 0.45 m, non-solid, which meant walking through them; they bought atmosphere the canopy and the counter already supply. **Both removals cost nothing to make and nothing to undo** — §3.7's merge means a part that reuses an existing token is free either way, which is exactly the condition under which *try it and look* is the cheap way to decide.
+
+**Brightness is emissive *and* §7's light 4, which is the pair this section always specified.** The lit faces carry §8.1's `bioStationPanel` at 2.44 — the rung §2.2 already authored for its own lit face, renamed rather than re-derived, because the *job* did not change when the object did — and the **canvas texture decides what is bright**, exactly as `lib/textures/vendingFront.ts` does: a dark board with pale type comes out as a dark board with pale type at any rung. Light 4 re-seats from the machine onto the canopy face and **throws light on the alley**, which no emissive material does and which is the whole difference between a station and a lit prop.
+
+**The count does not go up.** Lights 4 and 5 were already budgeted for the two stations this section and §2.3 replace, so §7 stays at eleven and `LIGHT_SURRENDER_ORDER` is untouched.
+
+**The four vending machines stay, and stay dead.** §2.2's rule was *the bio station is the one lit machine, and lighting the others costs it its meaning*. With the bio station off the machines entirely, that rule is satisfied by construction. One of them moves into the slot §3.4 reserved at east `z ∈ [5.10, 6.90]`, so the reservation stops being an unexplained gap in the wall.
+
+### 2.3 The mailbox bank (contact station)
+
+Reads the channels from `CONTENT.md` — **one box per channel, generated, never authored**. §2.1's rule applied here: adding a line to `CONTENT.md` adds a box to the wall and a row to the overlay with no component edited.
+
+**It was a payphone, and the bank does a thing the payphone could not.** A payphone is one object that means *contact* in the abstract; six labelled boxes are six channels you can read from where you stand, and §17's test is about *finding the details*, not about recognising a metaphor.
+
+The wall it goes on is the one §3.4 has been holding open since it was written: **west `z ∈ [12.90, 15.10]`**, reserved for this station and kept clear by the layout generator, plus the service gap's slack either side.
+
+| Part | Value |
+|---|---|
+| Plate | **Derived**: the box grid plus a 0.16 margin — 2.00 × 0.98 at six channels. 0.04 proud of the wall face at `x = -4.50` |
+| Bolts | One in each corner of the plate, 0.056 across, 0.08 inset |
+| Box | 0.44 w × **0.30 deep** × 0.26 h — rectangular, projecting from the plate, not a door in a carcass |
+| Grid | **3 across × 2 down.** Column pitch 0.62, row pitch 0.40, rows centred `y = 1.02` and `y = 1.42` |
+| Bank | 1.86 wide, `z ∈ [13.07, 14.93]` — 0.42 m clear of `standpipe:22` at 15.35 and 0.97 m of `standpipe:21` at 12.10 |
+| Label plate | 0.34 × 0.10 on each box's alley face, 0.012 proud, emissive at §8.1's `mailboxLabel` |
+| Flag | 0.05 cube at each box's top outer corner, emissive at §8.1's `mailboxFlag`, one §4 neon token per channel |
+| Station | `x = -4.20` (the box faces), `z = +14.0`. Radius **2.00** — opens the contact overlay |
+
+**Every box opens its own channel, and the email opens a `mailto:`.** That is what a bank of labelled boxes is *for*: six things in front of you, each going somewhere different, and a bank where all six do the same thing is a picture of a bank. Hovering one names it — `GitHub — JacintoDesign` — in §12.5's prompt, which falls back to `E — contact` the moment the pointer leaves. **Hover beats range because it is the more specific answer**: standing here, `E — contact` is true and useless.
+
+**One `InstancedMesh` for boxes, plate and bolts together.** The boxes *have* to be instanced — a click has to say which one, and `instanceId` is the only thing that does; a merged mesh gives back a face index and nothing else. The plate and bolts do not need identity, but a second mesh for them measured **90 of 90 on mobile**, so they join the same set as further instances. Boxes take indices `0…n-1`, which is the channel's index in `CONTENT.md`; anything after resolves to no channel, so clicking the plate does nothing.
+
+**The label plates do not take the raycast.** Each stands 0.012 m proud of the box it names — between the pointer and the thing the pointer wants — and they are one merged mesh that cannot say which label was hit. Opting them out sends every click and hover through to the box behind, which can.
+
+**The plate is sized from the grid, and it was authored 2.00 × 1.00 for about an hour.** On §3.4's plinth line that put its top at `y = 1.22` against a top row of boxes at `1.29–1.55`: **the row the plate exists to carry was hanging off it**, with bare wall behind, and a seventh channel would have left two rows in the air. A dimension that has to agree with a count out of `CONTENT.md` cannot be a literal. At a 0.16 margin the derivation reproduces the authored 2.00 width exactly, so only the height changed.
+
+**Two rows of three rather than one row of six**, because the wall is 2.10 m of usable width and six boxes in a row would be 0.31 m each — a label 0.24 m wide read at 1.60 m, which is the fault §2.1.2 already found and fixed twice by taking type off the world and onto the screen. Stacked, each label is 0.34 m and legible from the guided stop.
+
+**§7's light 5 re-seats here**, off the bank face at `(-3.70, 1.40, 14.0)` — small, `signWhite`, 6.0 m reach. Six emissive plates would make the bank *legible* and leave it not touching the wall it hangs on; a station in this world throws light, and this is the one that has to be found in ten seconds.
 
 **Contact is also permanently in the top nav**, on every device, from the first frame after the gate. The ten-second test is passed by the nav, not by the walk.
 
@@ -459,7 +502,7 @@ The whole assembly — panel, both jambs, lintel — now ends flush on the pier'
 
 **The spill is a 0.55 band on the shop floor, not the whole opening.** Filling an open aperture makes a 2.55 × 2.30 slab of flat `sodium` — a billboard that beat every content surface in the alley before any of them had been built. Ajar shows nearly all of its 0.62 slot, which is the point of that state; open shows 0.55 of lit floor beneath 1.75 of dark interior, which is what a lit room behind a raised shutter looks like from the street.
 
-**Layout is generated, not placed.** Three slots are reserved for the content surfaces and no unit may enter them: west `z ∈ [−6.60, −1.40]` — **now a deliberate gap, since §2.1 moved to the bend; see §16.12** — west `[12.90, 15.10]` for §2.3's payphone, east `[5.10, 6.90]` for §2.2's vending machine. What is left is five segments; the seven units per wall are apportioned across them by length (largest remainder), widths are drawn to fit with no two neighbours equal, and the slack is spread evenly as joints. One designated joint per wall widens to the 1.80 service gap.
+**Layout is generated, not placed.** Three slots are reserved for the content surfaces and no unit may enter them: west `z ∈ [−6.60, −1.40]` — **now a deliberate gap, since §2.1 moved to the bend; see §16.12** — west `[12.90, 15.10]` for §2.3's mailbox bank, east `[5.10, 6.90]` — **which §2.2 no longer needs**, since the bio station moved to §3.7's food cart, and which one of §3.7's four vending machines now fills so the reservation is not an unexplained hole in the wall. What is left is five segments; the seven units per wall are apportioned across them by length (largest remainder), widths are drawn to fit with no two neighbours equal, and the slack is spread evenly as joints. One designated joint per wall widens to the 1.80 service gap.
 
 **Each width aims at its fair share of what is left, not at the largest that fits, and this is not a detail.** Taking the largest feasible size is legal at every step and still wrong: one 6.20 early in a 14.30 m segment leaves nothing but the narrowest size for the two behind it, and the first generated wall came out **eight of fourteen at 3.60** with two adjacent pairs identical. Aiming at `remaining ÷ slots left` and taking a coin between the two nearest sizes spreads them across all five. Five sizes exist so the wall does not read as one shape repeated; a greedy pick defeats them while satisfying every constraint that was actually written down.
 
@@ -681,7 +724,7 @@ The rest of the §3.2 inventory that stands on the ground: **4 dead vending mach
 
 **Measured, because "it will be too dark without a glow" was the obvious objection and it deserved a number.** At two metres on the west wall the rack comes out at **100.8 mean, 206 peak** against the shutter beside it at 33.3 and the machine's own body at 32.8 — three times the wall it is mounted on, and the brightest thing on that stretch. **With no emissive term anywhere on it.** That is §4.1's whole argument arriving a second time: the fault was never that there was no light, it was that the surface was returning four parts in a thousand of it.
 
-**The distinction between these four and §2.2 is now *lit* versus *legible*, which is a stronger distinction than *dark* versus *lit* was.** A visitor walking past a dead machine can see there are cans in it and that nothing is glowing; §2.2's will carry the same canvas at §8.1's `vendingFrontPanel` rung of **2.44** — well over the bloom knee — **plus §7's light 4**, which is the part no emissive material can imitate. One of the five throws light on the alley. That is not something you can miss by comparing them, and it does not depend on the other four being invisible.
+**All four are dead now, and §2.2's rule got easier rather than harder.** This paragraph used to distinguish the four dead machines from a fifth lit one — *lit versus legible* — and hold that the fifth had to be the bio station. §2.2 has since moved the bio station to §3.7's food cart, so there is no fifth: **the rule that lighting the others would cost the bio station its meaning is now satisfied by there being nothing to light.** What was worked out here survives on its own terms — the rack is legible because of its albedo, at 100.8 mean against a 33.3 wall, with no emissive term — and it is the reason four unlit machines are objects rather than holes.
 
 **They also flickered when you walked past, and it was the oldest kind of bug there is.** The front panel's front face sat at local `z = 0.410` and the body's front face at *exactly* `0.410` — two coplanar surfaces, resolved differently every frame as the camera moved. Same for the coin flap. Both now stand **proud** of the body rather than flush with it, which is §3.4's own trick for the shopfront recess: this world fakes depth by standing things in front of other things, and it never needs two faces on one plane.
 
@@ -764,7 +807,9 @@ The rest of the §3.2 inventory that stands on the ground: **4 dead vending mach
 - **Crates** cycled `shutter` and `metalDark`: two tokens half a stop apart in the same blue-grey, which at three metres through §5's fog is one colour. Four now cycle — **`crateKraft`, `crateTimber`, `concrete`, `metalDark`**, two browns and two greys (§4.2) — on a fixed authored run, because §3.7 has said since it was written that a list this short is better read than generated. They take §3.4's grain at a **`crate` repeat of 1**, one tile per face, which is the scale a cardboard box is.
 - **Bins** were a drum, a lid and two sacks: a cylinder with a slightly wider cylinder on it. A rubbish drum is identified by its **hoops** — the rolled bands that stiffen the sheet — and by a **rim** under the lid, and none of that is texture, it is silhouette. Two hoops, a rim and a lid knob go on, all of them cylinders in buckets this section already pays for, so **the silhouette costs nothing**. The drum then takes §3.4's grain at a **`metal` repeat of 2** for the galvanised speckle, which is the one part that earns a material of its own: `metalDark` is shared with 39 other cylinders in this alley and a grain map on all of them would be §3.4's rule applied where §3.4 says not to apply it.
 
-**§17 survives the food cart, and the lanterns are the proof.** *Three things are lit warmer than everything else and they are the only three things you can touch.* Eleven paper lanterns at 1.30 already sit **above** the cart's 1.10 and were always in §3.2 — if eleven of those do not break the sentence, one cart does not. It also carries **no dynamic light**: §7's cap of ten is fully spent, and what actually makes the three content surfaces dominant is that each has a light of its own (§7 #2, #4, #5). An emissive material illuminates nothing but itself. The cart sits on the east wall at the far end, past the payphone, so it is the last thing before the bend and the first warm thing that is not a destination.
+**The cart was argued into §3.7 as scenery that would not break §17, and §2.2 has since promoted it to a station.** The argument then was that eleven paper lanterns at 1.30 already sat above the cart's 1.10, so one more warm thing on the east wall could not break *three things are lit warmer than everything else and they are the only three things you can touch* — and that it carried no dynamic light, so it illuminated nothing but itself.
+
+**Both halves held, and the second one is now the whole design.** The cart *is* one of the three things you can touch, so the sentence is not strained but satisfied; and it still carries no dynamic light, because §7's cap is spent and §2.2 lights it with emissive at 2.44 instead. What changed is only which section owns it: the geometry, the placement and the collision box stay here in §3.7, and §2.2 reads them rather than restating them.
 
 **Collision — these are the first boxes in this world that can actually fire.** §3.4 registered fourteen units' worth of AABBs and said outright that every one of them is inert, because the deepest storefront part stops at `|x| = 4.05` and §3's clamp has already stopped the eye at ±3.60. That changes here. A vending machine's front face at 3.48 resolves the eye to **3.16**, the food cart's at 3.30 resolves it to **2.98**, and the cones and the barrier stand in open alley at `x ≈ −1` where there is no clamp at all. **§12.4's resolver has been shipped and never tested against anything; this is the section that tests it**, and it is verified by walking into each of them rather than by assertion.
 
@@ -823,8 +868,8 @@ Every colour in the world comes from this table. Nothing else.
 | `sodium` | `#FFA23D` | street lamp, convenience-store spill |
 | `sodiumDeep` | `#FF7A1A` | sodium at range, through fog |
 | `lantern` | `#E8283F` | paper lanterns |
-| `vendGlow` | `#FFD9A0` | vending machine front panel |
-| `phoneGreen` | `#2FE08A` | payphone lamp |
+| `vendGlow` | `#FFD9A0` | §2.2's cart canopy and sign band; drinks-rack cans |
+| `phoneGreen` | `#2FE08A` | one of §2.3's six mailbox flags |
 | `signWhite` | `#FFF0F5` | lightbox surround, station plate |
 | `rain` | `#9FB4D6` | rain streaks |
 | `fogColor` | `#0A0F1A` | fog |
@@ -1058,14 +1103,28 @@ There is no sun at 3am. **No `directionalLight` anywhere. Shadow maps are off** 
 | 1 | `hemisphereLight` | sky `#121A2B` / ground `#060A10` | **0.70** | — | — |
 | 2 | `rectAreaLight` **= §2.1's screen** | `signWhite` | **1.2** cd/m², **desktop only** — was 70 | §2.1's screen centre, facing the alley | — (see below) |
 | 3 | `pointLight` | `neonMagenta` | **95** — was 264 | **0.90 m** clear of §2.1's title lightbox | 9.0 / 2 |
-| 4 | `rectAreaLight` 0.96 × 1.42 | `vendGlow` | **5.0** | `(+3.98, 1.15, 6.0)` facing `-X` | — |
-| 5 | `pointLight` | `phoneGreen` | **2.5** | `(-4.00, 1.60, 14.0)` | 5.0 / 2 |
+| 4 | `rectAreaLight` **2.0 × 0.9 = §2.2's lit canopy** | `vendGlow` | **28** — was 5.0 | `(+3.62, 1.94, 19.0)` facing **`-Y`** | — |
+| 5 | `pointLight` | `signWhite` | **18** — was 2.5 | `(-3.00, 1.55, 14.0)`, 1.20 m off §2.3's bank face | 6.0 / 1.45 |
 | 6 | `pointLight` | *its sign's* | **150** | §3.5 sign **1** | **18.0 / 1.45** |
 | 7 | `pointLight` | *its sign's* | **130** | §3.5 sign **4** | **16.5 / 1.45** |
 | 8 | `pointLight` | *its sign's* | **95** | §3.5 sign **6** | **15.0 / 1.45** |
 | 9 | `pointLight` | *its sign's* | **115** | §3.5 sign **8** | **13.5 / 1.45** |
 | 10 | `pointLight` | *its sign's* | **80** | §3.5 sign **0** | **12.0 / 1.45** |
 | 11 | `pointLight` | `signWhite` | **70** | §3.1's `終電` plate | **13.5 / 1.45** |
+
+**Whole-frame means are not comparable across tiers, and reading them that way overstated the gap.** A portrait phone frame contains far more of §3.1's dark overhead than a landscape one, so mobile looked 60% as bright as desktop at spawn when the *alley* was not. Sampling the same world region — the band across the middle of the frame at `z = −8` — gives **51.2 desktop against 47.4 mobile, 93%.** A measurement whose value depends on the aspect ratio is measuring the aspect ratio.
+
+**Mobile's light cap went 7 → 9 → 10, and the seven had never been measured.** It was authored before any of §7's lights existed, when the world had six. What it bought once the world was full: §7.1 surrendered two of its five sign lights *and* §2.2's station light, and the mean frame at §12.6's about stop came out at **14.4 against desktop's 51.6 — 28%.** Two of the three content surfaces had nothing on them but emissive, which is the exact failure this section exists to prevent, on the tier §17's test is written about. Nine is what this world needs minus light 2, the one that is genuinely expensive. **It is the one figure in §15 not checked on a real device**, and it is the first dial to turn back if a mid-range phone drops frames.
+
+**Light 4's `drop` on mobile drops the *type*, not the light.** A `rectAreaLight` is two 64² LTC lookups per fragment; mobile substitutes a `pointLight` in the same place at 26 cd, because intensity changes units with the type and the figure is measured on the tier that uses it. What is not negotiable is that the cart is lit at all: an unlit content surface is not a cheaper version of this world, it is a different one.
+
+**Two constants held §7's cap and nothing read either.** `LIGHT_CAP = 10` and `MOBILE_LIGHT_CAP = 7` sat in `lib/world.ts` beside this section while the caps actually enforced were `BUDGET.*.dynamicLights` — already 11 and 7. Found by editing one to fix the darkness above and watching the scene not change. They are deleted rather than synchronised: a budget belongs in §15, and **two constants for one rule is the drift `lib/world.ts` exists to prevent.**
+
+**Lights 4 and 5 moved rather than being deleted, and that is §7's own argument holding.** They were authored for §2.2's vending machine and §2.3's payphone, and both objects are gone — so the obvious move was to retire them and let the two new stations run on emissive alone. That would have broken the thing this section keeps saying: *what makes the three content surfaces dominant is that each has a light of its own.* An emissive material illuminates nothing but itself, and two of the three would have stopped touching the alley around them. So light 4 re-seats on §2.2's canopy face and light 5 on §2.3's bank, **the count is unchanged at eleven**, and `LIGHT_SURRENDER_ORDER` needs no revision.
+
+**Both intensities are measured, and the derivation was wrong by a factor of five.** §16.15 recorded what happens when a `rectAreaLight` is authored from a calculation and not checked — light 2 was written at 70 against an area a factor of eight out. The same thing happened here in the other direction: 6.0 cd/m² was derived as *0.6 × the board's total emission*, and measured at §12.6's about-stop it moved the cart's counter from 41.5 to 54.8, which is not a lit stall. The sweep gives 92.6 at 30 and 162 at 90; **28 lands the counter just under §3.7's drinks rack at 100.8** — the brightest thing on that stretch, which is what a content surface should be — and it is the last value that keeps `vendGlow` warm. By 40 the highlight has gone white, and a warm light that reads as white has stopped being one.
+
+**And it faces `-Y`, after a version that lit nothing at all.** A `rectAreaLight` emits from one side of its plane. The first placement put that plane on `x = 3.30`, which is the cart's own front face — so every part of the cart was *behind* it, and deck, posts and canopy measured **identically at 0 and at 45**. Under the canopy facing down it is the five panels it stands for: the counter, the stools and the ground in front. **A light contributing nothing looks exactly like a light that is too dim**, and only a sweep with an off reading in it tells the two apart.
 
 **Every figure in rows 1 and 6–11 is then multiplied by `STREET_LIGHT_TRIM` = 0.90.** One factor on everything that lights the street, applied where the intensity is resolved rather than to the eight authored numbers: §7.1's 150 / 130 / 95 / 115 / 80 is a decision about *which signs are the bright ones* and §5's hemisphere is the fill between them, while a trim is a decision about the whole street's exposure and nothing else. Editing eight values to express one intent is how a ratio drifts — §4.1 made the same argument for scaling five palette tokens by a single factor rather than re-picking them.
 
@@ -1179,7 +1238,7 @@ So the replacement is two things, not one. **§5.1's uniform fill takes the ambi
 | Painted metal (poles, brackets) | 0.62 | 0.55 | `envMapIntensity` 1.0 |
 | Condenser grille | 0.68 | 0.70 | alpha-mapped grille, no geometry |
 | **Board case** (§2.1) | **0.78** | **0.12** | `envMapIntensity` **0.35** — see below |
-| **Glass** (board aperture, payphone) | 0.08 | 0.0 | `transparent`, `opacity 0.22`, **no `transmission`** — transmission costs a render pass per frame and buys nothing at this exposure |
+| **Glass** (board aperture) | 0.08 | 0.0 | `transparent`, `opacity 0.22`, **no `transmission`** — transmission costs a render pass per frame and buys nothing at this exposure |
 | Noren fabric | 0.92 | 0.0 | `side: DoubleSide`, no transmission |
 | Paper lantern | 0.90 | 0.0 | emissive `lantern` @ 1.75, `side: DoubleSide` |
 | Neon tube | 0.30 | 0.0 | `meshBasicMaterial`, colour at full, plus a 0.03 emissive halo shell at 0.6 |
@@ -1205,9 +1264,9 @@ Bloom's threshold is `0.90`. This ladder is what sits either side of it.
 | **Vehicle headlight** (§3.6) | **4.64** | 2.60 | yes |
 | **Scooter headlamp** (§3.7) | **4.18** | — | yes — 0.90 × the rung above |
 | Vertical signs | **4.20** | 2.40 | yes |
-| Selection buttons | **3.54** | 2.10 | yes |
-| Payphone lamp | **3.10** | 1.90 | yes |
-| Vending front panel | **2.44** | 1.60 | yes — soft halo |
+| **Mailbox flag** (§2.3) | **3.10** | 1.90 | yes — six 0.05 cubes |
+| **Bio station panel** (§2.2) | **2.44** | 1.60 | yes — soft halo |
+| **Mailbox label** (§2.3) | **1.89** | — | yes |
 | **Vehicle tail lamp** (§3.6) | **2.33** | 1.55 | yes — soft |
 | Paper lanterns | **2.77** | 1.75 | yes |
 | Aperture surround strip (§2.1) | **2.00** | 1.40 | yes |
@@ -1501,7 +1560,7 @@ Any string not on this list and not from `CONTENT.md` does not go in the world.
 | Near / far | 0.10 / 90.0 |
 | Spawn | position `(0, 1.68, -19.5)`, yaw `0` (facing `+Z`), pitch `-4°` |
 
-**This document's yaw is not three's, and the difference is exactly π.** Yaw `0` here faces `+Z`; a three.js camera at `rotation.y = 0` looks down `−Z`. For a world yaw ψ, three's rotation is **ψ + π**, giving a view direction of `(sin ψ, 0, cos ψ)`. Checked against the §12.6 stops rather than taken on trust: ψ = 0° → `+Z`, the alley ahead at spawn; ψ = −90° → `−X`, the west wall, where the payphone is; ψ = +90° → `+X`, the east wall and the vending machine. All three agree. **§2.1's board adds a fourth check and it is the one that matters**, because it is the only pose in the world that is neither axial nor authored: a group at ψ = +20° puts its local `+Z` on `(−0.342, 0, −0.940)`, which is §3.1's inward face normal, and its local `+X` on `(−0.940, 0, +0.342)`, which is the visitor's right at that same yaw. **The board's facing and the locked view's yaw are therefore one number through one helper** — get the convention wrong and the board faces into the wall, which looks like a layout bug and is not. **Convert once, at the point a camera is posed** — never by sprinkling `+ Math.PI` through the navigation code, where one missing conversion faces the visitor at a wall for reasons that look like a layout bug.
+**This document's yaw is not three's, and the difference is exactly π.** Yaw `0` here faces `+Z`; a three.js camera at `rotation.y = 0` looks down `−Z`. For a world yaw ψ, three's rotation is **ψ + π**, giving a view direction of `(sin ψ, 0, cos ψ)`. Checked against the §12.6 stops rather than taken on trust: ψ = 0° → `+Z`, the alley ahead at spawn; ψ = −90° → `−X`, the west wall, where §2.3's mailbox bank is; ψ = +90° → `+X`, the east wall and §2.2's cart. All three agree. **§2.1's board adds a fourth check and it is the one that matters**, because it is the only pose in the world that is neither axial nor authored: a group at ψ = +20° puts its local `+Z` on `(−0.342, 0, −0.940)`, which is §3.1's inward face normal, and its local `+X` on `(−0.940, 0, +0.342)`, which is the visitor's right at that same yaw. **The board's facing and the locked view's yaw are therefore one number through one helper** — get the convention wrong and the board faces into the wall, which looks like a layout bug and is not. **Convert once, at the point a camera is posed** — never by sprinkling `+ Math.PI` through the navigation code, where one missing conversion faces the visitor at a wall for reasons that look like a layout bug.
 
 **Rotation order is `YXZ`.** Under three's default `XYZ`, pitching rolls the horizon as you turn. `YXZ` is what keeps yaw and pitch independent, and it must be set *before* the rotation values or the same three numbers describe a different orientation.
 
@@ -1556,17 +1615,36 @@ Any string not on this list and not from `CONTENT.md` does not go in the world.
 
 One owner of the key. Stations register `{ position, radius, open() }` on mount; a single manager finds the **nearest registered station in range** and opens it. Edge-triggered on `keydown`. **No station listens for the key itself.**
 
-| Station | Radius | Prompt |
-|---|---|---|
-| Board | **6.50** | `E — view project` / tap |
-| Vending machine | 2.20 | `E — about` / tap |
-| Payphone | 2.00 | `E — contact` / tap |
+| Station | At | Radius | Its stop | Prompt |
+|---|---|---|---|---|
+| Board | `(-1.626, 22.948)` | **9.50** | 7.07 m | `E — View Projects` / tap |
+| Food cart | `(+3.80, 19.0)` | 3.20 | 2.90 m | `E — About` / tap |
+| Mailbox bank | `(-4.20, 14.0)` | 2.00 | 1.60 m | `Click a mailbox · E for Overlay` |
 
-Prompt fades in over 180 ms at the radius edge. `Escape` closes whatever is open, and **nothing else claims `Escape`**.
+**The prompt is a button, and the *tap* half of this section was never built.** It has said `E — …` / **tap** since it was written; what shipped was a caption. So §12.6 could glide a touch visitor to a station and tell them to press a key their device does not have. It now opens the station it is naming, through the same `station.open()` the key calls, so there is still one way for a station to be opened. It is only pressable while it is speaking *for a station* — hovering one of §2.3's boxes names that box instead, and the box under the pointer is already the way to open it.
 
-**The board's radius went 3.00 → 6.50, in two steps and for two different reasons.** A radius is measured from the station, and this station is on a wall the clamp cannot approach squarely: at 3.00 the in-range region inside `BOUNDS` was a sliver about 3.2 m wide and 1.4 m deep pinned against the `z = 21.4` clamp. Then §2.1's board grew to 3.20 m and its locked pose moved out to **5.627 m** to fit it in frame.
+**Nothing opens on arrival any more.** For one round §12.6's About stop opened its overlay when the visitor got there. That was a workaround for this prompt rendering **blank** at every stop, not a decision: arriving at a food cart with no prompt left nothing to say what it was for. With the prompt fixed, an auto-opening panel is one the visitor did not ask for, thrown over a world they were just brought through. **Arriving somewhere and being shown what is there are two different things**, and only the second is theirs to trigger. §2.1's `work` stop is the exception and not one: §2.1.1's locked view *is* the destination.
 
-**A radius that does not contain its own locked pose is a lock you cannot enter from where it puts you** — press `E`, get pulled to 5.6 m, and the prompt that got you there is now out of range. 6.50 contains the pose with most of a metre to spare, and the board stays the widest of the three radii, which is the ordering §12.5 already had. It is large in absolute terms because the object is: 3.20 × 4.80 m is the biggest thing in the alley a visitor can touch.
+Prompt fades in over 180 ms at the radius edge, and **only when it has something to say** — the visibility test is the text, not the mode. It used to include `'locked'`, from a draft where that state would carry its own *press Escape* copy; the copy never landed and §2.1.2's close button took the job, leaving a condition that turned the pill on with nothing in it. Invisible until §12.6 began parking the visitor in `'locked'` at every stop, at which point every arrival ended in an empty black lozenge. `Escape` closes whatever is open, and **nothing else claims `Escape`**.
+
+**The prompt is live while §12.6 has you parked, and it used to go blank there.** It was cleared whenever `canControl()` was false, on the argument that it says *press E to view* and both non-play modes are past that — true while `'locked'` only ever meant §2.1.1's board, which brings its own controls. The tour now locks the camera at the cart and the bank too, and there the prompt is the **only thing on screen** naming what the visitor has arrived at. Worse, the pill still rendered: every arrival ended in **an empty black lozenge**. It shows when it has text and not when a mode says so, and it stays cleared in `'overlay'` and under a `'showcase'` lock, where something else is already talking.
+
+**The bank's prompt names the boxes rather than the key.** Every other station has one thing to press and `E — …` says it; this one has six, each going somewhere different, and the panel `E` opens is the fallback rather than the point. Hovering a box replaces it with that channel — `GitHub — JacintoDesign` — because **the specific answer beats the general one** when the visitor is looking straight at six of them.
+
+**The board's radius went 3.00 → 6.50 → 9.50, and the last step is why this table now has a *stop* column.** A radius is measured from the station, and this station is on a wall the clamp cannot approach squarely: at 3.00 the in-range region inside `BOUNDS` was a sliver about 3.2 m wide and 1.4 m deep pinned against the `z = 21.4` clamp. Then §2.1's board grew to 3.20 m and its locked pose moved out to fit it in frame — twice, ending at `(-3.081, 16.028)`, **7.07 m from the station**. 6.50 stopped containing it and this document went on saying 6.50 for two sections while the code said 9.50.
+
+**A radius that does not contain its own stop is a station you cannot open from where the world puts you** — press `E`, get pulled to 7 m, and the prompt that got you there is out of range.
+
+**So it is an invariant with an audit now, because it has been broken three times.** `stationAudit()` sits beside `propAudit()`, in the same shape, and returns `[]` or a list of findings:
+
+| Rule | Fails when |
+|---|---|
+| `stop-outside-radius` | a station's own guided stop lies outside its radius |
+| `wrong-station-at-stop` | at any stop, `nearestInRange()` returns a **different** station than the one the stop is for |
+
+**The second rule caught a fault in this very section's first draft.** The bank was at `z = 14.0` with §12.6's stop 2.40 m out at `x = -1.80`, which forces a radius above 2.40 — and a 2.40+ radius reaches `2.32 m` to §2.1.1's locked pose, so **standing at the board you would be prompted for contact.** Two stations, both correct on their own, wrong together. The fix is not a bigger number: the stop moves **in** to `x = -2.60`, 1.60 m from the bank, which keeps §2.3's authored radius of 2.00, puts the board's pose safely outside it, and is a better reading distance for a 0.10 m label anyway.
+
+Radii are ordered board ≫ cart > bank, which is the ordering this section always had, and each is large in proportion to its object.
 
 **`Escape` has exactly one owner and it is not any of these.** Overlays, the locked view and anything else that can be dismissed register with a single stack; the top-most registration wins. This is written here rather than left to convention because `Escape` is the one key three different features will each feel entitled to.
 
@@ -1574,29 +1652,72 @@ Prompt fades in over 180 ms at the radius edge. `Escape` closes whatever is open
 
 **Touch has to be able to release too, and that does not fall out of anything.** §12.3's on-screen stick is itself gated on `canControl()`, so on a phone a locked view freezes the one control that was supposed to escape it. The lock therefore carries **a visible close control for as long as it is held** — plus a tap on empty space, which R3F reports separately from a look-drag. This is the §17 stranger-on-a-phone test applied to the one state in the world that can trap them.
 
+**And the stick hides while it is frozen, rather than sitting there dead.** Being gated made it inert; it stayed drawn, in the same bottom-left corner §2.1.2's project controls occupy, so a phone in the locked view had a 120 px disc under the pager doing nothing. **A control that is visible and does nothing is worse than one that is gone** — it reads as the way out of a view whose actual way out is beside it. Faded rather than unmounted, so the pointer capture is never torn down mid-gesture.
+
+**§2.1.2's controls are two pills on a phone and one from `sm` up.** Paging, N dots, `GITHUB`, `OPEN` and a close came to about 400 px of controls on a 375 px screen: the ends ran off the edge and the row sat on the stick. They split on the seam already in them — *move between projects* above, *do something with this one* below — and rejoin on desktop.
+
 ### 12.6 The guided path
 
 For a visitor who does not want to walk. Reuses the locked-view camera (target pose, ease, release) — keep that general. **§2.1.1 builds that primitive and is its first consumer**, so this section inherits it rather than specifying it again.
 
-| Stop | Camera position | Yaw | Pitch |
-|---|---|---|---|
-| 0 — spawn | `(0, 1.68, -19.5)` | `0°` | `-4°` |
-| 1 — vending | `(+1.90, 1.68, +6.0)` | `+90°` | `-6°` |
-| 2 — payphone | `(-1.80, 1.68, +14.0)` | `-90°` | `-8°` |
-| 3 — board | §2.1.1's locked pose — `(-2.592, 1.68, +19.681)` | `+12.461°` | `+6.34°` |
+| Stop | Camera position | Yaw | Pitch | Leg |
+|---|---|---|---|---|
+| 0 — spawn | `(0, 1.68, -19.5)` | `0°` | `-4°` | 0.5 m — a turn |
+| 1 — about | `(+0.90, 1.68, +19.0)` | `+90°` | derived | 39.5 m |
+| 2 — work | §2.1.1's locked pose — `(-3.081, 1.68, +16.028)` | `+11.87°` | `+14.68°` | 5.9 m |
+| 3 — contact | `(-2.60, 1.68, +14.0)` | `-90°` | derived | 2.1 m |
+| 4 — gate | `(0, 1.68, -20.0)` | `180°` | derived | 34.1 m |
 
-**The order changed with §2.1's position, and the old one would have been absurd.** It ran spawn → shopfront → vending → payphone: with the showcase now at `z = +19.7`, that is a **39 m** first leg followed by two reversals back down the alley. Monotonic in `z` — spawn, vending, payphone, board — is the order a person would actually walk, and it ends on the surface the whole piece is for. **`legDurationSec` is unchanged at 2.6 because the legs are now 26 m, 8 m and 7 m** rather than 39; the old first leg would have moved the visitor at 15 m/s, six times §12.3's top speed.
+**The order is spawn → About → Work → Contact → Gate → spawn, and it no longer ends on the board.** This section used to say the tour *ends on the surface the whole piece is for*, which was right when contact was a payphone halfway down the alley. Contact came later, and the loop later still.
 
-**Stop 3 is not authored here.** It reads §2.1.1's pose, for the reason §7.1 gives about lights: a stop written as its own coordinate beside the thing it is a stop for drifts the moment that thing moves, and it drifts silently because a camera 2 m off still looks like a camera.
+**The loop closes through §3.1's station gate, and spawn became a stop rather than a start.** §17's first line is *you spawn facing an empty alley; you turn round and the shutter is down* — and a visitor who took the tour instead of walking **never turned round.** It ended on contact and looped back past the gate without ever facing it. Now it brings you back up the alley to face the last train you missed, then turns you to face the alley again. That is §17's opening beat, arrived at rather than spawned into, and the turn is a stop of its own because leaving the visitor pointed at a wall would make the next press fling them thirty-nine metres backwards.
 
-- Ease `easeInOutCubic`, **2.6 s** per leg, path is a quadratic through the alley centre so you never clip a wall.
+**The gate stop aims at §3.1's closure notice, not the plate above it.** §3.1 says outright that 2.10 is *the only height on this wall a visitor reads at 3.0 m without looking up*; the standoff is that 3.0. It is the one stop that is not a content surface and the only one §12.5 has no station for, so `stationAudit` skips it and spawn together.
+
+**Stop 2 is not authored here.** It reads §2.1.1's pose, for the reason §7.1 gives about lights: a stop written as its own coordinate beside the thing it is a stop for drifts the moment that thing moves, and it drifts silently, because a camera 2 m off still looks like a camera.
+
+**Stops 1 and 3 do not author their pitch either, and the reason is the same one.** A stop's pitch is *where you have to look to see the object*, so it is derived — `pitch = -atan((eyeY - objectCentreY) / standoff)` — and it moves when the object does. Authored, it would have stayed at §12.6's old `-6°` and `-8°` while §2.2 grew a stats board at 0.62 m and §2.3 became a bank centred at 1.22 m, and the tour would have delivered the visitor to two objects it was pointing over the top of.
+
+**Stop 3's standoff is 1.60 m, set by §12.5's `wrong-station-at-stop` rule** rather than chosen — at 2.40 m the bank's radius would have had to grow until it swallowed §2.1.1's locked pose.
+
+**Stop 1's went 1.90 → 2.90 for the opposite reason: the framing, which then moved the radius.** At 1.90 the cart filled the frame and its canopy sign band — the one thing on it that says what it is — sat behind §12.7's nav bar, so the visitor arrived at a close-up of a worktop. The aim point moved with it, from the counter alone to halfway between the counter and the band, so both are in shot. §12.5's rule then forced §2.2's radius from 2.20 to 3.20 to keep containing its own stop, which is the invariant doing its job in the direction it was written for.
+
+**Arriving *does* something, and it is the same thing whichever control brought you.** §12.7's nav and this section's `Next stop` reach the same three destinations and used to disagree — the nav opened the overlays and the tour did not, so a guided visitor landed at About looking at a food cart with no About in sight. The behaviour belongs to the stop:
+
+| Stop | On arrival |
+|---|---|
+| `about` | §2.2's overlay opens |
+| `work` | locks as §2.1.1's own view, so §2.1.2's pager and *open* appear — that **is** the projects overlay |
+| `contact` | nothing opens. §2.3's six boxes each go somewhere different and the prompt says to click one; a panel over them would hide the thing the visitor was brought here to use |
+
+**`legDurationSec` becomes a glide *speed*, because the legs are now 38.6, 5.9 and 2.1 m.** 38.6 m in the authored 2.6 s is **14.8 m/s** — the precise fault this section already rejected once ("39 m … is 15 m/s, six times §12.3's top speed"), arrived at again from the other direction as soon as the stops moved. A duration that is right for one leg length is wrong for every other, so the constant is read as what it always was: a speed. Every leg takes `distance ÷ speed`, with a **1.2 s floor** so the 2.1 m leg is not a quarter-second snap.
+
+**The speed is 5.0 m/s, and 10 was wrong for a reason worth stating.** Reading 26 m ÷ 2.6 s off the old constant gives 10 m/s, and at 10 the visitor did not travel — they **arrived**. This section's premise is *a visitor who does not want to walk*, which is not the same as one who does not want to **go**: thirty-eight metres in under four seconds, accelerating through the middle of an `easeInOutCubic`, is a cut with motion blur, and the alley the tour exists to show goes past too fast to see. 5.0 is about twice §12.3's own walking speed, so the first leg takes eight seconds and the visitor watches forty metres of street. Any movement input still ends it instantly, so nobody is held there.
+
+- Ease `easeInOutCubic`, path is a quadratic through the alley centre so you never clip a wall.
 - Control returns on arrival, or immediately on any movement input (the visitor always wins).
-- "Next stop" button, bottom-right, always visible after the gate.
+- "Next stop" button, always visible after the gate.
 - **Reduced motion: jump, with a 180 ms fade through `void`.**
 
 ### 12.7 Top nav
 
-Always present after the gate, on every device: **Work · About · Contact · Next stop**. `About` and `Contact` open the same overlays as the stations. This is what passes the ten-second test.
+Always present after the gate, on every device: **About · Work · Contact · Next stop**. This is what passes the ten-second test.
+
+**All three destinations *travel*.** `Work` has always done this — it takes §2.1.1's locked view from wherever you are standing — and `About` and `Contact` used to just put a panel on the screen. **A portfolio whose About button opens a panel over a world you never moved through has a world for decoration.** So each is a §12.6 leg at §12.6's own glide speed.
+
+**What none of them do any more is open the panel for you.** They arrive, and §12.5's prompt says what is there; pressing `E` or the prompt itself opens it. `Work` is the exception only because §2.1.1's locked view *is* the destination, so arriving is the whole action.
+
+**Contact on a phone is the second exception, and it is §2.1.2's argument again.** There the tour parks the visitor 1.60 m from six 0.44 m boxes in a portrait frame: the outer columns sit at the edges, the labels are 0.10 m tall, and the view is locked, so they cannot step back or turn to line one up. **A hit target in the world is only a hit target if the visitor can get in front of it** — which is exactly why §2.1.2 took the project controls off the wall and onto the screen. So on mobile the contact overlay opens on arrival and its rows are the targets. Desktop keeps the boxes, because there a pointer reaches any of the six without moving.
+
+Pressing one also sets §12.6's `Next stop` to continue from there rather than from wherever the tour had got to — the two controls are two ways into the same route, and they should not disagree about where the visitor is.
+
+**The overlays are a centred card, and it starts below this nav rather than covering it.** They were a side panel on desktop and a full sheet on a phone: the panel put its content against one edge and left the alley in the other two thirds, which reads as a drawer bolted to a game rather than as the thing you opened — and both put the nav under a scrim or under the sheet. *Always present on every device* is this section's first sentence, and the nav is also the fastest way from one panel to another, so it cannot be what an overlay hides.
+
+**The scrollbar is styled, and it is the one surface here whose colour is not in `lib/world.ts`.** A scrollbar cannot read a TypeScript module, so it is expressed in CSS — but it defaulted to the light theme, which put a white bar down the side of a near-black card, brighter than any type on it. Both syntaxes are set, because they are not interchangeable: `scrollbar-color` is the standard and is what Firefox uses; the `::-webkit-` pseudo-elements are what Chrome and Safari use. Neither alone covers the browsers this ships to.
+
+**It therefore stays live while a panel is open, and the panel is honestly non-modal.** A nav that is visible and dead is worse than either state: it looks like the way out and does nothing. Everything else — the canvas, the stick, the prompt — still goes `inert`, so the only thing outside the card that can be reached is the four buttons above it, and the card claims `role="dialog"` **without** `aria-modal`, because claiming modality while something outside is reachable is a lie to a screen reader.
+
+**About first, matching §12.6's order and the studio's own site.** The nav and the tour disagreeing about which order these three come in is the kind of small incoherence a visitor cannot name and does notice.
 
 ---
 
@@ -1644,8 +1765,8 @@ All levels relative to a master that starts at **−6 dB**, with a persistent mu
 | Rain on asphalt | −18 dB | seamless loop, always on |
 | Low city hum | −26 dB | seamless loop, always on |
 | Distant train | −12 dB | once, 40–90 s apart, never within 10 s of a station opening |
-| Vending compressor | −24 dB | positional, falls off from 6 m |
-| Payphone ring | −22 dB | once per 34 s, positional |
+| Cart simmer | −24 dB | positional, falls off from 6 m |
+| Mailbox flap | −22 dB | on open only, positional |
 | Footsteps on wet ground | −20 dB | 1.9 Hz at full speed, 4-sample round-robin |
 | Interact / open | −16 dB | one soft click |
 
@@ -1695,6 +1816,12 @@ Three things moved it off 35.61:
 - **§2.1's board face, gone entirely.** −5.59 MB, and not as an optimisation: §2.1.2 moved the prose and the controls to a DOM overlay, so the 1024² canvas carrying title, blurb, tags, dots and legends stopped existing. **The single largest consumer in the world was deleted by a legibility decision**, which is worth recording because it is the opposite of the usual direction — the budget was fixed by a change made for another reason entirely.
 
 Against that, this pass adds **§3.7's vending rack** at 256 × 512 / 128 × 256 (+0.67 / +0.17), the only new texture in it. §3.4's two new grain classes cost **zero**: a cloned `Texture` shares its `Source`, so a per-class repeat is another sampler on an image that is already resident.
+
+**§2.2 and §2.3 cost two draw calls between them, and it took two goes to keep it at two.** §2.3's whole bank — six boxes, the plate and four bolts — is **one `InstancedMesh`**; six label plates, twelve flag faces and the cart's sign band are thirteen surfaces sampling **one canvas**, so they merge into one more. Everything else the detail pass added — five canopy panels, an apron, an urn, two cups — reuses tokens the cart already had, so `Props.tsx`'s merge-by-material carries them at **zero**.
+
+**The plate started as its own mesh and measured 90 of 90 on mobile.** Folding it and its bolts into the boxes' instance set was the fix, and it cost the bolts their hexagonal heads — they are square pads turned 45°, which at 0.056 m across from 1.60 m is a difference nobody can see and a draw call the tier had none of.
+
+**§2.2's whole intricacy pass — rafters, fascia, noren, bowls, menu tags, hubs, base plates — added zero**, because every part reuses a token the cart already had and §3.7 merges by material. Measured across six poses including both stations: **96 of 140 desktop, 89 of 90 mobile, 7 of 7 mobile lights, 159k triangles.**
 
 **Draw calls, measured as the frame maximum across spawn, the north clamp, mid-alley and the mouth: 94 of 140 desktop, 88 of 90 mobile.** §3.6's traffic moves, so the desktop peak varies by a call or two with which vehicles are in frame. Mobile was 95 and had been over this cap for three sections while the lever §3.7 named went unspent. It is spent:
 
@@ -1746,7 +1873,7 @@ These need a decision before the code that depends on them is written, and the b
 
 8. ~~**The alley mouth around `z = +22` is reserved.**~~ — **resolved: the showcase moved to the bend.** The reservation did its job. §2.1 is now on that wall and §16.12 records the move.
 
-9. **§7's lights 4 and 5** — **2 and 3 are settled and now mounted** (§7 has the derivations, and §16.15 has what mounting them corrected). Lights 4 and 5 belong to §2.2's vending machine and §2.3's payphone, neither of which exists, and a light cannot be set against a surface that is not there. Light 5 is a `pointLight` at 2.5 cd and is wrong by §7.1's argument; light 4 is a `rectAreaLight` in cd/m², which that correction says nothing about and which §2.1's light 2 now gives a **worked and corrected** precedent for — luminance × area against the alley's candela, with the area read off the emitter rather than written down beside it. Both are set when their surfaces are built.
+9. ~~**§7's lights 4 and 5**~~ — **closed.** They were waiting on §2.2's vending machine and §2.3's payphone, and both objects were replaced before either light was ever mounted. They re-seat on the food cart's canopy face and the mailbox bank, and are set by measurement at §12.6's stops rather than from the authored figures, which is what §16.15 says to do with a `rectAreaLight`.
 
 10. ~~**The west wall's 5.20 m gap.**~~ — **closed in §16.15.** §3.4 reserved `z ∈ [−6.60, −1.40]` for a showcase that moved to the bend, and the reservation stayed: 5.20 m of bare west wall, measured at **8.5 of 255 against 37.7 on the lit wall beside it**, in the middle of the alley. The blast radius this item named was real and is exactly what happened — `placeWall`'s apportionment re-rolled every unit width, joint, doorway and sign box on that wall, which moved §3.5's signs, which re-seated §7.1's lights, which produced **six `audit()` findings from one deleted array entry**. It is closed here rather than in its own diff because §16.15 had already paid for the same re-verification once, for §3.4's doorway surround, which moves the identical chain. **The second full re-verification is nearly free once the first has been done**, and that is the only argument for the timing.
 
@@ -1993,6 +2120,22 @@ All of §3.7. Free choices: every dimension in its table except the vending mach
 **Four wrong diagnoses before the right one, and the reason is worth keeping.** Hiding the ground planes changed nothing, so it looked like direct geometry; widening the wall changed nothing, so it looked like a leak past its ends; dropping the wall two metres into the floor changed nothing, so it looked like it was not the wall at all. **All three tests were void: R3F re-applies `visible` on every render, so nothing declarative ever actually got hidden.** The imperatively-created meshes *did* hide, which is why the props and §3.6's panels answered honestly and the ground never did — a false negative that pointed away from the answer for four rounds. Toggling `layers` instead survives the re-render, and the first honest test named the reflector immediately. **A debugging tool that silently does nothing is worse than no tool**, and this one only failed on half the scene.
 
 **And the cones were cordoning off the middle of the road.** They were at `x = −1.30` and `−0.55`, which is the centre line of a carriageway with nothing in it. Cones stand where the thing being coned off is, and here that is the kerb — 0.05 m clear of it, beside the pavement and never on it, which `prop-straddles-kerb` requires anyway. They stay §3.7's honest test of §12.4's resolver: a cone's inner face at 2.79 is still well inside §3's ±3.60 clamp.
+
+### 16.17 Settled during the stations pass
+
+**The bio station was a vending machine and is a food cart, and the cart was already there.** §3.7 built one at east `z = +19.0` four sections ago, argued it into the world as scenery, and gave it the only canopy lamp on that stretch. §2.2 then went on specifying a lit drinks machine thirteen metres away. **The object that best fitted the role had been standing in the alley, lit, unused, since §3.7** — and nothing had to be built to notice it. Worth recording because the same shape recurs: §2.3's wall is a slot §3.4 had been holding open, and §6.1's kerb was a pavement §3 had already specified twice.
+
+**The contact station was a payphone and is six mailboxes, and the difference is not the metaphor.** A payphone means *contact*; six labelled boxes **are** the channels, readable from where you stand, and §17 tests finding the details rather than recognising the symbol. It also generates: §2.1's *N surfaces from N entries in `CONTENT.md`* now covers §2.3, so a seventh channel is a seventh box with no component edited.
+
+**Two stations, each correct alone, wrong together — and only an audit could see it.** The bank's guided stop was 2.40 m out, which forces a radius above 2.40, which reaches 2.32 m to §2.1.1's locked pose: **standing at the board, the prompt would have offered contact.** No single number was wrong. `stationAudit()`'s `wrong-station-at-stop` rule found it before any of it was built, and the fix moved the *stop* rather than growing the radius. **The third time §12.5's radius rule has been broken is the time it stopped being prose and became a check.**
+
+**§12.5's table had drifted from the code for two sections.** The document said the board's radius was 6.50; the code said 9.50. The code was right — the board's locked pose moved to 7.07 m during the showcase retune and 6.50 stopped containing it, which is the exact failure the paragraph beside it describes. **A document that states an invariant and then states a number violating it is worse than one that states neither**, because the number is what gets copied.
+
+**Lights 4 and 5 were nearly deleted for a good reason and kept for a better one.** They belonged to the two replaced objects, so retiring them was tidy, and §2.2 and §2.3 were both drafted saying *no light, the cap is spent* — which was false the moment the two objects left. §7 has said since it was written that what makes the three content surfaces dominant is that **each throws light**, and emissive illuminates nothing but itself. They re-seat. The count stays at eleven and `LIGHT_SURRENDER_ORDER` needs no revision.
+
+**A ref callback runs before R3F has applied the element's props, and it cost an hour.** §7's light 4 is a `rectAreaLight`, which has no declarative `lookAt`, so it is aimed in a `ref` callback — and `light.position` inside that callback is still `(0, 0, 0)`. The light mounted, in the scene, at the right place, with the right intensity, aimed at nothing, contributing **exactly zero**: measured 25.8 at 6 cd/m² and 25.8 at 65. **Anything a ref callback reads off the object it was handed must be set by the callback itself**, and the way this was caught is worth keeping — a sweep whose readings do not move is a different fault from a sweep whose readings move too little, and only a sweep distinguishes them.
+
+**The tour ends on contact now, and §12.6's old sentence was a real argument.** *It ends on the surface the whole piece is for* was right while contact was a payphone halfway down the alley. With all three surfaces within eight metres of each other, the last thing a visitor should be left looking at is the way to reach the person who made it.
 
 ---
 

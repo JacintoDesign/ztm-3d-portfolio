@@ -78,7 +78,8 @@ export function showcaseLightsFor(tier: Tier): {
   const surrendered = surrenderedFor(tier)
 
   return {
-    screen: tier === 'mobile' && screen.mobile === 'drop' ? null : screen,
+    /* Both tiers. See §7 #2 on why this one has no cheap substitute. */
+    screen,
     sign: surrendered.has(sign.id) ? null : sign,
   }
 }
@@ -93,13 +94,48 @@ export function showcaseLightsFor(tier: Tier): {
  */
 function surrenderedFor(tier: Tier): Set<number> {
   const cap = BUDGET[tier].dynamicLights
-  /* Light 2 is desktop-only, so on mobile it is not competing for a slot. Counting it
-     there would surrender one of §7.1's five to make room for a light that is not
-     mounted — a cap enforcing itself against a light nobody can see. */
-  const showcaseCount = tier === 'mobile' ? 1 : 2
-  const overBy = MOUNTED_ELSEWHERE + showcaseCount + ALLEY_LIGHTS.length - cap
+  /* **All four of §2's lights now occupy a slot on both tiers.** Light 2 is kept as a
+     `rectAreaLight` everywhere, because its contribution *is* §6's specular reflection and a
+     point light cannot stand in for that; light 4 is dropped to a `pointLight` on mobile but
+     still occupies its slot. This used to branch on the tier, which was arithmetic about
+     which lights were mounted rather than a preference. */
+  const showcaseCount = 2
+  const stationCount = 2
+  const overBy =
+    MOUNTED_ELSEWHERE + showcaseCount + stationCount + ALLEY_LIGHTS.length - cap
 
   return new Set<number>(overBy > 0 ? LIGHT_SURRENDER_ORDER.slice(0, overBy) : [])
+}
+
+/**
+ * §7 lights 4 and 5 — §2.2's and §2.3's, mounted by `Stations.tsx` rather than here.
+ *
+ * **They moved rather than being retired**, and §7 has the argument: *what makes the three
+ * content surfaces dominant is that each throws light*. Light 4 was authored for a vending
+ * machine and light 5 for a payphone; both objects were replaced before either light was
+ * ever mounted, and retiring them would have left two of the three stations illuminating
+ * nothing but themselves.
+ *
+ * Same shape as `showcaseLightsFor`, for the same reason: a light seated on an object
+ * belongs with the object, and `Stations.tsx` is where those two objects' frames are.
+ */
+export function stationLightsFor(tier: Tier): {
+  bio: (typeof LIGHTS)[3]
+  /** True when §7 #4's `rectAreaLight` is swapped for its cheap stand-in. */
+  bioAsPoint: boolean
+  contact: (typeof LIGHTS)[4] | null
+} {
+  const bio = LIGHTS[3]
+  const contact = LIGHTS[4]
+  const surrendered = surrenderedFor(tier)
+
+  return {
+    /* Never null. §7 #4's `mobile: 'drop'` drops the *type*, not the light — see the note
+       beside it, and the 28% measurement that found the difference mattered. */
+    bio,
+    bioAsPoint: tier === 'mobile' && bio.mobile === 'drop',
+    contact: surrendered.has(contact.id) ? null : contact,
+  }
 }
 
 /**

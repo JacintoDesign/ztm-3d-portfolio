@@ -10,8 +10,12 @@ import Camera from '@/components/player/Camera'
 import Interact from '@/components/player/Interact'
 import Player from '@/components/player/Player'
 import InteractPrompt from '@/components/ui/InteractPrompt'
+import Nav from '@/components/ui/Nav'
+import Overlays from '@/components/ui/Overlays'
 import ShowcaseControls from '@/components/ui/ShowcaseControls'
 import TouchStick from '@/components/ui/TouchStick'
+import type { About } from '@/lib/about'
+import type { Contact } from '@/lib/contact'
 import { resolveTier, useIsPortrait } from '@/lib/device'
 import { isLocked, releaseLock } from '@/lib/lockedView'
 import type { Project } from '@/lib/projects'
@@ -29,6 +33,7 @@ import Props from './Props'
 import Rain from './Rain'
 import Showcase from './Showcase'
 import StationGate from './StationGate'
+import Stations from './Stations'
 import Ripples from './Ripples'
 import Storefronts from './Storefronts'
 import Traffic from './Traffic'
@@ -58,7 +63,15 @@ RectAreaLightUniformsLib.init()
  * There is never a second one: another Canvas carries its own renderer and scene graph
  * and halves the frame rate for nothing.
  */
-export default function World({ projects }: { projects: readonly Project[] }) {
+export default function World({
+  projects,
+  about,
+  contact,
+}: {
+  projects: readonly Project[]
+  about: About
+  contact: Contact
+}) {
   const tier = resolveTier()
   const portrait = useIsPortrait()
   const fov = portrait ? CAMERA.fovDeg.portrait : CAMERA.fovDeg.landscape
@@ -131,6 +144,9 @@ export default function World({ projects }: { projects: readonly Project[] }) {
         {/* §2.1 — the showcase, on §3.1's bend. The only content-bearing thing in the
             world, and the only thing in it that responds to a click. */}
         <Showcase projects={projects} />
+        {/* §2.2 / §2.3 — the other two content surfaces. After `Props`, because §2.2's lit
+            faces stand in front of a cart that file builds. */}
+        <Stations contact={contact} />
         {/* §3.6 — past the bend, and past §3's clamp. Nothing out here is reachable. */}
         <CrossStreet />
         {/* The vehicles are glTF files, so they suspend. The boundary is around Traffic
@@ -162,6 +178,10 @@ export default function World({ projects }: { projects: readonly Project[] }) {
           the locked view is held. The close control is also the only way out on a device with
           no keyboard, which is what §17's last line depends on. */}
       <ShowcaseControls projects={projects} />
+      {/* §12.7 — always present, on every device. §17's ten-second test is this. */}
+      <Nav />
+      {/* §2.2 / §2.3 — the two overlays. Last, so they layer over everything above. */}
+      <Overlays about={about} contact={contact} />
     </div>
   )
 }

@@ -130,6 +130,8 @@ const FAMILY: Record<SurfaceKey, Family> = {
   vendingFront: 'vendingFront',
   cartLamp: 'cartLamp',
   lanternGlow: 'lanternGlow',
+  /* Cloth, so `matte` — and `matte` is tinted, so §2.2's noren costs no material at all. */
+  noren: 'matte',
 }
 
 /** Families whose members differ only in colour, so the colour goes in the geometry. */

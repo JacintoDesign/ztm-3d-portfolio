@@ -181,9 +181,20 @@ export const EMISSIVE = {
    */
   scooterHeadlamp: raise(2.6) * 0.9, // 4.64 × 0.90 = 4.18
   verticalSigns: raise(2.4), //         2.40 → 4.20
-  selectionButtons: raise(2.1), //      2.10 → 3.54
-  payphoneLamp: raise(1.9), //          1.90 → 3.10
-  vendingFrontPanel: raise(1.6), //     1.60 → 2.44
+  /* §2.3 — six 0.05 m cubes, one per channel. Was `payphoneLamp` at the same value: a small
+     bright point on the contact station, which is what it still is. Renamed rather than
+     re-derived, because the rung is a decision about *that job at that size* and the job
+     survived the object. */
+  mailboxFlag: raise(1.9), //           1.90 → 3.10
+  /* §2.2 — every lit face on the cart: sign band, canopy panels, stats board. Was
+     `vendingFrontPanel`, and the same argument applies: the lit face of the bio station,
+     read at two metres, is one rung whatever the station is made of. The canvas decides
+     what is bright — a dark board with pale type stays a dark board with pale type. */
+  bioStationPanel: raise(1.6), //       1.60 → 2.44
+  /* §2.3 — the six label plates. Above §2.1's `projectTitleSign` at 1.23 because these are
+     a third the size and have to carry at a glance from 1.60 m, and below the bio station's
+     2.44 because six of them side by side is six times the area of one sign band. */
+  mailboxLabel: raise(1.35), //         1.35 → 1.89
   vehicleTailLamp: raise(1.55), //      1.55 → 2.33
   /* Authored 1.30 → 1.50 → 1.75. Eleven of these are the warm spine of the alley. The
      first raise was because they read as dull red shapes rather than as lit paper; this
@@ -674,6 +685,27 @@ export const STOREFRONT = {
   reserved: {
     west: [[12.9, 15.1]],
     east: [[5.1, 6.9]],
+  },
+  /**
+   * **Which reserved slots still hold a content surface**, as opposed to being a hole the
+   * wall was generated around.
+   *
+   * The east slot was reserved for §2.2's vending machine. §2.2 has since moved the bio
+   * station to §3.7's food cart, so nothing is going in it — but **removing the reservation
+   * is not the cheap fix it looks like**: it re-runs `placeWall`'s largest-remainder
+   * apportionment, which moves every unit width, joint, doorway and sign box on the east
+   * wall, which moves §3.5's sign `z` values, which re-seats §7.1's lights. §16 item 10
+   * priced that chain exactly once and it was worth paying because a doorway change was
+   * moving the same wall anyway. Nothing is moving this wall now.
+   *
+   * So the slot stays and one of §3.7's vending machines fills it, and this list is what
+   * lets `audit()` tell the two cases apart: `prop-in-reserved-slot` exists to keep scenery
+   * out of the air in front of a **content surface**, and there is no longer a content
+   * surface behind the east slot to protect.
+   */
+  contentSlots: {
+    west: [[12.9, 15.1]],
+    east: [],
   },
   /** The run stays inside the alley proper, not the facade's full extent. */
   z: [-22.0, 22.0],
@@ -1263,8 +1295,18 @@ export const PROPS = {
     worktop: { length: 1.98, depth: 0.86, thickness: 0.06 },
     post: { radius: 0.03, y: [1.16, 2.02] },
     canopy: { length: 2.1, depth: 1.0, thickness: 0.08 },
-    /** Faces down, under the canopy. §8.1's 1.10 — over the knee, under the lanterns. */
-    lamp: { length: 1.7, depth: 0.7, y: 1.98, color: 'sodium', emissive: EMISSIVE.openShutterSpill },
+    /**
+     * The canopy lamps' colour and rung. **`length`/`depth`/`y` are §3.7's and are no longer
+     * read** — §2.2 replaced the single slab with `BIO_STATION.canopyPanels`, which sizes and
+     * places five of them; only `color` and `emissive` are still live, through `Props.tsx`'s
+     * `cartLamp` material family.
+     *
+     * **1.34 → 2.44.** `openShutterSpill` was the right rung for a lamp over an empty counter
+     * in the surroundings. §2.2 made this a content surface, and §7 has always held that the
+     * three content surfaces are the warmest things in the alley — at 1.34 the cart sat below
+     * eleven paper lanterns at 2.77, which is the wrong way round now that it is a station.
+     */
+    lamp: { length: 1.7, depth: 0.7, y: 1.98, color: 'sodium', emissive: EMISSIVE.bioStationPanel },
     bodyColor: 'shutter',
     metalColor: 'metalDark',
     wheelColor: 'void',
@@ -1650,32 +1692,118 @@ export const SHOWCASE = {
   autoAdvanceMs: 10_000,
 } as const
 
-/** §2.2 — the vending machine. Reads the About material from CONTENT.md. */
+/**
+ * §2.2 — the bio station: **§3.7's food cart**, promoted from scenery.
+ *
+ * **There is no geometry in here and that is the point.** The cart's size, position, yaw
+ * and collision box live in `lib/props.ts` where §3.7 put them four sections ago; this
+ * object carries only what being a *station* adds. §7.1's rule — a coordinate written twice
+ * beside the thing it describes drifts silently — is the whole reason the `x`/`z` fields
+ * that used to sit here are gone rather than updated.
+ *
+ * The lit faces are new and they are §3.7's parts, so they are added to `foodCartParts()`
+ * rather than built here: §3.7's merge-by-material bake then carries them at **no extra draw
+ * call**, which is what makes a detail pass on this object affordable at all.
+ */
 export const BIO_STATION = {
-  wall: 'east',
-  body: { width: 1.12, depth: 0.82, height: 1.94 },
-  x: 4.1,
-  z: 6.0,
-  facing: '-X',
-  frontPanel: { width: 0.96, height: 1.42, baseY: 0.44, emissiveIntensity: EMISSIVE.vendingFrontPanel },
-  buttons: { grid: [3, 4], size: 0.07, emissiveIntensity: EMISSIVE.selectionButtons },
-  interactRadius: 2.2,
+  /** Which §3.7 prop this station *is*. Position and footprint are read from it. */
+  propKey: 'foodCart',
+  /**
+   * The lit plate that says what this is — **on the front of the bar, not up on the canopy.**
+   *
+   * It spent a version at `y = 2.02` on the canopy fascia, which is where a shop's fascia
+   * sign goes and not where a yatai's does: a stall's plate hangs on the counter you stand
+   * at, under the lamps rather than above them. Up there it also read as floating behind the
+   * corner posts. On the bar front it is the first thing at eye level and the posts are
+   * nowhere near it.
+   *
+   * Narrower with it — 1.05 against a 1.90 m counter rather than 1.60 spanning a whole
+   * canopy — because a plate that runs the full width of the thing it is bolted to is a
+   * fascia again.
+   */
+  signBand: { width: 1.05, height: 0.3, y: 0.72 },
+  /** Five lit panels across the canopy underside, replacing §3.7's single lamp slab. */
+  canopyPanels: { count: 5, width: 0.3, depth: 0.34, y: 1.98 },
+  /** One rung for every lit face; the canvas decides what is bright. */
+  emissiveIntensity: EMISSIVE.bioStationPanel,
+  /**
+   * §2.2 / §2.3 — the shared label atlas, sized here because this station holds the widest
+   * surface on it: the 1.60 m sign band read at §12.6's 1.90 m stop wants about 1350 device
+   * pixels across, so 1024 is already a compromise and 512 would be visibly soft.
+   *
+   * **One atlas for fourteen surfaces on two stations** — see `lib/textures/stationLabels.ts`
+   * for why they share, which is §15's draw-call budget rather than memory.
+   */
+  labelCanvas: { desktop: 1024, mobile: 512 },
+  urn: { radius: 0.16, height: 0.26 },
+  /**
+   * **2.20 → 3.20, because §12.6's stop had to move back.** At 1.90 m the cart filled the
+   * frame and the canopy's sign band — the one thing on it that says what it is — sat behind
+   * §12.7's nav bar. A station's radius has to contain its own stop (§12.5), so widening the
+   * framing widens this. The board at 9.50 is still by far the widest, which is the ordering
+   * §12.5 has always had.
+   */
+  interactRadius: 3.2,
   idle: { breatheHz: 0.5, breatheAmplitude: 0.004 },
 } as const
 
-/** §2.3 — the payphone. Reads the contact channels from CONTENT.md. */
+/**
+ * §2.3 — the contact station: **a bank of mailboxes on the west wall**, one per channel.
+ *
+ * **`columns × rows` is a shape, not a count.** How many boxes there are is
+ * `CONTENT.md`'s business — §2.1's rule, applied here — so the grid is filled in reading
+ * order and a seventh channel starts a third row rather than requiring a component edit.
+ * `boxesPerRow` is what the geometry needs; the row count falls out of the channel list.
+ */
 export const CONTACT_STATION = {
   wall: 'west',
-  box: { width: 0.62, depth: 0.54, height: 1.36, plinthHeight: 0.28 },
-  x: -4.16,
+  /** The wall face. Boxes project from it into the alley. */
+  wallX: -4.5,
   z: 14.0,
   facing: '+X',
-  awning: { width: 1.6, depth: 1.1, undersideY: 2.6, undersideEmissiveIntensity: 0.85 },
-  handsetLamp: { emissiveIntensity: EMISSIVE.payphoneLamp },
+  /**
+   * The plate the boxes are bolted to. **A real plate with real fixings**, because it is what
+   * makes six boxes read as one installed thing rather than six boxes stuck to a wall — the
+   * same argument §3.5 made for the sign brackets and §2.1 for the board's bolted letters.
+   */
+  backPlate: {
+    /**
+     * **The plate is sized from the grid, not authored** — because authored, it was wrong.
+     *
+     * It was a 2.00 × 1.00 slab standing on §3.4's plinth line, which put its top at
+     * `y = 1.22` while the top row of boxes sits at `1.29–1.55`: **the row the plate is
+     * supposed to carry was floating above it**, with bare wall behind. A fixed height cannot
+     * survive a row count that comes out of `CONTENT.md`, and a seventh channel would have
+     * put two rows in the air instead of one.
+     *
+     * `margin` is the border around the block of boxes. At 0.16 it reproduces the authored
+     * 2.00 width exactly — `2 × 0.62 + 0.44 + 0.32` — so nothing about the look changed;
+     * what changed is that the height now follows the rows and the bolts stay in the corners.
+     */
+    margin: 0.16,
+    proud: 0.04,
+    /** One in each corner, inset from the edge. */
+    bolt: { radius: 0.028, depth: 0.03, inset: 0.08 },
+  },
+  box: { width: 0.44, depth: 0.3, height: 0.26 },
+  boxesPerRow: 3,
+  columnPitch: 0.62,
+  rowPitch: 0.4,
+  /** Bottom row centre. Rows stack upward from here. */
+  firstRowY: 1.02,
+  label: { width: 0.34, height: 0.1, proud: 0.012, emissiveIntensity: EMISSIVE.mailboxLabel },
+  flag: { size: 0.05, emissiveIntensity: EMISSIVE.mailboxFlag },
+  /**
+   * One §4 neon token per channel, cycled. Six tokens for six channels today, and it wraps
+   * rather than running out — the list is a palette, not a per-channel assignment, because
+   * a per-channel assignment would be a component edit waiting to happen.
+   */
+  flagColors: ['neonPink', 'neonCyan', 'phoneGreen', 'sodium', 'neonMagenta', 'lantern'],
   interactRadius: 2.0,
-  /** Never more often than this. */
-  idleRingIntervalSec: 34,
 } as const
+
+/** §2.3 — the box faces, which is where the station registers and what §12.6's stop aims at. */
+export const CONTACT_STATION_X = CONTACT_STATION.wallX + CONTACT_STATION.box.depth
 
 /* ────────────────────────────────────────────────────────────────────────────
  * §5 — Atmosphere
@@ -2034,8 +2162,16 @@ export const REFLECTOR_TURNDOWN = [
  * comes from the reflections and from painted contact-AO decals.
  * ──────────────────────────────────────────────────────────────────────────── */
 
-export const LIGHT_CAP = 10
-export const MOBILE_LIGHT_CAP = 7
+/*
+ * `LIGHT_CAP = 10` and `MOBILE_LIGHT_CAP = 7` used to sit here and **nothing read either of
+ * them.** The caps `lib/lights.ts` actually enforces are `BUDGET.desktop.dynamicLights` and
+ * `BUDGET.mobile.dynamicLights`, which had already moved to 11 and stayed at 7 — so the pair
+ * here was a second, silently wrong copy of §7's most consequential number.
+ *
+ * Found by editing one of them to fix a measured darkness and watching the scene not change.
+ * **Two constants for one rule is the drift `lib/world.ts` exists to prevent**, and the fix
+ * is deletion rather than synchronisation: §15's budget is where a budget belongs.
+ */
 
 export const CONTACT_AO_DECAL = {
   color: 'void',
@@ -2116,7 +2252,24 @@ export const LIGHTS = [
      */
     intensity: 1.2,
     mountedOn: 'showcaseScreen',
-    mobile: 'drop',
+    /**
+     * **`drop` → `keep`, and the reason is that this light cannot be substituted.**
+     *
+     * §7 dropped it on mobile for its *type* — a `rectAreaLight` is the most expensive three
+     * has. §2.2's light 4 was dropped on the same ground and got a `pointLight` stand-in,
+     * which works because what light 4 does is throw a warm pool on a counter.
+     *
+     * **This one's entire job is the specular rectangle it makes in §6's mirror.** The note
+     * above is explicit: its diffuse contribution is a few units of 255 and its contribution
+     * *is* the reflection — that bright slab of board on the wet road twenty metres down the
+     * alley, which is the first thing anyone looks at from spawn. A point light's specular in
+     * a mirror is a hot dot, not a rectangle: the stand-in that worked for the cart produces
+     * the wrong image here, not a dimmer one.
+     *
+     * So it is kept on both tiers, and §15's mobile light cap absorbs it. **The alternative
+     * was a phone that never sees the reflection the whole §6 exists for.**
+     */
+    mobile: 'keep',
   },
   /**
    * §7 — on §2.1's title lightbox.
@@ -2158,24 +2311,83 @@ export const LIGHTS = [
     decay: 2,
     mobile: 'keep',
   },
+  /**
+   * §7 #4 — **§2.2's food cart**, re-seated from the vending machine it was authored for.
+   *
+   * Retiring it with the machine was the tidy move and it would have broken §7's own
+   * argument: *what makes the three content surfaces dominant is that each throws light.*
+   * An emissive material illuminates nothing but itself, so two of the three would have
+   * stopped touching the alley around them. Moving it keeps the count at eleven and
+   * `LIGHT_SURRENDER_ORDER` unrevised.
+   *
+   * **The size is the lit canopy face, not a number.** §16.15 recorded what happens when a
+   * `rectAreaLight`'s area is written down beside the emitter rather than read off it —
+   * light 2 was authored at 70 against an area a factor of eight out and washed the bend
+   * white. 6.0 cd/m² over 1.8 m² is about 0.6 × the board's total emission, which is the
+   * intent; the figure that ships is what a pixel reading at §12.6's stop says it is.
+   */
   {
     id: 4,
     type: 'rectArea',
-    size: [0.96, 1.42],
+    size: [2.0, 0.9],
     color: 'vendGlow',
-    intensity: 5.0,
-    position: [3.98, 1.15, 6.0],
-    facing: '-X',
-    mobile: 'keep',
+    /**
+     * **28, measured, not the 6.0 that was derived.** §16.15 said to set a `rectAreaLight`
+     * from a pixel reading rather than from an area calculation, and the sweep at §12.6's
+     * about-stop is why: the counter reads 41.5 unlit, 54.8 at 6, 92.6 at 30 and 162 at 90.
+     * §3.7 measured its drinks rack at 100.8 and called it the brightest thing on that
+     * stretch; 28 puts the counter just under that and **keeps `vendGlow`'s warmth** — by 40
+     * the highlight has gone white, which is a warm light that has stopped reading as one.
+     */
+    intensity: 28,
+    /**
+     * **Under the canopy facing down, not on the cart's face facing out** — and the first
+     * version was measured contributing exactly nothing. A `rectAreaLight` emits from one
+     * side of its plane, and the plane was at `x = 3.30`, which is the cart's own front face:
+     * every part of the cart was *behind* it. Deck, posts and canopy all read identically at
+     * 0 and at 45.
+     *
+     * Here it is the five canopy panels it stands for: a 2.0 × 0.9 emitter at the canopy
+     * underside throwing down onto the counter, the stools and the ground in front, which is
+     * both what a yatai does and what §7 means by a content surface throwing light.
+     */
+    position: [3.62, 1.94, 19.0],
+    facing: '-Y',
+    /**
+     * **`drop` on mobile — of the `rectAreaLight`, not of the light.** It is the most
+     * expensive type three has (two 64² LTC tables and a shader permutation) and §7 drops
+     * light 2 on exactly that ground.
+     *
+     * Dropping it outright was measured and it was wrong: the mean frame at §12.6's about
+     * stop came out at **14.4 on mobile against 51.6 on desktop — 28%** — because the cart is
+     * a content surface with nothing but emissive on it. §7's own rule is that each of the
+     * three throws light, and a tier where two of them do not is not a cheaper version of
+     * this world, it is a different one.
+     *
+     * So mobile substitutes a `pointLight` in the same place. It is a loop iteration in a
+     * forward renderer rather than a pair of texture lookups per fragment, and `intensity`
+     * changes units with the type — cd/m² over 1.8 m² against candela — so the figure is
+     * measured on the tier that uses it.
+     */
+    mobile: 'drop',
+    mobileFallback: { type: 'point', intensity: 26, distance: 5.0, decay: 1.45 },
   },
+  /**
+   * §7 #5 — **§2.3's mailbox bank**, re-seated from the payphone.
+   *
+   * `signWhite` rather than the payphone's `phoneGreen`: this is the surface §17 needs a
+   * stranger to find in ten seconds, and a green wash reads as one more neon in an alley
+   * full of them. Decay 1.45 rather than 2 puts it on §7.1's corrected footing with the
+   * five sign lights instead of the inverse-square the rest of that pass moved off.
+   */
   {
     id: 5,
     type: 'point',
-    color: 'phoneGreen',
-    intensity: 2.5,
-    position: [-4.0, 1.6, 14.0],
-    distance: 5.0,
-    decay: 2,
+    color: 'signWhite',
+    intensity: 18,
+    position: [-3.0, 1.55, 14.0],
+    distance: 6.0,
+    decay: 1.45,
     mobile: 'keep',
   },
 ] as const
@@ -3116,37 +3328,76 @@ export const INTERACT = {
    * is out of range. It is large in absolute terms because the object is: 3.20 × 4.80 m is
    * the biggest thing in the alley a visitor can touch.
    */
-  board: { radius: 9.5, prompt: 'E — view project' },
-  vending: { radius: 2.2, prompt: 'E — about' },
-  payphone: { radius: 2.0, prompt: 'E — contact' },
+  board: { radius: 9.5, prompt: 'E — View Projects' },
+  /** §2.2 — the food cart. Contains §12.6's stop at 2.90 m with 0.30 to spare. */
+  bio: { radius: BIO_STATION.interactRadius, prompt: 'E — About' },
+  /**
+   * §2.3 — the mailbox bank. **2.00 is authored and the *stop* moved to fit it**, not the
+   * other way round: at §12.6's original 2.40 m standoff this radius would have had to grow
+   * past 2.40, and a 2.40+ radius reaches 2.32 m to §2.1.1's locked pose — so standing at
+   * the board you would be prompted for contact. `stationAudit`'s `wrong-station-at-stop`
+   * is what found that, and it found it before either object existed.
+   */
+  /**
+   * **The prompt names the boxes, not the key.** Every other station in the world has one
+   * thing to press and `E — …` says it; this one has six, each going somewhere different, and
+   * the panel `E` opens is the *fallback* rather than the point. §12.6 parks the visitor here
+   * facing six labelled boxes, and a prompt that only mentioned a keyboard key on a wall full
+   * of things to click was the least useful true sentence available.
+   */
+  contact: { radius: CONTACT_STATION.interactRadius, prompt: 'Click a mailbox · E for Overlay' },
   promptFadeMs: 180,
 } as const
 
-/** §12.6 — the guided path, for a visitor who does not want to walk. */
+/**
+ * §12.6 — the guided path, for a visitor who does not want to walk.
+ *
+ * **This holds policy; `lib/guidedPath.ts` resolves the poses.** Three of the four stops
+ * are *derived from the thing they are a stop for* — the board's from §2.1.1's locked pose,
+ * the other two from where their stations actually stand — and two of them read
+ * `lib/props.ts`, which imports this file. Concrete positions therefore cannot live here,
+ * and putting them here anyway is exactly the drift §7.1 warns about: a stop written as its
+ * own coordinate beside the thing it is a stop for goes stale silently, because a camera
+ * two metres off still looks like a camera.
+ */
 export const GUIDED_PATH = {
   /**
-   * §12.6 — monotonic in `z`, which it was not before §2.1 moved. The old order ran
-   * spawn → shopfront → vending → payphone; with the showcase now at `z = +19.7` that is a
-   * 39 m first leg followed by two reversals, and 39 m in `legDurationSec` is 15 m/s — six
-   * times §12.3's top speed. The legs are now 26, 8 and 7 m, so 2.6 s still holds.
-   *
-   * **The board's stop is not authored.** It reads §2.1.1's pose, for §7.1's reason: a stop
-   * written as its own coordinate beside the thing it is a stop for drifts when that thing
-   * moves, and drifts silently, because a camera 2 m off still looks like a camera.
+   * **Ends on contact rather than on the board.** §12.6 used to say the tour ends on the
+   * surface the whole piece is for, and that was right while contact was a payphone halfway
+   * down the alley. With all three within eight metres of each other, the last thing to
+   * leave a visitor looking at is the way to reach the person who made it.
    */
-  stops: [
-    { name: 'spawn', position: [0, 1.68, -19.5], yawDeg: 0, pitchDeg: -4 },
-    { name: 'vending', position: [1.9, 1.68, 6.0], yawDeg: 90, pitchDeg: -6 },
-    { name: 'payphone', position: [-1.8, 1.68, 14.0], yawDeg: -90, pitchDeg: -8 },
-    {
-      name: 'board',
-      position: showcaseLockPosition(),
-      yawDeg: SHOWCASE_LOCK.yawDeg,
-      pitchDeg: SHOWCASE_LOCK.pitchDeg,
-    },
-  ],
+  order: ['spawn', 'about', 'work', 'contact'],
+  spawn: { position: [0, CAMERA.eyeHeight, -19.5], yawDeg: 0, pitchDeg: -4 },
+  /**
+   * How far out from each wall station the visitor is put.
+   *
+   * **`contact` is 1.60 and it is not a framing choice** — see `INTERACT.contact`. At 2.40
+   * the bank's radius would have had to swallow §2.1.1's locked pose. It is a better reading
+   * distance for a 0.10 m label anyway, which is the sort of luck that follows from fixing
+   * the real constraint rather than the symptom.
+   */
+  standoff: { about: 2.9, contact: 1.6, gate: 3.0 },
   ease: 'easeInOutCubic',
-  legDurationSec: 2.6,
+  /**
+   * **A speed, because `legDurationSec` was a duration and durations do not survive a stop
+   * moving.** The legs are 38.6, 5.9 and 2.1 m now; 38.6 m in the authored 2.6 s is 14.8 m/s
+   * — the precise fault §12.6 rejected once already, arrived at again from the other side.
+   * 2.6 s was only ever right for the 26 m leg it was measured against, so it is read as
+   * what it always was: a speed.
+   *
+   * **10 m/s → 5.0, because at 10 the visitor did not travel, they arrived.** §12.6's whole
+   * premise is *a visitor who does not want to walk* — which is not the same as one who does
+   * not want to **go**. Thirty-eight metres in under four seconds, accelerating through the
+   * middle of an `easeInOutCubic`, reads as a cut with motion blur: the alley the tour exists
+   * to show goes past too fast to be seen. 5.0 is a brisk walk — about twice §12.3's own
+   * 2.6 m/s — so the first leg takes about eight seconds and the visitor watches forty metres
+   * of street they would otherwise have had to walk. Any movement input still ends it
+   * instantly, so nobody is held there.
+   */
+  glideSpeedMps: 5.0,
+  /** So the 2.1 m leg is a move rather than a quarter-second snap. */
+  minLegSec: 1.2,
   /** Quadratic through the alley centre, so a leg never clips a wall. */
   pathShape: 'quadraticThroughCentre',
   /** The visitor always wins: any movement input returns control immediately. */
@@ -3154,8 +3405,14 @@ export const GUIDED_PATH = {
   reducedMotion: { jump: true, fadeMs: 180, fadeThrough: 'void' },
 } as const
 
-/** §12.7 — always present after the gate, on every device. */
-export const TOP_NAV = ['Work', 'About', 'Contact', 'Next stop'] as const
+/**
+ * §12.7 — always present after the gate, on every device.
+ *
+ * **About first, matching §12.6's order.** The nav and the tour disagreeing about which
+ * order the three surfaces come in is the kind of small incoherence a visitor cannot name
+ * and does notice.
+ */
+export const TOP_NAV = ['About', 'Work', 'Contact', 'Next stop'] as const
 
 /* ────────────────────────────────────────────────────────────────────────────
  * §13 — Reduced motion
@@ -3251,7 +3508,38 @@ export const BUDGET = {
     drawCalls: 90,
     triangles: 220_000,
     textureMemoryMB: 9,
-    dynamicLights: 7,
+    /**
+     * §7 / §15 — **7 → 9, and the seven was never measured.**
+     *
+     * It was authored before any of §7's lights existed, when the world had six and a cap was
+     * a guess about a phone. What it bought once the world was full: §7.1 surrendered two of
+     * its five sign lights *and* §2.2's station light, and the mean frame at §12.6's about
+     * stop came out at **14.4 against desktop's 51.6 — 28%**. Two of the three content
+     * surfaces had nothing on them but emissive, which is the exact failure §7 exists to
+     * prevent, on the tier §17's test is written about.
+     *
+     * **Nine is what this world needs minus the one light that is genuinely expensive.**
+     * Light 2's `rectAreaLight` stays desktop-only for its type; the hemisphere, the gate,
+     * §2.1's sign light, both station lights and four of §7.1's five fit inside it. A
+     * `pointLight` in a forward renderer is a loop iteration per fragment, not a pass — what
+     * actually constrains a phone here is fill rate, and §15 already caps DPR at 1.5, halves
+     * the reflector and drops multisampling for that.
+     *
+     * **Then 9 → 10, because §7 #2 turned out to have no substitute.** Light 2's whole
+     * contribution is the specular rectangle it makes in §6's mirror — the slab of lit board
+     * on the wet road that is the first thing anyone looks at from spawn. A `pointLight`
+     * stand-in gives a hot dot instead, so it is the wrong image rather than a dimmer one,
+     * and it is kept on both tiers. Ten is then everything this world has except one of
+     * §7.1's five sign lights.
+     *
+     * **This is the one figure in §15 not checked on a real device**, and it has now moved
+     * twice in one pass, which is worth being uncomfortable about in writing. What makes it
+     * defensible is that light *count* was never what constrains this world on a phone —
+     * fill rate is, and §15 already caps DPR at 1.5, halves the reflector to 512, drops
+     * multisampling and thins the rain for exactly that. **If a mid-range phone drops frames,
+     * turn this back first**, before any of the levers that cost the picture.
+     */
+    dynamicLights: 10,
     timeToFirstFrameSec: 2.5,
   },
   /** Capped on both tiers. */
