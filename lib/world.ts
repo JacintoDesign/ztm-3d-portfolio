@@ -1894,78 +1894,24 @@ export const REFLECTOR_STRIP = {
   centreZ: 3.5,
   y: 0.004,
   /**
-   * §6.1 — **the strip is an L, and the notch is in front of §3.1's bend wall.**
+   * §3.1's mouth slot: the band of `x` that is actually reachable — and visible — through
+   * the bend's opening. West edge just past the bend wall's east corner at `x = 1.309`, so
+   * nothing keyed to this region ever lands in the wall's shadow. §6.2's second coverage
+   * region and §10's carriageway ripple region both read it, so a ring can never fall on
+   * ground the mask left dry.
    *
-   * A planar reflection at grazing incidence looks *along* the mirror. For a floor point
-   * 0.2 m in front of the bend wall, seen from a 1.68 m eye seven metres back, the
-   * reflected ray leaves the surface heading down, passes **3 cm under the wall's foot**,
-   * rises back through the floor plane a few centimetres past it and carries on to §3.6's
-   * far building — so the last strip of floor before the wall was reflecting the cross
-   * street, its lit boards and its traffic. It reads, exactly, as a slot under the wall.
-   *
-   * **Nothing standing on the floor can block it**: the ray is below `y = 0` for its whole
-   * journey to the wall, and drei's reflector clips everything under the mirror plane out
-   * of the reflection pass — verified by dropping the wall two metres into the ground and
-   * watching the leak stay. Geometry is not the lever; **the reflective floor being there
-   * at all is.**
-   *
-   * So the alley's reflector stops at `bendCutZ` and a separate arm carries §3.6's
-   * carriageway, reachable only through §3.1's opening where there is no wall to see under.
-   * **One mesh, one material, one reflection pass** — §16.14 rejected a second reflector for
-   * doubling §15's most expensive pass and that argument still holds; this costs a dozen
-   * extra vertices.
-   *
-   * The floor between `bendCutZ` and the wall keeps the base plane's matte asphalt, which is
-   * what §6.2 already says happens against a kerb face: sheltered ground stays dry.
-   */
-  /**
-   * How far in front of §3.1's bend face the reflective floor stops, measured along the
-   * wall's own inward normal. **The cut runs parallel to the wall, not square to the
-   * alley** — a straight cut would leave 0.20 m of matte at the wall's east end and 2.25 m
-   * at its west, and that wedge is exactly the shape a mistake makes.
-   *
-   * **It is §3.1's kerb depth, and it took three goes to get there.** Leaving bare base
-   * plane in the gap was worse than the leak — `asphalt` at the mirror's own roughness comes
-   * out *brighter* than the mirror, a lit sliver reading as the same slot. Filling it with a
-   * 0.40 m plinth fixed that close up and left a bright band at middle distance, because a
-   * 0.40 m strip at the foot of a 14 m wall is not a pavement, it is a seam.
-   *
-   * At `LAYOUT.kerb.width` it is the pavement, the same one running down both side walls,
-   * and **the mirror stops where the pavement starts — which is exactly where it stops on
-   * the side walls.** The rule was already in the world; the bend was the only wall it had
-   * never been applied to.
-   *
-   * **Less 5 cm, so the mirror runs *under* the kerb rather than butting against it.** Cut
-   * flush, the reflector's edge and the kerb's inner face are the same line in plan, and one
-   * line is where floating-point disagreement puts a hairline of base plane at grazing
-   * incidence — visible on some frames and not others, which is the worst kind. Tucked, the
-   * overlap is hidden by a 0.118 m step from any eye above it, and reflective floor that
-   * cannot be seen cannot leak.
-   */
-  bendClearance: BEND_KERB.depth - 0.05,
-  /**
-   * The arm's west edge, just past the bend wall's east corner at `x = 1.309`, so no
-   * reflective floor is ever in the wall's shadow. §10's carriageway ripple region reads
-   * this, so a ring can never land on ground that is not wet.
+   * **It used to be the west edge of an L-shaped reflector's arm, and it is not that any
+   * more.** For two sections the strip was notched in front of §3.1's bend wall — a planar
+   * mirror at grazing incidence looks *along* itself, so the last stretch of floor before
+   * that wall was reflecting §3.6's cross street under its foot, and it read as a slot.
+   * **§3.1's kerb covers that floor now**, opaquely, which is a better answer than a hole
+   * for the reason the hole itself proved: the notch's diagonal ran on past the wall's east
+   * corner into this very slot, where there is neither wall nor kerb, and put a wedge of
+   * bare base plane on the carriageway. The lever was never the shape of the mirror; it was
+   * whether reflective floor is *visible*, and a pavement settles that without a cut.
    */
   mouthX: [1.35, 6.0],
 } as const
-
-/**
- * §6.1 — world `z` of the reflector's cut at this `x`: §3.1's bend face pushed
- * `bendClearance` into the alley along its own inward normal.
- *
- * Derived from `BEND` rather than authored, for the reason §2.1 gives about that frame:
- * two descriptions of one wall drift the moment the angle changes, and a reflector cut that
- * has drifted off the wall is either a matte wedge or the slot this exists to close.
- */
-export const reflectorCutZ = (x: number): number => {
-  const [fx, fz] = BEND.faceCentre
-  const [ix, iz] = BEND.inward
-  const [ax, az] = BEND.along
-  const s = (x - fx - REFLECTOR_STRIP.bendClearance * ix) / ax
-  return fz + REFLECTOR_STRIP.bendClearance * iz + s * az
-}
 
 /** §6.2 — the puddle mask. Drives both roughnessMap and distortionMap. */
 export const PUDDLE_MASK = {
