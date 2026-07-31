@@ -4,7 +4,7 @@ import { goTo, nextStop } from '@/lib/guidedPath'
 import { releaseLock } from '@/lib/lockedView'
 import { useOverlay } from '@/lib/overlays'
 import { useMode } from '@/lib/store'
-import { TOP_NAV } from '@/lib/world'
+import { PALETTE, TOP_NAV, WORDMARK } from '@/lib/world'
 
 /**
  * §12.7 — the top nav. **About · Work · Contact · Next stop**, always, on every device.
@@ -24,6 +24,7 @@ import { TOP_NAV } from '@/lib/world'
  */
 
 const [ABOUT, WORK, CONTACT, NEXT] = TOP_NAV
+const [MARK_FIRST, MARK_SECOND] = WORDMARK
 
 export default function Nav() {
   const overlay = useOverlay()
@@ -41,45 +42,76 @@ export default function Nav() {
   const idle = `${item} text-white/55 hover:bg-white/10 hover:text-white`
   const active = `${item} bg-white/15 text-white`
 
+  /**
+   * **One column, three flow rows, and the last of them used to be positioned by hand.**
+   * `Return to freeroam` was absolute at `3.75rem` — the bar's height plus its safe-area inset
+   * — which was correct and invisible for exactly as long as nothing above the bar could change
+   * height. The wordmark row changes it on every phone.
+   */
   return (
     <nav
       aria-label="Sections"
-      className="pointer-events-none fixed inset-x-0 top-0 z-40 flex justify-center px-2"
+      className="pointer-events-none fixed inset-x-0 top-0 z-40 flex flex-col items-center gap-2 px-2"
       style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 0.75rem)' }}
     >
-      <div className="pointer-events-none flex max-w-full items-center gap-0.5 rounded-full border border-white/10 bg-black/55 p-1 backdrop-blur-md">
-        {/* All three *travel*, and About and Contact open on arrival. See `goTo`. */}
-        <button
-          type="button"
-          onClick={() => goTo('about', performance.now())}
-          aria-current={overlay === 'about'}
-          className={overlay === 'about' ? active : idle}
-        >
-          {ABOUT}
-        </button>
-        <button
-          type="button"
-          onClick={() => goTo('work', performance.now())}
-          className={idle}
-        >
-          {WORK}
-        </button>
-        <button
-          type="button"
-          onClick={() => goTo('contact', performance.now())}
-          aria-current={overlay === 'contact'}
-          className={overlay === 'contact' ? active : idle}
-        >
-          {CONTACT}
-        </button>
+      <div className="pointer-events-none relative flex w-full flex-col items-center gap-1.5 md:gap-0">
+        {/**
+         * §12.7 — the studio's name, and **the Latin counterpart to §3.6's katakana.** The
+         * brand sign out on the far building reads `ジャシント / デザイン` at 52 m behind up to
+         * 0.91 of §5's fog; this is the same name in screen-space type, the same size on every
+         * device. Between them the world keeps its own language and a stranger still reads the
+         * name in the first second.
+         *
+         * **Beside the bar from `md` up, centred above it below.** At 375 px the four buttons
+         * take 285 of 375 — 45 px a side against the 133 this needs — and even 640 leaves only
+         * 120. Shortening it to initials on a phone is the fault §12.7 already names about the
+         * labels themselves: a mark that says `JD` on a phone and `JACINTO DESIGN` on a laptop
+         * is two marks. So it moves rather than shrinks — and on its own row it centres over
+         * the bar rather than hugging a corner, because a corner is only a corner next to
+         * something that is not in it.
+         *
+         * **Type, not a button**, and not `pointer-events-auto` — the strip above the alley
+         * stays draggable, which is the whole reason the bar is `pointer-events-none`.
+         */}
+        <span className="pointer-events-none text-[0.62rem] tracking-[0.16em] whitespace-nowrap uppercase select-none md:absolute md:top-1/2 md:left-3 md:-translate-y-1/2 md:text-xs md:tracking-[0.2em]">
+          {/* §3.6's own pairing — §4's signature over §4's spice. The one place in the
+              overlay that is branded, so it is the one place that takes two colours. */}
+          {/* A real space rather than a margin: a margin is a gap on screen and nothing at
+              all to a screen reader or to a copy-paste, which both got `JACINTODESIGN`. */}
+          <span style={{ color: PALETTE.neonMagenta }}>{MARK_FIRST}</span>{' '}
+          <span style={{ color: PALETTE.neonCyan }}>{MARK_SECOND}</span>
+        </span>
 
-        {/* §12.6 — the tour. Grouped with the three destinations rather than parked in a
-            corner: it is the fourth way to reach them, and a visitor who has not understood
-            that they can walk needs it next to the things it walks to. */}
-        <span aria-hidden className="mx-0.5 h-4 w-px bg-white/15 sm:mx-1" />
-        <button type="button" onClick={() => nextStop(performance.now())} className={idle}>
-          {NEXT}
-        </button>
+        <div className="pointer-events-none flex max-w-full items-center gap-0.5 rounded-full border border-white/10 bg-black/55 p-1 backdrop-blur-md">
+          {/* All three *travel*, and About and Contact open on arrival. See `goTo`. */}
+          <button
+            type="button"
+            onClick={() => goTo('about', performance.now())}
+            aria-current={overlay === 'about'}
+            className={overlay === 'about' ? active : idle}
+          >
+            {ABOUT}
+          </button>
+          <button type="button" onClick={() => goTo('work', performance.now())} className={idle}>
+            {WORK}
+          </button>
+          <button
+            type="button"
+            onClick={() => goTo('contact', performance.now())}
+            aria-current={overlay === 'contact'}
+            className={overlay === 'contact' ? active : idle}
+          >
+            {CONTACT}
+          </button>
+
+          {/* §12.6 — the tour. Grouped with the three destinations rather than parked in a
+              corner: it is the fourth way to reach them, and a visitor who has not understood
+              that they can walk needs it next to the things it walks to. */}
+          <span aria-hidden className="mx-0.5 h-4 w-px bg-white/15 sm:mx-1" />
+          <button type="button" onClick={() => nextStop(performance.now())} className={idle}>
+            {NEXT}
+          </button>
+        </div>
       </div>
 
       {/**
@@ -95,17 +127,19 @@ export default function Nav() {
        * **Both tiers**, though only one needs it: a control that appears on a phone and not on
        * a desktop is a control nobody can tell you about, and it costs a desktop visitor one
        * row of pixels they can ignore.
+       *
+       * **A flow row, where it used to be absolute at `3.75rem` from the top.** That number was
+       * the bar's height plus its safe-area inset, and it was right for exactly as long as
+       * nothing above the bar could change height — which the wordmark row does, on every phone.
        */}
       {locked && (
-        <div className="pointer-events-none absolute inset-x-0 flex justify-center" style={{ top: 'calc(env(safe-area-inset-top, 0px) + 3.75rem)' }}>
-          <button
-            type="button"
-            onClick={releaseLock}
-            className="pointer-events-auto rounded-full border border-white/20 bg-black/70 px-3.5 py-1.5 text-[0.65rem] tracking-[0.08em] whitespace-nowrap text-white/75 uppercase backdrop-blur-md transition-colors hover:border-white/40 hover:text-white sm:px-4 sm:py-2 sm:text-xs sm:tracking-[0.2em]"
-          >
-            Return to freeroam
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={releaseLock}
+          className="pointer-events-auto rounded-full border border-white/20 bg-black/70 px-3.5 py-1.5 text-[0.65rem] tracking-[0.08em] whitespace-nowrap text-white/75 uppercase backdrop-blur-md transition-colors hover:border-white/40 hover:text-white sm:px-4 sm:py-2 sm:text-xs sm:tracking-[0.2em]"
+        >
+          Return to freeroam
+        </button>
       )}
     </nav>
   )

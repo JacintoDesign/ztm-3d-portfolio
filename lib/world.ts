@@ -1013,7 +1013,30 @@ export const CROSS_STREET = {
      * only from the last twelve metres, and this is that sentence applied to the one named thing.
      */
     brandSign: {
-      rows: ['JACINTO', 'DESIGN'],
+      /**
+       * **Katakana, and that is what makes it a sign in this street rather than a logo
+       * dropped into it.** Every other lit string in the world is Japanese — §11.4's thirty,
+       * §3.1's `終電`, §3.4's seven sign boxes — so a Latin wordmark on the one wall nobody
+       * can walk to was at once the least legible thing out there and the thing that gave
+       * the set away. Transliterated, not translated: it is what the studio would be
+       * *called* here, which is the move the world already makes with its own title.
+       *
+       * **The Latin name did not disappear; it moved to §12.7's corner**, and neither half
+       * works alone. Katakana by itself loses the name to a visitor who cannot read it; a
+       * corner wordmark by itself leaves the far wall speaking English.
+       *
+       * `ジャシント` rather than `ハシント` is a choice, not a rule — Spanish `Jacinto` is
+       * /xaˈsinto/ and would take ハ. The studio is an English-speaking one and this is the
+       * reading a visitor who knows the name would hear. Noted because it otherwise looks
+       * like a typo to whoever reads it next.
+       */
+      rows: ['ジャシント', 'デザイン'],
+      /**
+       * **The script, because one constant in the painter depends on it.** §3.4's lightbox
+       * rows have carried the same field since the storefront build; this is one script for
+       * both rows, so it sits on the sign rather than on each of them.
+       */
+      face: 'japanese',
       /**
        * §4's signature over §4's spice — the pairing that reads as branding, not as a shopfront.
        *
@@ -3467,6 +3490,19 @@ export const GUIDED_PATH = {
  * and does notice.
  */
 export const TOP_NAV = ['About', 'Work', 'Contact', 'Next stop'] as const
+
+/**
+ * §12.7 — the studio's name in the corner, on the nav's own line.
+ *
+ * **The Latin counterpart to §3.6's katakana, and the reason that sign could change script.**
+ * The brand sign is 52 m away behind 0.09 to 0.91 of §5's fog; this is screen-space type at a
+ * fixed size on every device. Between them the world keeps its own language and a stranger
+ * still reads the name in the first second.
+ *
+ * Here rather than in `Nav.tsx` for the same reason `TOP_NAV` is: it is a string the world
+ * owns, and two copies of a name is one place for it to drift.
+ */
+export const WORDMARK = ['Jacinto', 'Design'] as const
 
 /* ────────────────────────────────────────────────────────────────────────────
  * §13 — Reduced motion

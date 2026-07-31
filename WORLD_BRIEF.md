@@ -648,13 +648,21 @@ The three banner wires hang a **3.20 × 0.62** cloth 0.50 beneath them, carrying
 
 ### The brand sign, and what it cost the board run
 
-**Two boards came out and the studio's name went in**, at `x = 3.70`, **3.40 × 1.60**, centred at `y = 2.60` so it sits above the board band rather than in it. Two rows, two colours: `JACINTO` in `neonMagenta` over `DESIGN` in `neonCyan` — §4's signature over §4's spice, which is the one pairing that reads as branding rather than as another shopfront.
+**Two boards came out and the studio's name went in**, at `x = 3.70`, **3.40 × 1.60**, centred at `y = 2.60` so it sits above the board band rather than in it. Two rows, two colours: `ジャシント` in `neonMagenta` over `デザイン` in `neonCyan` — §4's signature over §4's spice, which is the one pairing that reads as branding rather than as another shopfront.
+
+**The name is in katakana, and that is what makes it a sign in this street rather than a logo dropped into it.** Every other lit string in the world is Japanese — §11.4's thirty, §3.1's `終電`, §3.4's seven sign boxes — so a Latin wordmark on the one wall the visitor cannot walk to was the single thing out there announcing that the alley is a set. `ジャシント・デザイン` is the name **transliterated, not translated**: it is what the studio would be *called* here, which is the same move the world already makes with its own title. **The Latin name did not disappear — it moved to §12.7's corner**, and the two together are the whole argument for the swap: the world keeps its own language and a stranger still reads the name in screen-space type in the first second, at a size §5's fog cannot touch.
+
+**The reading is ジャシント and not ハシント**, which is a choice rather than a rule. Spanish `Jacinto` is /xaˈsinto/ and transliterates to ハシント; the studio is an English-speaking one and the English reading is what a visitor who already knows the name would hear in it. Recorded because it is exactly the kind of decision that looks like a typo to whoever reads it next.
+
+**The painter's baseline nudge came off with the Latin.** It dropped every row by 6% of the cap height because canvas centres the *em box*, which carries descender space no capital uses — true of an all-caps Latin row and false of katakana, which fills the em box far more evenly. Left in, it sat both rows visibly low on a 1.60 m sign. The nudge is now a property of the **script**, not of the sign, and rides the same `face` field §3.4's lightbox rows already carry.
 
 **`x = 3.70` is the only interesting number here.** §3.1 shows the far wall through a 3.36 m slot, and the visible window *moves with the visitor*: from spawn it is `x ∈ [1.42, 5.40]`, from mid-alley `[1.66, 6.13]`, and the intersection over the whole spawn-to-mid half is only **`x ∈ [3.29, 4.67]`, 1.38 m wide**. A sign centred anywhere else on that wall disappears for part of the walk. 3.70 sits inside that band, so the name is in frame from the moment the visitor turns to face the alley.
 
 **It is a glimmer from spawn and that is accepted, not overlooked.** At 52.2 m through §5's `FogExp2` 0.0300 the far wall is at **0.086 transmittance**; mid-alley **0.382**; from §3's clamp at the bend **0.892**. So the sign resolves as you walk toward it and is never a greeting. §5's density was derived twice and settled, and §3.6 already says the street *"reads properly from about the last twelve metres of the alley"* — this is that sentence applied to the one thing out there that has a name on it.
 
 **The canvas is 512 × 256, not §11.1's 4 px/cm.** Four px/cm on 3.40 m asks 1360 and pads to 2048, which is 16 MB with mipmaps against 1.06 MB of headroom. 512 across 3.40 m is 151 px/m — coarse by this world's standards and correct here, because the thing is never seen closer than 11 m and is behind 0.11 to 0.91 of fog at every distance it *is* seen from. **0.67 MB**, taking desktop to 18.0 of 18.
+
+**The katakana fit at the same cap height the Latin had, which was worth measuring rather than assuming.** The painter fits each row to the row height and only then shrinks to the width, and full-width glyphs are the case where that second step bites: at 84 px the five characters of `ジャシント` measure **420 px against a 451 px limit**, and `デザイン` 336. Neither row shrinks, on either tier — so the script changed and the type size did not, which is why the sign reads at the same distance it always did.
 
 **Twenty is where §4's blue now rounds in.** The ratio over 20 gives **11 / 6 / 2 / 1** — cyan drops from three to two and **blue survives**, which was the thing worth checking before removing anything. Twenty-two used to be the number where blue rounded in; two fewer still carries it, and sixteen would not. The one blue board is on the most distant lit surface in the world — which is what §4 means by *rare, distance signs only*, arrived at by the ratio rather than by an exception made for it. Every count before this one (14 sign boxes, 9 signs, 7, 6) rounded it away.
 
@@ -1737,6 +1745,14 @@ Pressing one also sets §12.6's `Next stop` to continue from there rather than f
 
 **About first, matching §12.6's order and the studio's own site.** The nav and the tour disagreeing about which order these three come in is the kind of small incoherence a visitor cannot name and does notice.
 
+**The studio's name sits in the left corner, on the bar's own line.** `JACINTO DESIGN`, in the nav's own type and in §3.6's own two colours — `neonMagenta` then `neonCyan`, the same pairing the far wall carries, because **this is the one place in the overlay that is branded and so the one place that takes a colour at all.** Everything else up here is `white/55`. It is the Latin counterpart to the katakana §3.6 put on that wall. That pairing is what lets the world stay in its own language: the sign out there is a sign in this street, and the name a stranger can actually read is here, in screen-space type, at a size no fog and no distance can take away. It is **type and not a button** — the bar is already `pointer-events-none` and this stays that way, so the strip above the alley is still draggable.
+
+**On a phone it goes on its own row above the bar, because beside it there is no room.** At 375 px the four buttons come to **285 of 375**, leaving 45 px a side against the **133 px** the mark needs; even at 640 the margin is 120 and still short. 768 is the first width where it clears, so from `md` up it is pinned to the left and centred on the bar's own line — measured, both centres land on the same pixel. **Shortening it to initials was the obvious alternative and it is the fault this section already names** — *a nav that says different words on a phone is two navs*, and a mark reading `JD` on a phone and `JACINTO DESIGN` on a laptop is two marks.
+
+**On its own row it centres, and that is not the same decision as the corner.** *Left* is what makes a corner mark a corner mark when there is something else on the line with it; on a row of its own there is nothing for it to be left *of*, so left-aligned it reads as a stray label above a centred bar rather than as the head of it. The two placements are the same mark answering the same question — *where does the eye start* — in two layouts.
+
+**That row is also why *Return to freeroam* stopped being positioned by hand.** It was absolute at a hardcoded `3.75rem` from the top, which was exactly the bar's height plus its inset — a number that was only ever right while nothing above the bar could change height. The wordmark row changes it on every phone. All three are flow rows in one column now, so the pill sits under whatever is actually there.
+
 ---
 
 ## 13. Reduced motion
@@ -2159,7 +2175,13 @@ All of §3.7. Free choices: every dimension in its table except the vending mach
 
 **The tour ends on contact now, and §12.6's old sentence was a real argument.** *It ends on the surface the whole piece is for* was right while contact was a payphone halfway down the alley. With all three surfaces within eight metres of each other, the last thing a visitor should be left looking at is the way to reach the person who made it.
 
----
+### 16.18 Settled during the wordmark pass
+
+**The one Latin string in the world was on the one surface nobody can reach, and swapping the two fixed both halves at once.** §3.6's brand sign said `JACINTO DESIGN` on a wall 52 m away behind 0.91 of fog, in a street where every other lit string is Japanese — so it was simultaneously the least legible thing in the world and the thing that gave the set away. The name is now `ジャシント / デザイン` out there and `JACINTO DESIGN` in §12.7's corner. **Neither move works alone**: katakana on its own loses the name to anyone who cannot read it, and a corner wordmark on its own leaves the far wall speaking English. Worth recording as a shape — *a thing in the wrong layer* rather than *a thing that needs tuning* — because the sign had already been retuned twice for legibility it was never going to reach.
+
+**A baseline nudge that was right for one script was silently wrong for the other.** The painter dropped every row by 6% of the cap because canvas centres the em box, which an all-caps Latin row does not fill downward. Katakana does. The nudge survived the script change because it was written as a property of *the sign*, and it is now a property of *the face* — the same field §3.4's lightbox rows have carried since the storefront build. **Any constant justified by a comment about capitals belongs next to the thing that chooses the font.**
+
+**A hardcoded offset only looks like a constant while nothing above it can move.** §12.7's *Return to freeroam* pill was absolute at `3.75rem` — the bar's height plus its safe-area inset, correct and invisible for two sections. The mobile wordmark row put a line above the bar and that number became wrong on every phone at once. It is a flow row now.
 
 ## 17. Definition of done, for this world specifically
 

@@ -16,6 +16,11 @@ import { CANVAS_PAINTER, CROSS_STREET, PALETTE, type Tier } from '@/lib/world'
  * thirty-first §11.4 string, because that list is explicitly *"never project-related"* and this
  * is the one thing in the world that is. It extends the allowance §3.1 already makes for `終電`.
  *
+ * **It says `ジャシント / デザイン` and not `JACINTO / DESIGN`**, and the swap is §3.6's rather
+ * than this file's: a Latin wordmark was the one string out here in a street where everything
+ * else is Japanese, on the one wall that cannot be walked to. §12.7's corner carries the Latin
+ * name now, in screen-space type, where §5's fog cannot reach it.
+ *
  * **It was built as a §3.4 lightbox and that was the wrong object.** The argument for it was
  * that every other sign in this alley is one — which is precisely why it fails here: a lightbox
  * is a *shop's* fitting, and this is the only surface in the world that is not a shop. Cut
@@ -28,6 +33,27 @@ import { CANVAS_PAINTER, CROSS_STREET, PALETTE, type Tier } from '@/lib/world'
  * dark offset below-right: at this range that reads as depth far more reliably than geometry
  * would, because geometry that small disappears into §5's fog before its silhouette arrives.
  */
+
+/**
+ * The two things that depend on the script, keyed by it rather than branched on.
+ *
+ * **The nudge is the reason this pair exists, and it survived a script change once already.**
+ * Canvas centres the *em box*, which carries descender space an all-caps Latin row never fills
+ * — so `JACINTO` without it sat visibly high. Katakana fills the box far more evenly and wants
+ * none of it: applied to `ジャシント`, the same 6% pushed both rows low on a 1.60 m sign. It was
+ * written as a constant of the *sign*, because the sign only ever had one script; it is a
+ * constant of the *face*, and belongs beside the thing that picks the font.
+ *
+ * A lookup rather than `face === 'latin'` because §3.6 pins the field with `as const`, so the
+ * comparison is a type error rather than a branch — and two properties of one script read
+ * better side by side than as two ternaries anyway.
+ */
+const FACE = {
+  latin: CANVAS_PAINTER.latinFace,
+  japanese: CANVAS_PAINTER.japaneseFace,
+} as const
+
+const BASELINE_NUDGE = { latin: 0.06, japanese: 0 } as const
 
 function paint(tier: Tier): HTMLCanvasElement | null {
   if (typeof document === 'undefined') return null
@@ -50,6 +76,9 @@ function paint(tier: Tier): HTMLCanvasElement | null {
   const rowH = height / sign.rows.length
   const maxTextW = width * 0.88
 
+  const face = FACE[sign.face]
+  const baselineNudge = BASELINE_NUDGE[sign.face]
+
   sign.rows.forEach((text, i) => {
     const token = sign.rowColors[i] ?? sign.rowColors[0] ?? 'neonMagenta'
     const hex = PALETTE[token as keyof typeof PALETTE]
@@ -57,17 +86,15 @@ function paint(tier: Tier): HTMLCanvasElement | null {
     /* Fit the row height first, then shrink to the width — never the other way round, or a
        longer word grows past the wall it is bolted to. */
     let px = Math.round(rowH * 0.66)
-    ctx.font = `700 ${px}px ${CANVAS_PAINTER.latinFace}`
+    ctx.font = `700 ${px}px ${face}`
     const measured = ctx.measureText(text).width
     if (measured > maxTextW) {
       px = Math.round((px * maxTextW) / measured)
-      ctx.font = `700 ${px}px ${CANVAS_PAINTER.latinFace}`
+      ctx.font = `700 ${px}px ${face}`
     }
 
     const cx = width / 2
-    /* Nudged down by 6% of the cap: canvas centres the *em box*, which carries descender space
-       no capital uses, so an all-caps row otherwise sits visibly high. */
-    const cy = rowH * (i + 0.5) + px * 0.06
+    const cy = rowH * (i + 0.5) + px * baselineNudge
 
     /* The shadow the letters cast on the wall behind them — the bolted-on read. Offset down
        and right, because §7 has nothing out here and the only light on this facade is its own
