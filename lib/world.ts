@@ -702,6 +702,28 @@ export const STOREFRONT = {
 export const DOORWAY_SURROUND = STOREFRONT.doorway.width + 2 * STOREFRONT.doorway.jambWidth
 
 /**
+ * §3.1 — the bend wall's plinth, and it is doing two jobs.
+ *
+ * The first is the one §3.4 already gives every unit on the side walls: *a step at the base
+ * of the whole unit*. §3.1 calls the bend **a return wall of shuttered doors**, so it is the
+ * same kind of wall and it was the only one in the alley standing straight on the floor.
+ *
+ * The second is why it is here now. §6.1's reflector stops short of this wall, and the
+ * matte floor that was left in the gap is **brighter than the mirror beside it** — measured,
+ * a thin lit sliver running the wall's whole length that reads as a slot under it, which is
+ * what it was reported as twice. The plinth is a solid box occupying exactly that gap:
+ * `depth` is what §6.1's cut reads, so **there is no floor between them to be seen at all**
+ * — not a darker floor, no floor.
+ *
+ * **The height matches §3.4's plinths on the side walls**, `kerb + plinth`, so the step runs
+ * round the alley at one level instead of the bend having a skirting of its own.
+ */
+export const BEND_PLINTH = {
+  depth: 0.4,
+  height: LAYOUT.kerb.height + STOREFRONT.plinth.height,
+} as const
+
+/**
  * §3.5 — the decorative neon signs. Nine of them, projecting into the alley at 90° on
  * brackets and read from both directions. A flush panel is a poster; a projecting
  * double-sided box is signage, and that is the whole difference between a wall with
@@ -1882,10 +1904,16 @@ export const REFLECTOR_STRIP = {
    * How far in front of §3.1's bend face the reflective floor stops, measured along the
    * wall's own inward normal. **The cut runs parallel to the wall, not square to the
    * alley** — a straight cut would leave 0.20 m of matte at the wall's east end and 2.25 m
-   * at its west, and that wedge is exactly the shape a mistake makes. Parallel, it is a
-   * constant band that reads as the shadow line at the foot of a wall.
+   * at its west, and that wedge is exactly the shape a mistake makes.
+   *
+   * **It is §3.1's plinth depth, and that is the whole of it.** The first version left the
+   * base plane showing in the gap, on the argument that dry ground at the foot of a wall is
+   * what §6.2 describes anyway. Measured, the base plane there comes out **brighter** than
+   * the mirror beside it — a lit sliver running the wall's length, reported as a slot under
+   * the wall for the second time. Reading the plinth's depth means the gap is filled by a
+   * solid step rather than by floor: **there is no ground between them left to be seen.**
    */
-  bendClearance: 0.35,
+  bendClearance: BEND_PLINTH.depth,
   /**
    * The arm's west edge, just past the bend wall's east corner at `x = 1.309`, so no
    * reflective floor is ever in the wall's shadow. §10's carriageway ripple region reads

@@ -1,10 +1,16 @@
 'use client'
 
-import { useMemo } from 'react'
-import { BoxGeometry, MeshStandardMaterial } from 'three'
+import { useCallback, useMemo } from 'react'
+import {
+  BoxGeometry,
+  type InstancedMesh,
+  Matrix4,
+  MeshStandardMaterial,
+  Object3D,
+} from 'three'
 import { resolveTier } from '@/lib/device'
 import { grainParams } from '@/lib/textures/surfaceGrain'
-import { BEND, LAYOUT, MATERIALS, PALETTE } from '@/lib/world'
+import { BEND, BEND_PLINTH, LAYOUT, MATERIALS, PALETTE } from '@/lib/world'
 
 /**
  * §3 — the alley envelope: facades, end walls, kerbs.
@@ -78,6 +84,23 @@ const eastCentreX = alley.x[1] + halfThickness
 /** Long enough to meet the outer faces of both end walls, so no corner shows a gap. */
 const facadeLength = alley.length + wallThickness * 2
 
+/**
+ * §3.1 — how much further south the **west** facade runs than the east one.
+ *
+ * The bend is at 20°, so its west end reaches `z = 24.94` at the facade's inner face while
+ * the facade itself stopped at 24.00 — **a 0.94 m open corner** between the two, and the
+ * only thing behind it is §3.6's cross street. It showed as a patch of lit road at the foot
+ * of the wall, which is where a corner gap always shows: at the bottom, because that is the
+ * only part of it a 1.68 m eye is below.
+ *
+ * Derived from where the bend's *back* face crosses `x = −4.5`, plus a little, so the
+ * overlap survives a change to §3.1's angle. The east side needs none: past the bend's east
+ * corner is §3.1's opening, which is meant to be open.
+ */
+const westFacadeOverrun = 1.0
+const westFacadeLength = facadeLength + westFacadeOverrun
+const westFacadeCentreZ = westFacadeOverrun / 2
+
 const northCentreZ = ends.north.z - halfThickness
 
 /** §3.1 — the taller of the two facades, so a cap never opens a strip of sky. */
@@ -85,9 +108,59 @@ const endWallHeight = facadeHeight.west
 /** Spans the full alley plus both facade thicknesses. */
 const endWallWidth = alley.width + wallThickness * 2
 
+/**
+ * §3 / §3.1 — the two kerbs and the bend's plinth, as one instanced set.
+ *
+ * Built once at module scope: none of it moves and none of it depends on the tier.
+ *
+ * **The plinth stands where §6.1's reflector stops**, its depth read from the same constant,
+ * so the gap between mirror and wall is filled by a solid step rather than by floor. That
+ * gap had been showing the base plane — brighter than the mirror beside it, a lit sliver the
+ * length of the wall, reported as a slot under it. There is no ground there to see now.
+ */
+const KERB_MATRICES = (() => {
+  const at = new Object3D()
+  const matrices: Matrix4[] = []
+
+  for (const side of [-1, 1] as const) {
+    at.position.set(side * (kerb.innerEdgeX + kerb.width / 2), kerb.height / 2, 0)
+    at.rotation.set(0, 0, 0)
+    at.scale.set(kerb.width, kerb.height, alley.length)
+    at.updateMatrix()
+    matrices.push(at.matrix.clone())
+  }
+
+  /* Centred on the bend's *face* pushed half its own depth into the alley, and turned with
+     the wall — the same frame §2.1's board mounts in, read from `BEND` rather than
+     re-derived, because two descriptions of one wall drift the moment the angle changes. */
+  const [fx, fz] = BEND.faceCentre
+  const [ix, iz] = BEND.inward
+  at.position.set(
+    fx + ix * (BEND_PLINTH.depth / 2),
+    BEND_PLINTH.height / 2,
+    fz + iz * (BEND_PLINTH.depth / 2),
+  )
+  at.rotation.set(0, BEND.angleRad, 0)
+  at.scale.set(BEND.length, BEND_PLINTH.height, BEND_PLINTH.depth)
+  at.updateMatrix()
+  matrices.push(at.matrix.clone())
+
+  return matrices
+})()
+
 export default function Alley() {
   const tier = resolveTier()
   const material = useMemo(() => buildMaterials(tier), [tier])
+
+  /* Written once when the mesh attaches — nothing here moves. `computeBoundingSphere`
+     follows, or the set culls against the geometry at the origin and the kerbs vanish as
+     one unit the moment it leaves frame. */
+  const attachKerbs = useCallback((mesh: InstancedMesh | null) => {
+    if (mesh === null) return
+    KERB_MATRICES.forEach((matrix, i) => mesh.setMatrixAt(i, matrix))
+    mesh.instanceMatrix.needsUpdate = true
+    mesh.computeBoundingSphere()
+  }, [])
 
   return (
     <>
@@ -96,8 +169,8 @@ export default function Alley() {
       <mesh
         geometry={UNIT_BOX}
         material={material.west}
-        position={[westCentreX, facadeHeight.west / 2, 0]}
-        scale={[wallThickness, facadeHeight.west, facadeLength]}
+        position={[westCentreX, facadeHeight.west / 2, westFacadeCentreZ]}
+        scale={[wallThickness, facadeHeight.west, westFacadeLength]}
       />
 
       {/* East facade — 12.5. */}
@@ -129,20 +202,11 @@ export default function Alley() {
         scale={[BEND.length, endWallHeight, wallThickness]}
       />
 
-      {/* Kerbs — 0.12 high, 0.60 wide, inner edge at x = ±3.90, so the outer edge meets
-          the wall. Both sit outside the §3 walkable clamp; the visitor never steps up. */}
-      <mesh
-        geometry={UNIT_BOX}
-        material={material.kerb}
-        position={[-(kerb.innerEdgeX + kerb.width / 2), kerb.height / 2, 0]}
-        scale={[kerb.width, kerb.height, alley.length]}
-      />
-      <mesh
-        geometry={UNIT_BOX}
-        material={material.kerb}
-        position={[kerb.innerEdgeX + kerb.width / 2, kerb.height / 2, 0]}
-        scale={[kerb.width, kerb.height, alley.length]}
-      />
+      {/* §3 — the two kerbs, and §3.1's bend plinth. **One `InstancedMesh` for all three**:
+          they are the same box in the same `concrete`, and the only thing that had ever kept
+          the kerbs apart was being written as two elements. Three instances therefore cost
+          one draw call where two used to cost two. */}
+      <instancedMesh ref={attachKerbs} args={[UNIT_BOX, material.kerb, KERB_MATRICES.length]} />
     </>
   )
 }
