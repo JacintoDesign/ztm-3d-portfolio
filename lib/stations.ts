@@ -44,19 +44,56 @@ export function registerStation(station: Station): () => void {
 }
 
 /**
- * The nearest station whose radius contains the point, or `null`.
+ * §12.5's front arc: how far off the view direction a station may sit and still be claimable.
+ *
+ * `cos 75°`, so a 150° cone — wide enough that a station at the edge of vision still prompts,
+ * narrow enough that one behind your head does not.
+ */
+const FACING_MIN_DOT = 0.25
+
+/**
+ * The nearest station whose radius contains the point **and which the visitor is facing**,
+ * or `null`.
  *
  * Squared distances, and no allocation — this runs every frame from `Interact.tsx`.
+ *
+ * **The facing test is new, and *nearest alone* stopped being enough when the stations moved
+ * together.** §12.5 was written for three stations spread over forty metres, where the
+ * closest was always the one in front of you. §2.1 then moved to the bend and §2.2 and §2.3
+ * followed, and now §2.1.1's locked pose — where a visitor stands to read the board — is
+ * **2.32 m from §2.3's bank and 7.07 m from the board itself.** By distance the mailboxes win
+ * there, and they are directly behind the visitor's head.
+ *
+ * So the rule becomes *the nearest thing you are looking at*, which is what "nearest" was
+ * always standing in for. It also unblocks §2.3's stop: the bank's radius could not exceed
+ * 2.32 without claiming the board's pose, and framing six boxes on a portrait phone needs a
+ * 3.34 m standoff — the two were in direct conflict until this stopped being about distance
+ * alone.
+ *
+ * **No fallback when nothing is in the arc.** Returning the nearest thing behind you would
+ * reintroduce exactly the case this exists to exclude; turning away from a station and losing
+ * its prompt is the correct reading of *what you are looking at*.
  */
-export function nearestInRange(x: number, z: number): Station | null {
+export function nearestInRange(x: number, z: number, facingYaw?: number): Station | null {
   let best: Station | null = null
   let bestDistSq = Infinity
 
+  /* §12.1's convention: yaw 0 faces `+Z`. Computed once, not per station. */
+  const hasFacing = facingYaw !== undefined
+  const faceX = hasFacing ? Math.sin(facingYaw) : 0
+  const faceZ = hasFacing ? Math.cos(facingYaw) : 0
+
   for (const station of stations) {
-    const dx = x - station.x
-    const dz = z - station.z
+    const dx = station.x - x
+    const dz = station.z - z
     const distSq = dx * dx + dz * dz
     if (distSq > station.radius * station.radius) continue
+
+    if (hasFacing && distSq > 1e-6) {
+      const distance = Math.sqrt(distSq)
+      if ((dx * faceX + dz * faceZ) / distance < FACING_MIN_DOT) continue
+    }
+
     if (distSq < bestDistSq) {
       bestDistSq = distSq
       best = station

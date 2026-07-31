@@ -1613,13 +1613,25 @@ Any string not on this list and not from `CONTENT.md` does not go in the world.
 
 ### 12.5 The interact manager
 
-One owner of the key. Stations register `{ position, radius, open() }` on mount; a single manager finds the **nearest registered station in range** and opens it. Edge-triggered on `keydown`. **No station listens for the key itself.**
+One owner of the key. Stations register `{ position, radius, open() }` on mount; a single manager finds the **nearest registered station in range that the visitor is facing** and opens it. Edge-triggered on `keydown`. **No station listens for the key itself.**
+
+**The facing test is not decoration, and *nearest alone* stopped working when the stations moved together.** This section was written for three stations spread over forty metres, where the closest was always the one in front of you. §2.1 then moved to the bend and §2.2 and §2.3 followed it, and now §2.1.1's locked pose — where a visitor stands to read the board — is **2.32 m from §2.3's bank and 7.07 m from the board itself.** By distance the mailboxes win there, and they are directly behind the visitor's head.
+
+So the rule becomes *the nearest thing you are looking at*, which is what **nearest** was always standing in for. A 150° cone: wide enough that a station at the edge of vision still prompts, narrow enough that one behind you does not. **There is no fallback when nothing is in the cone** — returning the nearest thing behind you would reintroduce exactly the case this exists to exclude, and turning away from a station and losing its prompt is the correct reading of *what you are looking at*.
 
 | Station | At | Radius | Its stop | Prompt |
 |---|---|---|---|---|
 | Board | `(-1.626, 22.948)` | **9.50** | 7.07 m | `E — View Projects` / tap |
-| Food cart | `(+3.80, 19.0)` | 3.20 | 2.90 m | `E — About` / tap |
-| Mailbox bank | `(-4.20, 14.0)` | 2.00 | 1.60 m | `Click a mailbox · E for Overlay` |
+| Food cart | `(+3.80, 19.0)` | 4.00 | 3.60 m | `E — About` / tap |
+| Mailbox bank | `(-4.20, 14.0)` | **3.80** | 1.60 m desktop / 3.40 m mobile | `Click a Mailbox · E for Overlay` desktop / `Click to View All` mobile |
+
+**§2.2's stop went back twice — 1.90 → 2.90 → 3.60 — and its radius with it.** A station's radius has to contain its own stop, so a framing decision drags a §12.5 number behind it every time. At 2.90 the cart still read as zoomed in, and on a portrait phone a 2.1 m object at that distance overflows the frame width outright.
+
+**§2.3's stop is the one that splits by tier, and its radius is 3.80 on both.** The bank is 2.00 m of wall a visitor stands square to, so how much of it fits is decided entirely by h-FOV — **35.8° in portrait against 62° landscape**. Desktop frames all six from 1.60 m and gets a 0.10 m label at a comfortable reading distance; a phone needs **3.34 m** to see the same six, measured, and at 1.60 m showed 1.03 m of a 2.00 m bank. One stop cannot be both, so it is both.
+
+**The radius does not split with it, and could not have moved at all a section ago.** 3.80 contains the further of the two, and anything over **2.32 m** used to claim §2.1.1's locked pose — from behind the visitor's head. **3.34 needed against 2.32 available**: the two requirements were in direct conflict until the manager stopped deciding on distance alone.
+
+**Two prompts on this station, because the two tiers offer different things.** On a desktop the six boxes are the affordance and `E` is the fallback that lists them all; on a phone that is reversed, which is why §12.6 opens the panel on arrival there. The prompt should offer the thing that works, not the thing that is nominally true.
 
 **The prompt is a button, and the *tap* half of this section was never built.** It has said `E — …` / **tap** since it was written; what shipped was a caption. So §12.6 could glide a touch visitor to a station and tell them to press a key their device does not have. It now opens the station it is naming, through the same `station.open()` the key calls, so there is still one way for a station to be opened. It is only pressable while it is speaking *for a station* — hovering one of §2.3's boxes names that box instead, and the box under the pointer is already the way to open it.
 
@@ -1654,6 +1666,10 @@ Radii are ordered board ≫ cart > bank, which is the ordering this section alwa
 
 **And the stick hides while it is frozen, rather than sitting there dead.** Being gated made it inert; it stayed drawn, in the same bottom-left corner §2.1.2's project controls occupy, so a phone in the locked view had a 120 px disc under the pager doing nothing. **A control that is visible and does nothing is worse than one that is gone** — it reads as the way out of a view whose actual way out is beside it. Faded rather than unmounted, so the pointer capture is never torn down mid-gesture.
 
+**`GITHUB` and `OPEN` are the same height, set rather than inferred.** They carried `text-xs` and `text-sm` with only `py-2` to size them, so the smaller line-height made one shorter than the other beside it — the kind of misalignment that is invisible until it is pointed at and then impossible to unsee.
+
+**§2.1.2's controls wait for the camera to stop.** A lock has two phases — the seconds spent gliding to a pose and the time spent held at it — and `'locked'` covered both from the start. §2.1.1 could ignore the difference at 1.1 s; §12.6 cannot, because its legs run to eight seconds. The pager was appearing the instant `Work` was pressed and riding the whole move, **offering *open* and a page count for a board still thirty metres away.** Arriving is a state of its own now: false while travelling, true from the moment the curve finishes, false again on release. Both routes wait — the tour's eight seconds and §2.1.1's 1.1.
+
 **§2.1.2's controls are two pills on a phone and one from `sm` up.** Paging, N dots, `GITHUB`, `OPEN` and a close came to about 400 px of controls on a 375 px screen: the ends ran off the edge and the row sat on the stick. They split on the seam already in them — *move between projects* above, *do something with this one* below — and rejoin on desktop.
 
 ### 12.6 The guided path
@@ -1663,9 +1679,9 @@ For a visitor who does not want to walk. Reuses the locked-view camera (target p
 | Stop | Camera position | Yaw | Pitch | Leg |
 |---|---|---|---|---|
 | 0 — spawn | `(0, 1.68, -19.5)` | `0°` | `-4°` | 0.5 m — a turn |
-| 1 — about | `(+0.90, 1.68, +19.0)` | `+90°` | derived | 39.5 m |
+| 1 — about | `(+0.20, 1.68, +19.0)` | `+90°` | derived | 39.5 m |
 | 2 — work | §2.1.1's locked pose — `(-3.081, 1.68, +16.028)` | `+11.87°` | `+14.68°` | 5.9 m |
-| 3 — contact | `(-2.60, 1.68, +14.0)` | `-90°` | derived | 2.1 m |
+| 3 — contact | `(-2.60, 1.68, +14.0)` desktop / `(-0.80, …)` mobile | `-90°` | derived | 2.1 / 3.5 m |
 | 4 — gate | `(0, 1.68, -20.0)` | `180°` | derived | 34.1 m |
 
 **The order is spawn → About → Work → Contact → Gate → spawn, and it no longer ends on the board.** This section used to say the tour *ends on the surface the whole piece is for*, which was right when contact was a payphone halfway down the alley. Contact came later, and the loop later still.
@@ -1708,6 +1724,8 @@ Always present after the gate, on every device: **About · Work · Contact · Ne
 **What none of them do any more is open the panel for you.** They arrive, and §12.5's prompt says what is there; pressing `E` or the prompt itself opens it. `Work` is the exception only because §2.1.1's locked view *is* the destination, so arriving is the whole action.
 
 **Contact on a phone is the second exception, and it is §2.1.2's argument again.** There the tour parks the visitor 1.60 m from six 0.44 m boxes in a portrait frame: the outer columns sit at the edges, the labels are 0.10 m tall, and the view is locked, so they cannot step back or turn to line one up. **A hit target in the world is only a hit target if the visitor can get in front of it** — which is exactly why §2.1.2 took the project controls off the wall and onto the screen. So on mobile the contact overlay opens on arrival and its rows are the targets. Desktop keeps the boxes, because there a pointer reaches any of the six without moving.
+
+**A second pill under the bar says *Return to freeroam*, for as long as the lock is held.** Every desktop release is something the tour does not own — `Escape`, `WASD` through §12.5's movement counter, a click on empty space. A phone has none of them, and §12.3's stick, which *was* the touch answer, is now hidden while locked precisely because it does nothing there. That closed the last door: `Next stop` could put a visitor in a held pose with no way back to walking. It shows on both tiers though only one needs it — a control that appears on a phone and not on a desktop is a control nobody can tell you about.
 
 Pressing one also sets §12.6's `Next stop` to continue from there rather than from wherever the tour had got to — the two controls are two ways into the same route, and they should not disagree about where the visitor is.
 
@@ -1818,6 +1836,10 @@ Three things moved it off 35.61:
 Against that, this pass adds **§3.7's vending rack** at 256 × 512 / 128 × 256 (+0.67 / +0.17), the only new texture in it. §3.4's two new grain classes cost **zero**: a cloned `Texture` shares its `Source`, so a per-class repeat is another sampler on an image that is already resident.
 
 **§2.2 and §2.3 cost two draw calls between them, and it took two goes to keep it at two.** §2.3's whole bank — six boxes, the plate and four bolts — is **one `InstancedMesh`**; six label plates, twelve flag faces and the cart's sign band are thirteen surfaces sampling **one canvas**, so they merge into one more. Everything else the detail pass added — five canopy panels, an apron, an urn, two cups — reuses tokens the cart already had, so `Props.tsx`'s merge-by-material carries them at **zero**.
+
+**Mobile peaks at 91 of 90 at spawn, and it is §3.6's traffic that decides.** Three samples at the spawn pose came out 89, 89, **91** — the cross-street vehicles drift in and out of the frustum through §3.1's opening, so the worst case depends on where they are on a 240 m loop rather than on where the visitor is. A glided §12.6 leg peaks at 84 and the gate stop at 89; the only pose over the cap is the one §17 opens on.
+
+**It is a one-call overrun and the fix has a blast radius, so it is recorded rather than taken.** §15's turn-down order says *instance harder before deleting anything*, and §3.6's three vehicles are distinct glTF models that cannot instance together — so the lever is dropping mobile from three per lane to two, which means `lib/traffic.ts` building per tier and `Traffic.tsx`'s module-scope arrays sized to match. Two fewer cars seen through a 3.36 m slot at 30 m through §5's fog is the cheapest thing in this world to lose; it is still a budget change, and this pass has already moved the mobile light cap twice.
 
 **The plate started as its own mesh and measured 90 of 90 on mobile.** Folding it and its bolts into the boxes' instance set was the fix, and it cost the bolts their hexagonal heads — they are square pads turned 45°, which at 0.056 m across from 1.60 m is a difference nobody can see and a draw call the tier had none of.
 

@@ -108,17 +108,21 @@ export default function Showcase({ projects }: { projects: readonly Project[] })
    * this material *is* until a screenshot succeeds. §2.1: no spinner, no error, no white
    * plane — and no error path, because there is nothing to catch.
    */
+  /* §8.1's rung for *this* tier — see `SHOWCASE.screenshot.emissive` on why it splits. Read
+     once and shared by the material and the frame loop, so the two can never disagree. */
+  const screenshotEmissive = SHOWCASE.screenshot.emissive[tier]
+
   const screenshotMaterial = useMemo(
     () =>
       new MeshStandardMaterial({
         color: SHOWCASE.restingColor,
         emissive: 0xffffff,
-        emissiveIntensity: SHOWCASE.screenshot.emissive,
+        emissiveIntensity: screenshotEmissive,
         toneMapped: SHOWCASE.screenshot.toneMapped,
         roughness: MATERIALS.boardCase.roughness,
         metalness: 0,
       }),
-    [],
+    [screenshotEmissive],
   )
 
   /**
@@ -219,7 +223,7 @@ export default function Showcase({ projects }: { projects: readonly Project[] })
        second to dim a board costs more than the board does. Both surfaces move together, so
        the name and the work never disagree about which project is showing. */
     const level = transitionLevel(nowMs)
-    screenshotMaterial.emissiveIntensity = SHOWCASE.screenshot.emissive * level
+    screenshotMaterial.emissiveIntensity = screenshotEmissive * level
     /* The diffuse rides the same level, or the screen dims to a lit-but-black rectangle
        instead of going dark. Copied from a hoisted colour — parsing a hex string sixty times
        a second is the frame-loop allocation this file is careful about everywhere else.

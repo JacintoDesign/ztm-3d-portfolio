@@ -6,6 +6,7 @@ import { expose } from '@/lib/debug'
 import { isLocked, lockOwner, pollLockRelease } from '@/lib/lockedView'
 import { getInRange, nearestInRange, setInRange, stationCount } from '@/lib/stations'
 import { canControl, getMode } from '@/lib/store'
+import { look } from './Camera'
 import { position } from './Player'
 
 /**
@@ -75,7 +76,7 @@ export default function Interact(): null {
        React renders on exactly three events per approach — in, out, or a swap. §12.5's
        180 ms fade is then a CSS transition rather than a JS interpolation, which also
        makes it reverse correctly when the visitor backs out halfway through. */
-    setInRange(nearestInRange(position.x, position.z))
+    setInRange(nearestInRange(position.x, position.z, look.yaw))
   }, 0)
 
   return null

@@ -1,7 +1,9 @@
 'use client'
 
 import { goTo, nextStop } from '@/lib/guidedPath'
+import { releaseLock } from '@/lib/lockedView'
 import { useOverlay } from '@/lib/overlays'
+import { useMode } from '@/lib/store'
 import { TOP_NAV } from '@/lib/world'
 
 /**
@@ -25,6 +27,7 @@ const [ABOUT, WORK, CONTACT, NEXT] = TOP_NAV
 
 export default function Nav() {
   const overlay = useOverlay()
+  const locked = useMode() === 'locked'
 
   /**
    * **Tighter under `sm`, because at 375 px the bar ran off the screen** — `Next stop` was
@@ -78,6 +81,32 @@ export default function Nav() {
           {NEXT}
         </button>
       </div>
+
+      {/**
+       * §12.6 — **the way out of the tour, and on a phone it is the only one.**
+       *
+       * Every desktop release is a keyboard or a pointer the tour does not own: `Escape`,
+       * `WASD` through §12.5's movement counter, a click on empty space. A phone has none of
+       * them — and §12.3's stick, which was the touch answer, is now *hidden* while locked
+       * precisely because it does nothing there. That closed the last door: `Next stop` could
+       * put a visitor into a held pose with no way back to walking.
+       *
+       * So it is a second pill under the bar, shown for exactly as long as the lock is held.
+       * **Both tiers**, though only one needs it: a control that appears on a phone and not on
+       * a desktop is a control nobody can tell you about, and it costs a desktop visitor one
+       * row of pixels they can ignore.
+       */}
+      {locked && (
+        <div className="pointer-events-none absolute inset-x-0 flex justify-center" style={{ top: 'calc(env(safe-area-inset-top, 0px) + 3.75rem)' }}>
+          <button
+            type="button"
+            onClick={releaseLock}
+            className="pointer-events-auto rounded-full border border-white/20 bg-black/70 px-3.5 py-1.5 text-[0.65rem] tracking-[0.08em] whitespace-nowrap text-white/75 uppercase backdrop-blur-md transition-colors hover:border-white/40 hover:text-white sm:px-4 sm:py-2 sm:text-xs sm:tracking-[0.2em]"
+          >
+            Return to freeroam
+          </button>
+        </div>
+      )}
     </nav>
   )
 }

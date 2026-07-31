@@ -1674,7 +1674,31 @@ export const SHOWCASE = {
     tint: '#8792A6',
     multiply: 0.74,
     toneMapped: true,
-    emissive: EMISSIVE.projectScreenshot,
+    /**
+     * **Tier-split, and the mobile figure is compensating for a texture rather than a light.**
+     *
+     * Measured on §2.1's darkest project from §2.1.1's locked pose, the screenshot's peak came
+     * out at **235 on desktop against 184 on mobile** — with the same rung, the same tint and
+     * the same material on both. The difference is `screenshotSize`: at 512 × 272 against
+     * 1024 × 544, every bright detail in a dark interface is averaged with the dark pixels
+     * beside it, and mobile's bloom is weaker on top of that. **A half-size texture is not a
+     * softer picture, it is a flatter one**, and the projects it flattens most are exactly the
+     * ones with the least light in them to begin with.
+     *
+     * Raising the rung is the cheap half of the fix — the honest one is a full-size texture,
+     * and §15's mobile budget is 9 MB with the screenshots already the largest thing in it.
+     * **0.86 takes the dark project's peak from 184 to 212 and still leaves the white one
+     * with zero clipped pixels** — measured across all three of §2.1's distinct interfaces,
+     * not just the extremes — so *peak luminance lands below the bloom threshold* still holds,
+     * which is the rule this rung exists to obey. It does not reach desktop's 235 and it
+     * cannot: what is missing is resolution, and no amount of emissive puts detail back.
+     *
+     * **It is 0.86 against desktop's 0.45, which looks alarming and is not.** The two are not
+     * comparable numbers: one multiplies a full-size image and the other a half-size one whose
+     * highlights have already been averaged away. The rung is a means; the *measured peak* is
+     * the thing §8.1 actually governs, and those now agree to within a tenth.
+     */
+    emissive: { desktop: EMISSIVE.projectScreenshot, mobile: 0.86 },
   },
 
   /**
@@ -1737,13 +1761,14 @@ export const BIO_STATION = {
   labelCanvas: { desktop: 1024, mobile: 512 },
   urn: { radius: 0.16, height: 0.26 },
   /**
-   * **2.20 → 3.20, because §12.6's stop had to move back.** At 1.90 m the cart filled the
-   * frame and the canopy's sign band — the one thing on it that says what it is — sat behind
-   * §12.7's nav bar. A station's radius has to contain its own stop (§12.5), so widening the
-   * framing widens this. The board at 9.50 is still by far the widest, which is the ordering
-   * §12.5 has always had.
+   * **2.20 → 3.20 → 4.00, twice for the same reason.** At 1.90 m the cart filled the frame and
+   * the canopy's sign band sat behind §12.7's nav bar; at 2.90 it still read as zoomed in, on
+   * a portrait phone especially, where a 2.1 m object at that distance overflows the width. A
+   * station's radius has to contain its own stop (§12.5), so widening the framing widens this
+   * — twice now, which is what a radius derived from a framing decision does. The board at
+   * 9.50 is still by far the widest, which is the ordering §12.5 has always had.
    */
-  interactRadius: 3.2,
+  interactRadius: 4.0,
   idle: { breatheHz: 0.5, breatheAmplitude: 0.004 },
 } as const
 
@@ -1799,7 +1824,19 @@ export const CONTACT_STATION = {
    * a per-channel assignment would be a component edit waiting to happen.
    */
   flagColors: ['neonPink', 'neonCyan', 'phoneGreen', 'sodium', 'neonMagenta', 'lantern'],
-  interactRadius: 2.0,
+  /**
+   * **2.00 → 3.80, and it needed §12.5's facing rule before it could move.**
+   *
+   * Framing six boxes on a portrait phone takes a 3.34 m standoff — measured, not guessed:
+   * h-FOV there is 35.8°, so at the old 1.60 m only **1.03 m** of a 2.00 m bank was visible.
+   * A station's radius has to contain its own stop, so the radius had to follow. But 2.32 m
+   * is all there was: past that the bank became the *nearest* station at §2.1.1's locked pose,
+   * two metres behind a visitor reading the board.
+   *
+   * Distance alone could not separate them. §12.5 now picks the nearest station **in front of
+   * the visitor**, and behind-the-head stops being a case at all.
+   */
+  interactRadius: 3.8,
 } as const
 
 /** §2.3 — the box faces, which is where the station registers and what §12.6's stop aims at. */
@@ -3329,7 +3366,7 @@ export const INTERACT = {
    * the biggest thing in the alley a visitor can touch.
    */
   board: { radius: 9.5, prompt: 'E — View Projects' },
-  /** §2.2 — the food cart. Contains §12.6's stop at 2.90 m with 0.30 to spare. */
+  /** §2.2 — the food cart. Contains §12.6's stop at 3.60 m with 0.40 to spare. */
   bio: { radius: BIO_STATION.interactRadius, prompt: 'E — About' },
   /**
    * §2.3 — the mailbox bank. **2.00 is authored and the *stop* moved to fit it**, not the
@@ -3345,7 +3382,19 @@ export const INTERACT = {
    * facing six labelled boxes, and a prompt that only mentioned a keyboard key on a wall full
    * of things to click was the least useful true sentence available.
    */
-  contact: { radius: CONTACT_STATION.interactRadius, prompt: 'Click a mailbox · E for Overlay' },
+  contact: {
+    radius: CONTACT_STATION.interactRadius,
+    /**
+     * **Two prompts, because the two tiers offer different things.**
+     *
+     * On a desktop the six boxes are the affordance: a pointer reaches any of them without
+     * moving, and `E` is the fallback that lists them all. On a phone that is reversed — the
+     * boxes are 0.44 m targets in a locked portrait frame, which is why §12.6 opens the panel
+     * on arrival there (§2.1.2's argument), so the prompt should offer the thing that works
+     * rather than the thing that is nominally true.
+     */
+    prompt: { desktop: 'Click a Mailbox · E for Overlay', mobile: 'Click to View All' },
+  },
   promptFadeMs: 180,
 } as const
 
@@ -3372,12 +3421,17 @@ export const GUIDED_PATH = {
   /**
    * How far out from each wall station the visitor is put.
    *
-   * **`contact` is 1.60 and it is not a framing choice** — see `INTERACT.contact`. At 2.40
-   * the bank's radius would have had to swallow §2.1.1's locked pose. It is a better reading
-   * distance for a 0.10 m label anyway, which is the sort of luck that follows from fixing
-   * the real constraint rather than the symptom.
+   * **`contact` splits by tier, and it is the only stop that does.** The bank is 2.00 m wide
+   * on a wall the visitor stands square to, so how much of it fits is decided entirely by
+   * h-FOV — 35.8° in portrait against 62° landscape. Desktop frames all six from 1.60 m and
+   * gets a 0.10 m label at a comfortable reading distance; a phone needs **3.34 m** to see the
+   * same six, measured, and at 1.60 m showed 1.03 m of a 2.00 m bank.
+   *
+   * **The radius does not split with it.** 3.80 contains both, and it only became available
+   * once §12.5 started preferring the station the visitor is *facing* — before that anything
+   * over 2.32 m claimed §2.1.1's locked pose from behind the visitor's head.
    */
-  standoff: { about: 2.9, contact: 1.6, gate: 3.0 },
+  standoff: { about: 3.6, contact: { desktop: 1.6, mobile: 3.4 }, gate: 3.0 },
   ease: 'easeInOutCubic',
   /**
    * **A speed, because `legDurationSec` was a duration and durations do not survive a stop

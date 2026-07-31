@@ -125,7 +125,7 @@ export function stops(channelCount?: number): Stop[] {
     },
     {
       name: 'contact',
-      pose: wallStop(mailboxStation(channelCount), GUIDED_PATH.standoff.contact, -1),
+      pose: wallStop(mailboxStation(channelCount), GUIDED_PATH.standoff.contact[resolveTier()], -1),
     },
     /**
      * §3.1's station gate — **the tour's one stop that is not a content surface.**
@@ -331,7 +331,7 @@ export function stationAudit(channelCount?: number): StationFinding[] {
 
     /* The one that found §2.3's fault. Two stations can each contain their own stop and still
        be wrong together, because the *nearest* is what §12.5's manager opens. */
-    const nearest = nearestInRange(stop.pose.x, stop.pose.z)
+    const nearest = nearestInRange(stop.pose.x, stop.pose.z, stop.pose.yaw)
     if (nearest !== null && nearest.id !== id) {
       findings.push({
         rule: 'wrong-station-at-stop',

@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
-import { isLocked, lockOwner, releaseLock } from '@/lib/lockedView'
+import { isLocked, releaseLock, useLockArrived, useLockOwner } from '@/lib/lockedView'
 import { openProject } from '@/lib/openProject'
 import type { Project } from '@/lib/projects'
 import { page, useShowcaseIndex } from '@/lib/showcase'
@@ -26,6 +26,13 @@ import { useMode } from '@/lib/store'
 export default function ShowcaseControls({ projects }: { projects: readonly Project[] }) {
   const mode = useMode()
   const index = useShowcaseIndex()
+  /* Subscribed, not read during render — see `useLockOwner`. Pressing `Next stop` from
+     this wall changes the owner without changing the mode React can see. */
+  const owner = useLockOwner()
+  /* **And only once the camera has stopped.** These offer *open* and a page count for the
+     board in front of you; riding an eight-second §12.6 leg they offer it for one thirty
+     metres away. See `useLockArrived`. */
+  const arrived = useLockArrived()
   /**
    * **Locked *by the showcase*, not merely locked.** §12.6's guided path reuses §2.1.1's
    * camera primitive — which `CLAUDE.md` asks for — so `mode === 'locked'` is now true at
@@ -33,7 +40,7 @@ export default function ShowcaseControls({ projects }: { projects: readonly Proj
    * check the project pager and its OPEN button appear while the camera glides to a food
    * cart, offering to open whichever project happens to be showing.
    */
-  const locked = mode === 'locked' && lockOwner() === 'showcase'
+  const locked = mode === 'locked' && owner === 'showcase' && arrived
   /* N from the prop, not from the store — the store's copy exists for the frame loop. */
   const count = projects.length
 
@@ -146,7 +153,11 @@ export default function ShowcaseControls({ projects }: { projects: readonly Proj
           <button
             type="button"
             onClick={() => openProject(project?.github ?? '')}
-            className="rounded-full px-3 py-2 text-xs tracking-wide text-white/55 transition-colors hover:bg-white/10 hover:text-white sm:ml-1"
+            /* Same `h-9` as OPEN. They had `text-xs` and `text-sm` with only `py-2` to size
+               them, so the smaller line-height made GITHUB the shorter of two buttons sitting
+               side by side — the kind of misalignment that is invisible until it is pointed at
+               and then impossible to unsee. Height is set, not inferred from the type. */
+            className="grid h-9 place-items-center rounded-full px-3 text-xs tracking-wide text-white/55 transition-colors hover:bg-white/10 hover:text-white sm:ml-1"
           >
             GITHUB
           </button>
@@ -154,7 +165,7 @@ export default function ShowcaseControls({ projects }: { projects: readonly Proj
           <button
             type="button"
             onClick={() => openProject(project?.url ?? '')}
-            className="rounded-full bg-[#FF2E6A] px-4 py-2 text-sm tracking-wide text-white transition-opacity hover:opacity-90 sm:px-5"
+            className="grid h-9 place-items-center rounded-full bg-[#FF2E6A] px-4 text-sm tracking-wide text-white transition-opacity hover:opacity-90 sm:px-5"
           >
             OPEN
           </button>

@@ -379,7 +379,7 @@ export default function Stations({ contact }: { contact: Contact }) {
       x: bank.x,
       z: bank.z,
       radius: INTERACT.contact.radius,
-      prompt: INTERACT.contact.prompt,
+      prompt: INTERACT.contact.prompt[tier],
       open: openContact,
     })
 
@@ -387,7 +387,9 @@ export default function Stations({ contact }: { contact: Contact }) {
       removeBio()
       removeContact()
     }
-  }, [])
+    /* §2.3's prompt is tier-split, so the registration is too. `resolveTier()` is frozen at
+       mount, so this never actually re-runs — the dependency is honesty, not machinery. */
+  }, [tier])
 
   useEffect(() => {
     const count = contact.channels.length
