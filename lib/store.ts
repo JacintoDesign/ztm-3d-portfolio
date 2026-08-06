@@ -19,11 +19,15 @@ import { useSyncExternalStore } from 'react'
 export type Mode = 'loading' | 'play' | 'locked' | 'overlay'
 
 /**
- * `'play'` for now, because nothing sets the mode yet and the world has to be walkable.
- * The §14.1 gate flips this to `'loading'` when it lands, and that is the only line of
- * this file that changes.
+ * §14.1 — `'loading'`, and the gate is the only thing that has ever moved it off this.
+ *
+ * It was `'play'` from the shell until the gate landed, with a note saying this line was the
+ * one that would change. It is that line. Until the visitor presses `Enter`, `canControl()` is
+ * false, so §12.3's walking, §12.2's looking, §12.5's interact key and §12.3's touch stick are
+ * all inert — **behind a full-screen panel, which is belt and braces and is the point**: the
+ * gate is DOM, and a keydown does not know it is there.
  */
-let mode: Mode = 'play'
+let mode: Mode = 'loading'
 
 const listeners = new Set<() => void>()
 

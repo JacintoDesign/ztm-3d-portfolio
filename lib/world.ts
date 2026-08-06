@@ -3532,13 +3532,58 @@ export const REDUCED_MOTION = {
  * §14 — Threshold: gate, sound, hint
  * ──────────────────────────────────────────────────────────────────────────── */
 
+/**
+ * §14.1 — the entry gate.
+ *
+ * **The title is the name and the story is the line above it.** It was drafted the other way
+ * round — a `終電 / LAST TRAIN DEPARTED` eyebrow over the vibe line, the name nowhere — which
+ * is a mood board rather than a front door. The first screen of a portfolio has one job that
+ * outranks atmosphere: say whose it is.
+ */
 export const GATE = {
   background: 'void',
-  eyebrow: '終電 / LAST TRAIN DEPARTED',
+  kicker: "It's three AM. You've missed the last train.",
+  title: 'Jacinto Design',
+  /**
+   * **A word, not a sentence.** `STEP OUT INTO THE RAIN` was the draft and it is copy rather
+   * than a control: it wraps on a phone, and it is a third thing to read by a visitor who
+   * decided two lines ago.
+   */
+  button: 'Enter',
+  /**
+   * §14.1 — no longer on the gate. It is `metadata.description` in `app/layout.tsx`, which is
+   * the one place a sentence of atmosphere still has work to do.
+   */
   vibeLine: "3am in Tokyo. You've just missed the last train. Neon reflections on wet pavement.",
-  button: 'STEP OUT INTO THE RAIN',
-  /** A 1 px rule filling left to right. Not a spinner. */
-  progress: 'rule',
+  /**
+   * A 1 px rule across the bottom of the viewport, filling left to right. Not a spinner.
+   *
+   * **Milestones, not a fraction, because neither thing it waits on can be measured while it
+   * is happening.** A dynamic `import()` fires no progress events and states no total, and the
+   * first frame is shader compilation — time on a GPU, not bytes. So the rule moves only when
+   * something has actually happened, which is the one property a progress indicator has to
+   * have. Weighted toward the chunk because on any connection slower than a desk that is where
+   * nearly all of the wait is: 1.6 MB of engine, measured off a production build.
+   *
+   * It deliberately does **not** wait on §3.6's cars — 4.46 MB, the largest download in the
+   * world, already suspended alone in `World.tsx` because *the one thing §3.6 is allowed to be
+   * is late*.
+   */
+  progress: {
+    painted: 0.08,
+    chunkMounted: 0.62,
+    firstFrame: 1,
+    /** Long enough that three floors read as travel rather than as three jumps. */
+    easeMs: 900,
+  },
+  /** §13 — the panel is removed rather than faded, and the rule jumps between floors. */
+  fadeOutMs: 320,
+  /**
+   * **The escape hatch, and it is here because this is the one screen that can trap someone.**
+   * No WebGL, a context that failed to create, a driver that gave up — and the button never
+   * enables, with nothing on screen saying why. It enables anyway after this.
+   */
+  readyTimeoutMs: 12_000,
 } as const
 
 /** §14.2 — all levels in dB, relative to a master that starts at −6. */

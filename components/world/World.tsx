@@ -1,8 +1,8 @@
 'use client'
 
-import { Suspense, useCallback } from 'react'
+import { Suspense, useCallback, useEffect, useRef } from 'react'
 import { PerspectiveCamera } from '@react-three/drei'
-import { Canvas } from '@react-three/fiber'
+import { Canvas, useFrame } from '@react-three/fiber'
 import type { PerspectiveCamera as ThreePerspectiveCamera } from 'three'
 import { ACESFilmicToneMapping, ColorManagement, SRGBColorSpace } from 'three'
 import { RectAreaLightUniformsLib } from 'three/examples/jsm/lights/RectAreaLightUniformsLib.js'
@@ -17,6 +17,7 @@ import TouchStick from '@/components/ui/TouchStick'
 import type { About } from '@/lib/about'
 import type { Contact } from '@/lib/contact'
 import { resolveTier, useIsPortrait } from '@/lib/device'
+import { markChunkMounted, markFirstFrame } from '@/lib/gate'
 import { isLocked, releaseLock } from '@/lib/lockedView'
 import type { Project } from '@/lib/projects'
 import { ATMOSPHERE, BUDGET, CAMERA, GL } from '@/lib/world'
@@ -58,6 +59,31 @@ ColorManagement.enabled = ATMOSPHERE.colorManagement
 RectAreaLightUniformsLib.init()
 
 /**
+ * §14.1 — the second of the gate's two milestones: the Canvas has presented a frame.
+ *
+ * **Two frames, not one.** `useFrame` at the default priority runs *before* R3F renders that
+ * frame, so signalling on the first call reports the world visible while the first pixels are
+ * still being drawn — and on a phone the gap is shader compilation, which is precisely the
+ * part of the wait this milestone exists to cover. Counting to two means one full frame has
+ * been through the composer and is on screen.
+ *
+ * **The one `setState` in a frame loop in this codebase, and it fires exactly once.**
+ * `CLAUDE.md`'s rule is about sixty React renders a second; the ref guard makes this one
+ * render, one time, at the moment the world becomes visible. Nothing reads back from it here.
+ */
+function ReadyProbe() {
+  const frames = useRef(0)
+
+  useFrame(() => {
+    if (frames.current > 1) return
+    frames.current += 1
+    if (frames.current > 1) markFirstFrame()
+  })
+
+  return null
+}
+
+/**
  * The single <Canvas> for the whole world.
  *
  * There is never a second one: another Canvas carries its own renderer and scene graph
@@ -92,6 +118,13 @@ export default function World({
     if (camera === null) return
     camera.rotation.order = 'YXZ'
   }, [])
+
+  /**
+   * §14.1 — the gate's first milestone. This component *is* §15's engine chunk: reaching this
+   * line means 1.6 MB of `three` and R3F has arrived, been parsed and mounted, which is the
+   * bulk of the wait the gate is covering on any connection slower than a desk.
+   */
+  useEffect(markChunkMounted, [])
 
   return (
     <div style={{ position: 'fixed', inset: 0 }}>
@@ -166,6 +199,8 @@ export default function World({
         {/* §9 — bloom and vignette only. It goes after everything it operates on, and
             note that mounting it takes tone mapping off the renderer: see Effects.tsx. */}
         <Effects />
+        {/* §14.1 — last, so the frame it counts is a frame with everything in it. */}
+        <ReadyProbe />
       </Canvas>
 
       {/* §12.3 — 2D overlay, so it lives outside the Canvas. Being a sibling of the

@@ -1786,9 +1786,30 @@ Pressing one also sets §12.6's `Next stop` to continue from there rather than f
 
 ### 14.1 The gate
 
-Full-screen, `void` background, holds until the world is ready. Carries: the vibe line, a `終電 / LAST TRAIN DEPARTED` eyebrow, a progress line (not a spinner — a 1 px rule filling left to right), and one button: **`STEP OUT INTO THE RAIN`**. The button both enters the world and unlocks audio in the same gesture.
+Full-screen over the canvas, `void` background, holds until the world is ready. Three things, in this order: the line **`It's three AM. You've missed the last train.`**, the title **`Jacinto Design`** under it, and one button — **`Enter`**. A 1 px rule across the very bottom of the viewport fills left to right. Not a spinner.
 
 The gate covers the download. Nothing about it apologises for the wait.
+
+**The title is the name, and the story is the line above it.** It was drafted the other way round — a `終電 / LAST TRAIN DEPARTED` eyebrow over the vibe line, with the name nowhere — which is a mood board rather than a front door. **The first screen of a portfolio has one job that outranks atmosphere: say whose it is.** The story still comes first in reading order, because it is the sentence that explains why the world looks like this, and it takes one second to read. The long vibe line stays in `lib/world.ts` as the document description, where a search result is the one place it still has to do that work.
+
+**One button, and it is the only thing on the gate that can be pressed.** `STEP OUT INTO THE RAIN` was the draft label and it is a sentence, not a control: it wraps on a phone, it is a second thing to read after the two lines above it, and the visitor has already decided by the time they reach it. `Enter` is the word for what the button does.
+
+**Disabled until the world is ready, and *ready* is two events rather than a number.** The bar cannot report a percentage, because neither thing it waits on can be measured while it is happening:
+
+- **The engine chunk** — 1.6 MB of `three` and R3F, measured off a production build, in its own async chunk behind §15's `next/dynamic` boundary. A dynamic `import()` fires no progress events and states no total, so there is nothing to divide.
+- **The first rendered frame** — shader compilation, which is time on the GPU and not bytes at all. It is also where a mid-range phone spends the part of the wait that surprises people.
+
+So the rule is filled by **milestone, not by fraction**: **0.08** when the gate itself paints, **0.62** when the engine chunk has mounted, **1.00** on the first frame — each one eased over 900 ms so it reads as travel rather than as three jumps. **A bar that moves only when something has actually happened never lies about where it is**, which is the one property a progress indicator has to have. The floors are weighted toward the chunk because on any connection slower than a desk that is where nearly all of the wait is.
+
+**It does not wait for §3.6's cars.** They are 4.46 MB — the largest download in the world by a factor of three over everything else together — and `World.tsx` already suspends them alone with a `null` fallback, on the stated grounds that *the one thing §3.6 is allowed to be is late*. Holding the gate for them would triple the wait to populate a road seen through a 3.36 m slot at 30 m.
+
+**There is a hard timeout, and it exists because this is the one screen that can trap someone.** If the first frame has not arrived within **12 s** — no WebGL, a context that failed to create, a driver that gave up — the button enables anyway. A visitor who lands on a permanently disabled button has no way forward and nothing telling them why. §12.5 makes the same argument about the locked view; this is the same argument one screen earlier, and the stakes are higher because nothing has been seen yet.
+
+**The button does three things in one gesture, and the order matters.** It creates the `AudioContext`, **synchronously inside the click handler** — browsers grant a context only on a real user gesture, and a context created in a promise callback or an effect afterwards is created outside that gesture and starts `suspended` with no way back. Then it moves the mode from `'loading'` to `'play'`, which is what takes §12's controls live. Then the panel fades out over 320 ms.
+
+**`'loading'` is the mode the world starts in**, and this is the first thing that ever sets it to anything else. Until then `canControl()` is false, so §12.3's walking, §12.2's looking, §12.5's interact key and §12.3's touch stick are all inert — behind a full-screen panel, which is belt and braces, and correct: the gate is DOM and a stray key event does not know it is there.
+
+**§13 — no fade and no eased bar.** The panel is removed rather than faded and the rule jumps between floors. Nothing is lost: the bar's floors are the information and the easing was only ever the manner of arriving at them.
 
 ### 14.2 Audio
 
