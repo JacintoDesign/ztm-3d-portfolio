@@ -1,15 +1,18 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { type CSSProperties, useEffect, useState } from 'react'
 
 import { unlock } from '@/lib/audio'
+import { startEntrySweep } from '@/lib/entrySweep'
 import { markReadyTimeout, useGate } from '@/lib/gate'
+import { startRainBed } from '@/lib/rainBed'
 import { usePrefersReducedMotion } from '@/lib/reducedMotion'
 import { setMode } from '@/lib/store'
 import { GATE, PALETTE, WORDMARK } from '@/lib/world'
 
 /** The same two words §12.7's corner carries. Two treatments of one name is two studios. */
 const [MARK_FIRST, MARK_SECOND] = WORDMARK
+const [KICKER_LINE_1, KICKER_LINE_2] = GATE.kickerLines
 
 /**
  * §14.1 — the entry gate.
@@ -20,15 +23,47 @@ const [MARK_FIRST, MARK_SECOND] = WORDMARK
  * arrive with the thing it was covering for and cover nothing. So it mounts from
  * `WorldMount.tsx`, in the first paint, while the chunk is still on the wire.
  *
- * **Three things and one button**, in reading order: the line that explains why the world
- * looks like this, the name of whose it is, and the way in.
+ * **Five lines and one button**, in reading order, each fading in after the one before it:
+ * the two-part line that explains why the world looks like this, the name of whose it is —
+ * itself two words, two beats — and the way in.
  */
 
 /** §13 — a duration of zero, applied in both the places that animate. */
 const instant = (ms: number, reduced: boolean): number => (reduced ? 0 : ms)
 
+/**
+ * §14.1 — one line's turn in the five-line reveal.
+ *
+ * **§13 disables the animation outright rather than shortening it to zero.** A zero-duration
+ * `gate-reveal` still runs — `from` and `to` collapse to the same instant, but the *rise* is
+ * still there for one frame under some browsers' animation timing, which is a flicker rather
+ * than a cut. `animation: 'none'` with `opacity: 1` has no such edge: the line is simply there.
+ */
+function revealStyle(index: number, reduced: boolean): CSSProperties {
+  if (reduced) return { opacity: 1 }
+  return {
+    opacity: 0,
+    animation: `gate-reveal ${GATE.reveal.riseDurationMs}ms ease-out ${GATE.reveal.delayMs[index]}ms both`,
+    ['--gate-reveal-rise' as string]: `${GATE.reveal.risePx}px`,
+  }
+}
+
+/**
+ * §14.1 — the button's own reveal. `gate-fade` carries no `transform`, so there is no rise to
+ * hold `--gate-reveal-rise` for — a fade-only keyframe rather than the shared one at zero rise,
+ * because a `0px` rise is still a `translateY` some browsers repaint for on the same frame the
+ * animation resolves.
+ */
+function buttonRevealStyle(reduced: boolean): CSSProperties {
+  if (reduced) return { opacity: 1 }
+  return {
+    opacity: 0,
+    animation: `gate-fade ${GATE.reveal.buttonFadeMs}ms ease-out ${GATE.reveal.delayMs[4]}ms both`,
+  }
+}
+
 export default function Gate() {
-  const { progress, ready } = useGate()
+  const { ready } = useGate()
   const reduced = usePrefersReducedMotion()
   /**
    * `open` is the panel; `entered` is the visitor. They are two states because the panel
@@ -64,21 +99,33 @@ export default function Gate() {
   if (!open) return null
 
   /**
-   * **The order of these three is the whole of §14.2's autoplay rule.**
+   * **The order of these five is the whole of §14.2's autoplay rule, plus two.**
    *
    * `unlock()` is the *first statement*, synchronous, inside the handler. A browser grants a
    * running `AudioContext` only to a real gesture, and the gesture's permission is spent by
    * the time a promise callback or an effect runs — so a context created anywhere after this
    * line starts `suspended`, silently, and cannot resume itself.
    *
+   * `startRainBed` is the *second* statement, for the same reason. It builds and starts a
+   * `BufferSourceNode` on the context `unlock()` just returned, and a source node started
+   * from a later effect or timer is a second thing asking a context for permission it was
+   * only ever granted once, in this handler, by this gesture.
+   *
    * Then the mode, which is what takes §12's controls live: `canControl()` has been false
    * since the module loaded and this is the first thing in the world that moves it.
+   *
+   * Then §14.1's entry sweep — skipped outright under reduced motion, not shortened to zero,
+   * for the same reason `revealStyle` skips its own animation rather than running it at 0 ms:
+   * a sweep of no duration is still one JS-driven write competing with the frame that should
+   * simply already be at rest.
    *
    * Then the fade, which is only appearance.
    */
   function enter(): void {
-    unlock()
+    const context = unlock()
+    if (context !== null) startRainBed(context)
     setMode('play')
+    if (!reduced) startEntrySweep(performance.now())
     /* §13 — no fade. The panel goes now, and `entered` is never set, because there is no
        out-transition left for it to drive. */
     if (reduced) {
@@ -103,26 +150,38 @@ export default function Gate() {
         pointerEvents: entered ? 'none' : 'auto',
       }}
     >
-      {/* Wide enough for the sentence to hold one line from `sm` up — at 26rem it broke
-          after *the last*, which turns a beat into a stumble. It still wraps on a phone,
-          where two lines is what 375 px has. */}
-      <p className="max-w-[22rem] text-xs leading-relaxed tracking-[0.18em] text-white/45 uppercase sm:max-w-[38rem] sm:text-sm sm:tracking-[0.22em]">
-        {GATE.kicker}
+      {/**
+       * §14.1 — two elements, not one, on every device. The reveal below fades each in on
+       * its own beat, which a single string cannot do. `sm:inline` lets them flow onto what
+       * usually reads as one sentence; below that they stack, forced onto their own lines
+       * rather than left to wrap wherever 375 px happens to break them.
+       */}
+      <p className="flex max-w-[22rem] flex-col items-center gap-1 text-xs leading-relaxed tracking-[0.18em] text-white/45 uppercase sm:block sm:max-w-[38rem] sm:text-sm sm:tracking-[0.22em]">
+        <span className="sm:inline" style={revealStyle(0, reduced)}>
+          {KICKER_LINE_1}
+        </span>{' '}
+        <span className="sm:inline" style={revealStyle(1, reduced)}>
+          {KICKER_LINE_2}
+        </span>
       </p>
 
       {/* §3.6's own pairing, and the same two words the corner wordmark carries — this is
           where a visitor meets the name, and meeting it twice in two different treatments
           would be two studios. */}
       <h1 className="mt-5 text-3xl tracking-[0.16em] uppercase sm:mt-6 sm:text-5xl sm:tracking-[0.2em]">
-        <span style={{ color: PALETTE.neonMagenta }}>{MARK_FIRST}</span>{' '}
-        <span style={{ color: PALETTE.neonCyan }}>{MARK_SECOND}</span>
+        <span style={{ color: PALETTE.neonMagenta, ...revealStyle(2, reduced) }}>{MARK_FIRST}</span>{' '}
+        <span style={{ color: PALETTE.neonCyan, ...revealStyle(3, reduced) }}>{MARK_SECOND}</span>
       </h1>
 
       <button
         type="button"
         onClick={enter}
         disabled={!ready}
-        className="mt-10 rounded-full px-10 py-3 text-sm tracking-[0.3em] uppercase transition-opacity disabled:cursor-not-allowed sm:mt-12"
+        /* `cursor-pointer` is explicit rather than assumed: Tailwind's preflight resets a
+           `<button>` to `cursor: default`, which is correct for a button that submits a
+           form and wrong for the one button on this screen, whose entire job is to be
+           pressed. `disabled:cursor-not-allowed` already covers the other state. */
+        className="mt-10 cursor-pointer rounded-full px-10 py-3 text-sm tracking-[0.3em] uppercase transition-opacity disabled:cursor-not-allowed sm:mt-12"
         style={{
           background: ready ? PALETTE.neonMagenta : 'transparent',
           color: ready ? '#FFFFFF' : 'rgba(255,255,255,0.3)',
@@ -130,30 +189,11 @@ export default function Gate() {
           /* The same 320 ms the panel leaves on — the button lighting up and the panel
              going are one gesture's worth of motion, not two durations. */
           transition: `background ${instant(GATE.fadeOutMs, reduced)}ms ease-out, color ${instant(GATE.fadeOutMs, reduced)}ms ease-out`,
+          ...buttonRevealStyle(reduced),
         }}
       >
         {GATE.button}
       </button>
-
-      {/**
-       * §14.1 — a 1 px rule across the very bottom, filling left to right. Not a spinner.
-       *
-       * **It moves by milestone and never between them**, because neither thing it waits on
-       * can be measured while it happens: a dynamic `import()` states no total, and the first
-       * frame is shader compilation rather than bytes. The easing is what makes three floors
-       * read as travel — and §13 takes it off, which loses nothing, since the floors were
-       * always the information.
-       */}
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-white/10">
-        <div
-          className="h-full"
-          style={{
-            width: `${progress * 100}%`,
-            background: PALETTE.neonCyan,
-            transition: `width ${instant(GATE.progress.easeMs, reduced)}ms ease-out`,
-          }}
-        />
-      </div>
     </div>
   )
 }

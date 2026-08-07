@@ -68,3 +68,44 @@ canvas {
 .scroll-dark::-webkit-scrollbar-corner {
   background: transparent;
 }
+
+/*
+ * §14.1 — the gate's five-line reveal: `It's three AM.` → `You've missed the last train.` →
+ * `Jacinto` → `Design` → `Enter`, each rising in a few pixels and brightening in after the one
+ * before it.
+ *
+ * A CSS animation rather than a JS-driven stagger — every line's delay is fixed relative to
+ * the panel's own mount (`Gate.tsx`'s `lib/world.ts` note explains why), which is exactly what
+ * `animation-delay` already means. No `useEffect`, no timers, nothing to clean up.
+ *
+ * `both` fill mode holds the `from` state before the delay elapses and the `to` state after —
+ * without it every line would flash visible for one frame before its own delay took hold.
+ *
+ * §13 disables this per element with `animation: none`, which is a simpler override than a
+ * second keyframe: the line's own inline `opacity: 1` then wins outright.
+ */
+@keyframes gate-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(var(--gate-reveal-rise, 10px));
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/**
+ * §14.1 — the button's own reveal. Every other line rises as it brightens; the button only
+ * brightens. It is the one element on the gate a visitor is about to press, and a target that
+ * is still sliding when the cursor arrives over it is a worse target than one that is merely
+ * fading in.
+ */
+@keyframes gate-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}

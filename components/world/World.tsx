@@ -1,6 +1,6 @@
 'use client'
 
-import { Suspense, useCallback, useEffect, useRef } from 'react'
+import { Suspense, useCallback, useRef } from 'react'
 import { PerspectiveCamera } from '@react-three/drei'
 import { Canvas, useFrame } from '@react-three/fiber'
 import type { PerspectiveCamera as ThreePerspectiveCamera } from 'three'
@@ -17,7 +17,7 @@ import TouchStick from '@/components/ui/TouchStick'
 import type { About } from '@/lib/about'
 import type { Contact } from '@/lib/contact'
 import { resolveTier, useIsPortrait } from '@/lib/device'
-import { markChunkMounted, markFirstFrame } from '@/lib/gate'
+import { markFirstFrame } from '@/lib/gate'
 import { isLocked, releaseLock } from '@/lib/lockedView'
 import type { Project } from '@/lib/projects'
 import { ATMOSPHERE, BUDGET, CAMERA, GL } from '@/lib/world'
@@ -59,7 +59,7 @@ ColorManagement.enabled = ATMOSPHERE.colorManagement
 RectAreaLightUniformsLib.init()
 
 /**
- * §14.1 — the second of the gate's two milestones: the Canvas has presented a frame.
+ * §14.1 — the gate's ready signal: the Canvas has presented a frame.
  *
  * **Two frames, not one.** `useFrame` at the default priority runs *before* R3F renders that
  * frame, so signalling on the first call reports the world visible while the first pixels are
@@ -118,13 +118,6 @@ export default function World({
     if (camera === null) return
     camera.rotation.order = 'YXZ'
   }, [])
-
-  /**
-   * §14.1 — the gate's first milestone. This component *is* §15's engine chunk: reaching this
-   * line means 1.6 MB of `three` and R3F has arrived, been parsed and mounted, which is the
-   * bulk of the wait the gate is covering on any connection slower than a desk.
-   */
-  useEffect(markChunkMounted, [])
 
   return (
     <div style={{ position: 'fixed', inset: 0 }}>

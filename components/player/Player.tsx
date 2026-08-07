@@ -4,6 +4,7 @@ import { useEffect } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { boxCount, registerBoxes, resolveX, resolveZ } from '@/lib/collision'
 import { expose } from '@/lib/debug'
+import { entrySweepOffset } from '@/lib/entrySweep'
 import { attachKeyboard, hasMovementInput, readIntent } from '@/lib/input'
 import { poseActive, sampled } from '@/lib/pose'
 import { prefersReducedMotion } from '@/lib/reducedMotion'
@@ -198,7 +199,17 @@ export default function Player(): null {
       eyeY += Math.sin(bobPhase) * WALK.headBob.amplitude * speedRatio
     }
 
-    state.camera.position.set(position.x, eyeY, position.z)
+    /* §14.1 — the entry sweep: a diagonal offset on top of everything above, camera-only in
+       the same sense `eyeY` already is. It is added at the very last moment, after the
+       clamp and after the bob, and it never touches `position.x`/`position.z` themselves —
+       §12.4's collision and §12.5's interact range read `position`, and the sweep is a
+       98-frame flourish at spawn, nowhere near a wall or a station, so there is nothing for
+       either to see. `{0, 0, 0}` on every frame it has not been started on, which under
+       reduced motion is every frame, since `Gate.tsx` never starts it there. */
+    const sweep = entrySweepOffset(state.clock.elapsedTime * 1000)
+    eyeY += sweep.dy
+
+    state.camera.position.set(position.x + sweep.dx, eyeY, position.z + sweep.dz)
   }, -1)
 
   return null

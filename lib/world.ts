@@ -3253,6 +3253,34 @@ export const CAMERA = {
     yawDeg: 0,
     pitchDeg: -4,
   },
+  /**
+   * §14.1 — the entry sweep: the world's first movement, started by `Enter` and by nothing
+   * else. The camera starts `riseM` above `eyeHeight` and `backM` behind spawn — measured
+   * along the direction spawn already faces, not as a raw `x`/`z` pair, so a retuned spawn
+   * heading rotates the start point with it rather than leaving it pointed at a wall — and
+   * eases from there into exactly the resting frame over `durationMs`. Same yaw and pitch
+   * throughout; see `lib/entrySweep.ts`.
+   *
+   * **Diagonal, not vertical.** A pure rise-and-drop reads as an elevator; pulling the start
+   * back along the facing direction as well turns the ease into a swoop down-and-in, which
+   * reads as *arriving* rather than merely *lowering*.
+   *
+   * **`easeOutCubic`, not `easeInOutCubic`.** The sweep covers ground fastest at the moment it
+   * starts and decelerates the whole way in, rather than building up speed through the middle —
+   * a glide that is already moving when it begins and settles into the resting frame rather
+   * than arriving at speed and having to be stopped.
+   *
+   * **§13 — off.** `REDUCED_MOTION.entrySweep` is `false`, and that flag has named this
+   * feature since §13 was written, before it existed to turn off. Under reduced motion the
+   * sweep never starts, so the first frame after `Enter` is already at the resting frame —
+   * cutting straight to control in the most literal sense available.
+   */
+  entrySweep: {
+    riseM: 0.9,
+    backM: 2.6,
+    durationMs: 1600,
+    ease: 'easeOutCubic',
+  },
 } as const
 
 /**
@@ -3542,7 +3570,14 @@ export const REDUCED_MOTION = {
  */
 export const GATE = {
   background: 'void',
-  kicker: "It's three AM. You've missed the last train.",
+  /**
+   * **Two lines, not one, on every device.** The reveal below fades each in on its own beat,
+   * which a single string cannot do — so this was always two elements; `sm` and up just let
+   * them flow inline onto what usually reads as one line. Split at the sentence boundary
+   * rather than left to wrap wherever the width breaks it, because *You've / missed the last
+   * train* is not the same read as *You've missed / the last train*.
+   */
+  kickerLines: ["It's three AM.", "You've missed the last train."],
   title: 'Jacinto Design',
   /**
    * **A word, not a sentence.** `STEP OUT INTO THE RAIN` was the draft and it is copy rather
@@ -3555,29 +3590,40 @@ export const GATE = {
    * the one place a sentence of atmosphere still has work to do.
    */
   vibeLine: "3am in Tokyo. You've just missed the last train. Neon reflections on wet pavement.",
-  /**
-   * A 1 px rule across the bottom of the viewport, filling left to right. Not a spinner.
-   *
-   * **Milestones, not a fraction, because neither thing it waits on can be measured while it
-   * is happening.** A dynamic `import()` fires no progress events and states no total, and the
-   * first frame is shader compilation — time on a GPU, not bytes. So the rule moves only when
-   * something has actually happened, which is the one property a progress indicator has to
-   * have. Weighted toward the chunk because on any connection slower than a desk that is where
-   * nearly all of the wait is: 1.6 MB of engine, measured off a production build.
-   *
-   * It deliberately does **not** wait on §3.6's cars — 4.46 MB, the largest download in the
-   * world, already suspended alone in `World.tsx` because *the one thing §3.6 is allowed to be
-   * is late*.
-   */
-  progress: {
-    painted: 0.08,
-    chunkMounted: 0.62,
-    firstFrame: 1,
-    /** Long enough that three floors read as travel rather than as three jumps. */
-    easeMs: 900,
-  },
-  /** §13 — the panel is removed rather than faded, and the rule jumps between floors. */
+  /** §13 — the panel is removed rather than faded, no fade to time. */
   fadeOutMs: 320,
+  /**
+   * **Five lines, five fades, one direction of travel.** `It's three AM.` → `You've missed the
+   * last train.` → `Jacinto` → `Design` → `Enter`, each rising a few pixels and brightening in
+   * after the one before it. It is the gate doing at the level of a sentence what §3.6's
+   * traffic and §10's rain already do at the level of a scene: nothing in this world arrives
+   * all at once, and the first five seconds should not be the exception.
+   *
+   * **Delays are relative to the panel's own mount, not to §14.1's ready state.** The story is
+   * free to render on a slow connection exactly when it is free to render on a fast one — tying
+   * it to the load would make the reveal a symptom of the wait rather than a piece of writing.
+   *
+   * §13 turns the sequence off rather than down: every line at full opacity, no motion, read
+   * order unchanged.
+   *
+   * **All five lines fade in together, where an earlier pass staggered them 150 ms apart.**
+   * The staggered read gave each line its own beat, but with the loading bar also gone
+   * (§14.1) the panel no longer has a wait to fill — one simultaneous rise reads as the
+   * screen arriving, not as five things queuing to be read.
+   */
+  reveal: {
+    delayMs: [0, 0, 0, 0, 0],
+    riseDurationMs: 480,
+    risePx: 10,
+    /**
+     * **The button fades; it does not rise.** It is the one element on the gate a visitor is
+     * about to press, and a target sliding into place under the cursor reads worse than one
+     * that simply brightens. A full second, well past the 480 ms rise above it — with no
+     * motion to carry the eye, the fade itself is what has to hold attention, and a slow one
+     * reads as deliberate rather than as something arriving late.
+     */
+    buttonFadeMs: 1000,
+  },
   /**
    * **The escape hatch, and it is here because this is the one screen that can trap someone.**
    * No WebGL, a context that failed to create, a driver that gave up — and the button never
