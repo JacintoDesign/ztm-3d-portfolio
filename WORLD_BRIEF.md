@@ -1828,7 +1828,7 @@ The gate covers the download. Nothing about it apologises for the wait — but i
 
 ### 14.2 Audio
 
-All levels relative to a master that starts at **−6 dB**, with a persistent mute in the nav.
+All levels relative to a master that starts at **−30 dB** — retuned down three times from an original −6, each pass a further halving of the amplitude: `10^(-30/20) ≈ 0.0316` against the original `10^(-6/20) ≈ 0.501` — with a persistent mute — top-right, visible from the gate's first frame, before there is anything to mute.
 
 | Bed | Level | Notes |
 |---|---|---|
@@ -1841,6 +1841,20 @@ All levels relative to a master that starts at **−6 dB**, with a persistent mu
 | Interact / open | −16 dB | one soft click |
 
 Audio never autoplays. If the gate is skipped by a deep link, the world is silent until first interaction.
+
+**Rain on asphalt is the first bed built, and it is synthesised, not sampled — no file, ever.** A looping rain recording is the obvious way to fill this row and it was rejected before it was tried: `CLAUDE.md`'s weight discipline (§15, §16) is paid in files that ship, and a bed that has to sound seamless at 18 dB down for the length of a visit is exactly the kind of asset that is never quite long enough to hide its loop point. White noise does not have that problem — it has no periodicity for a loop seam to expose, so a **6 s buffer**, generated once at `AudioContext.sampleRate` and looped, is indistinguishable from an infinite one. Filtered and shaped, it is rain; unfiltered, it is what a dead FM station sounds like, which is the whole reason the next two paragraphs exist.
+
+**One `BiquadFilterNode`, lowpass at 900 Hz, Q 0.6 — rolling the top off is the entire brief this filter has to satisfy.** White noise carries equal energy at every frequency, and the top few octaves of that are exactly the hiss a real gutter does not have. 900 Hz is low enough that the *no hiss* instruction holds even close to a monitor's tweeter; **Q 0.6**, below the biquad default of 1, is deliberate — a resonant peak at the cutoff is a filter *whistling*, and a whistling rain bed reads as a synthesiser rather than weather. No second filter stage: the ask was *filtered noise*, singular, and a bed sitting 24 dB below the master (−18 on top of −6) has nowhere near enough presence for a first-order rolloff to sound thin.
+
+**The wobble is a sine LFO on the filter's own cutoff, not on the gain.** Amplitude modulation reads as a *pulse* — a bed getting quieter and louder, which is a fader move, not weather. Modulating **where the lowpass sits** instead — swinging 900 Hz by ±220 Hz on a 14 s cycle (0.07 Hz) — changes how *bright* the noise is moment to moment without ever changing how loud it is, which is closer to what a real gutter does as the rain's intensity drifts. Slow enough that no two adjacent seconds sound different, which is what stops flat filtered noise reading as static: static has no motion at all: this has motion too slow to name.
+
+**One `GainNode` per bed, one shared master, one further gain for mute — three stages, three jobs.** The bed's own `GainNode` carries `AUDIO.beds.rainOnAsphalt.db`, which is a property of *this sound* and stayed −18 dB through two rounds of the master itself being retuned quieter — proof the split holds: a level that is relative to the master should not need to be touched when the master moves. `master()` (§14.1) carries the −30 dB the whole mix breathes under, one knob for every bed there will ever be. A third node, downstream of both, is what the mute toggle drives — **not the master**, because a visitor's mute preference is not a level; it is a switch, and folding it into a fader that also carries the deliberate mix balance would mean *unmuting* had to remember what the balance used to be.
+
+**Started once, from `Gate.tsx`'s `Enter` handler, after `unlock()` and never before it.** §14.1 already established that the `AudioContext` may only ever be created inside that one gesture; the rain bed is built from the same context, in the same handler, for the same reason — a `BufferSourceNode.start()` called from an effect or a timer afterward is a second thing asking a suspended context to do work it was never granted permission for.
+
+**The mute preference persists in `localStorage`, and it is read before the button ever shows a state.** A visitor who muted last time should not have to mute again — the toggle's very first paint already reflects it, which is why the read happens eagerly rather than after an effect settles: a button that shows *unmuted* for one frame and then flips is worse than one frame of no button at all. Muting writes to the third gain stage above, not to the `AudioContext`'s own suspend/resume — a gain of zero is instant and needs no further gesture to reverse, where suspending a context is itself an action the browser can refuse to grant twice.
+
+**Visible from the gate's first frame, which means above it — `z-[65]` against the gate's `z-[60]`.** Nothing else in the world needs to be seen before `Enter` is pressed; this does, because a visitor deciding whether to unmute their speakers is a decision that belongs *before* the button that starts making sound, not after. It stays mounted at that same corner for the rest of the visit — the one piece of chrome that outranks even §12.7's nav, because unlike the nav it has something to say before there is a nav to say it in.
 
 ### 14.3 Controls hint
 

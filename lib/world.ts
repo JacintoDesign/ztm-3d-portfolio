@@ -3634,7 +3634,15 @@ export const GATE = {
 
 /** §14.2 — all levels in dB, relative to a master that starts at −6. */
 export const AUDIO = {
-  masterDb: -6,
+  /**
+   * §14.2 — **−30, three steps down from where it started.** The first pass took this to −12,
+   * half the amplitude of the original −6; the next took it to −24, a quarter of *that*. Half
+   * of −24 dB's amplitude again is another −6.02 dB, so −30: `10^(-30/20) ≈ 0.0316`, which
+   * against the −24 figure is `10^(-30/20) / 10^(-24/20) ≈ 0.501` — measured, not assumed,
+   * the day this changed again. Every bed still sits at its own level relative to this,
+   * unchanged — the mix balance was never the thing that moved.
+   */
+  masterDb: -30,
   beds: {
     rainOnAsphalt: { db: -18, loop: true },
     lowCityHum: { db: -26, loop: true },
@@ -3646,6 +3654,32 @@ export const AUDIO = {
   },
   /** Never autoplays. Silent until the gate button, or until first interaction. */
   autoplay: false,
+  /**
+   * §14.2 — rain on asphalt, synthesised rather than sampled. No file: white noise has no
+   * periodicity for a loop seam to expose, so a short buffer loops as cleanly as an infinite
+   * one — see `lib/rainBed.ts`.
+   */
+  rainSynthesis: {
+    /** Long enough that the loop is never audible, short enough to cost nothing to build. */
+    bufferSeconds: 6,
+    /**
+     * **One lowpass, and that is the whole filter.** White noise carries equal energy at
+     * every frequency; 900 Hz rolls the top few octaves off, which is the hiss a real gutter
+     * does not have. Q **0.6**, under the biquad default of 1 — a resonant peak at the
+     * cutoff is the filter *whistling*, and a whistling rain bed reads as a synthesiser.
+     */
+    lowpassHz: 900,
+    lowpassQ: 0.6,
+    /**
+     * **The wobble is on the filter's cutoff, not on the gain.** Modulating loudness reads
+     * as a pulse — a fader move; modulating *brightness* instead changes how the noise
+     * sounds moment to moment without ever changing how loud it is, closer to how a real
+     * gutter drifts. ±220 Hz around 900 on a 14 s cycle (0.07 Hz) is slow enough that no two
+     * adjacent seconds sound different, which is what stops filtered noise reading as
+     * static — static has no motion at all; this has motion too slow to name.
+     */
+    wobble: { rateHz: 0.07, depthHz: 220 },
+  },
 } as const
 
 export const CONTROLS_HINT = {

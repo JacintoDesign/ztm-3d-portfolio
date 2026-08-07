@@ -1,9 +1,12 @@
 'use client'
 
+import { useSyncExternalStore } from 'react'
+
 import { AUDIO } from '@/lib/world'
 
 /**
- * §14.2 — the audio context, and the one rule about when it may be created.
+ * §14.1 / §14.2 — the audio context, its two-stage output, and the mute preference that
+ * drives the second stage.
  *
  * **`unlock()` must be called synchronously inside a real gesture handler, and nothing else in
  * this file may create the context.** A browser grants a running `AudioContext` only to a
@@ -14,20 +17,108 @@ import { AUDIO } from '@/lib/world'
  * bug in whatever plays the first sound. Hence one entry point, called from one place —
  * §14.1's `Enter` button, first statement in the handler.
  *
- * **There is nothing to play yet, and that is deliberate rather than unfinished.** §14.2's
- * seven beds need seven files that are not in the repo. What exists is the context and the
- * master gain they will hang off, created in the only gesture the world is guaranteed to get.
- * A later bed connects to `master()` and is audible; a later bed that had to unlock its own
- * context would have missed its chance by minutes.
+ * **Two gain stages downstream of every bed, not one.** `masterGain` carries §14.2's −30 dB —
+ * the mix balance, one knob for every bed there will ever be. `muteGain`, after it, is what
+ * the visitor's mute preference drives. They stay separate because they answer different
+ * questions: *how loud is the mix* is a property of the mix; *is this visitor listening at
+ * all* is a property of the visitor, and folding the second into the first would mean
+ * unmuting had to remember what the balance used to be.
  */
 
 let context: AudioContext | null = null
 let masterGain: GainNode | null = null
+let muteGain: GainNode | null = null
 
-/** §14.2 — all levels are dB relative to a master that starts at −6. */
-const gainFromDb = (db: number): number => 10 ** (db / 20)
+/** §14.2 — all bed levels are dB relative to a master that starts at −6. Exported: `lib/rainBed.ts`
+    needs the same conversion for `AUDIO.beds.rainOnAsphalt.db` and a second formula for the
+    same number is a second place for it to drift. */
+export const dbToGain = (db: number): number => 10 ** (db / 20)
+
+/** How fast the mute gain ramps. Fast enough that toggling never sounds like a fade,
+    slow enough that a gain node jumping to exactly 0 never clicks. */
+const MUTE_RAMP_SEC = 0.05
 
 type WebkitWindow = Window & { webkitAudioContext?: typeof AudioContext }
+
+/**
+ * §14.2 — the mute preference. `localStorage`-backed, read once, lazily, and only on the
+ * client — this module is reachable from `MuteToggle.tsx`, which renders before the gate is
+ * dismissed and therefore before `unlock()` has ever run, so the preference has to exist
+ * independently of the audio graph it will eventually drive.
+ *
+ * Same shape as `lib/store.ts`: a module-level value, a listener set, a direct read and a
+ * hook — except the direct read (`isMuted`) also has to be safe to call during SSR, which
+ * `getMode` never had to be. `ensureLoaded` is the guard: `typeof window === 'undefined'` on
+ * the server, and read-once on the client.
+ */
+
+let muted = false
+let loaded = false
+const listeners = new Set<() => void>()
+
+const STORAGE_KEY = 'jacintoDesign:audioMuted'
+
+function ensureLoaded(): void {
+  if (loaded || typeof window === 'undefined') return
+  loaded = true
+  try {
+    muted = window.localStorage.getItem(STORAGE_KEY) === '1'
+  } catch {
+    /* Private browsing, a full quota, a browser policy — `localStorage` can throw on either
+       read or write. The preference just does not persist; it is not worth failing over. */
+  }
+}
+
+/** Direct read. Safe on the server (`ensureLoaded` no-ops there) and safe inside a frame
+    loop, though nothing currently reads it from one. */
+export function isMuted(): boolean {
+  ensureLoaded()
+  return muted
+}
+
+/**
+ * Ramps `muteGain` toward the current preference. Split out from `setMuted` because
+ * `unlock()` also needs it — a returning visitor who muted last time should hear nothing
+ * from the instant the context exists, not from the next time they happen to press the
+ * button.
+ */
+function applyMuteGain(instant: boolean): void {
+  if (context === null || muteGain === null) return
+  const target = muted ? 0 : 1
+  if (instant) {
+    muteGain.gain.setValueAtTime(target, context.currentTime)
+  } else {
+    muteGain.gain.setTargetAtTime(target, context.currentTime, MUTE_RAMP_SEC)
+  }
+}
+
+export function setMuted(next: boolean): void {
+  ensureLoaded()
+  if (next === muted) return
+  muted = next
+  try {
+    window.localStorage.setItem(STORAGE_KEY, next ? '1' : '0')
+  } catch {
+    /* See `ensureLoaded` — the preference simply does not survive a reload. */
+  }
+  applyMuteGain(false)
+  for (const listener of listeners) listener()
+}
+
+export const toggleMuted = (): void => setMuted(!isMuted())
+
+function subscribe(onStoreChange: () => void): () => void {
+  listeners.add(onStoreChange)
+  return () => {
+    listeners.delete(onStoreChange)
+  }
+}
+
+/** Reactive, for `MuteToggle.tsx`. `false` on the server — the same default `isMuted` would
+    give without a stored preference, so hydration never has a mismatch to reconcile. */
+export function useMuted(): boolean {
+  return useSyncExternalStore(subscribe, isMuted, () => false)
+}
 
 /**
  * Create and resume the context. **Call only from inside a click handler.**
@@ -54,8 +145,16 @@ export function unlock(): AudioContext | null {
 
   context = new Ctor()
   masterGain = context.createGain()
-  masterGain.gain.value = gainFromDb(AUDIO.masterDb)
-  masterGain.connect(context.destination)
+  masterGain.gain.value = dbToGain(AUDIO.masterDb)
+
+  muteGain = context.createGain()
+  masterGain.connect(muteGain)
+  muteGain.connect(context.destination)
+  /* The stored preference, applied before a single bed connects — a muted visitor gets
+     silence from the first frame this context exists, not from the next time they reach
+     for the button. */
+  ensureLoaded()
+  applyMuteGain(true)
 
   /* Chromium hands back a `running` context when the gesture is real and a `suspended` one
      when it is not — so this resolves instantly in the good case and is the tell in the bad. */
