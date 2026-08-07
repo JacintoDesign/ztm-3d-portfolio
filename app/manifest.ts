@@ -3,7 +3,7 @@ import { PALETTE } from '@/lib/world'
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'Jacinto Design - 3D portfolio',
+    name: 'Jacinto Design - 3D Portfolio',
     short_name: 'Jacinto Design',
     icons: [
       { src: '/android-chrome-192x192.png', sizes: '192x192', type: 'image/png' },
