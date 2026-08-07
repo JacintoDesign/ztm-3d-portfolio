@@ -3682,13 +3682,48 @@ export const AUDIO = {
   },
 } as const
 
+/**
+ * §14.3 — the controls hint. **A dismissible panel with a persisted "seen" flag and a
+ * standing way back in, not the auto-fading idle bar this constant used to describe.**
+ *
+ * The idle-bar design was never built, and it solved the wrong problem: it disappears on
+ * its own schedule regardless of whether the visitor read it, and it comes back only after
+ * 45 s of stillness — which is also, on this world, roughly how long a visitor spends
+ * reading the food cart. A stranger who taps through it by accident had no way to ask for
+ * it again short of waiting a minute. This version keeps the state instead of the timer:
+ * shown once, automatically, the first time the gate is dismissed on a given browser
+ * (`localStorage`, `lib/controlsHint.ts`'s own key), closed by its own **✕** or `Escape` or
+ * a tap on the scrim, and always reachable again after that from a **`?`** button that
+ * lives for as long as the world does — top-right beside §14.2's mute toggle, or
+ * bottom-right beside it on a portrait phone; see `lib/controlsCorner.ts`.
+ */
 export const CONTROLS_HINT = {
-  appearAfterMs: 900,
-  fadeAfterSec: 6,
-  desktop: 'WASD / drag to look / E to interact',
-  touch: 'stick to walk / drag to look / tap to interact',
-  /** Never returns unless the visitor idles this long with no input. */
-  returnAfterIdleSec: 45,
+  /**
+   * §15.1's tier decides which of these a visitor reads — `resolveTier() === 'mobile'`
+   * gets `touchLines`, everyone else gets `lines` — because a desktop visitor has no `E`
+   * key story to tell touch's version and a phone has no `WASD` to explain. Two arrays
+   * rather than one with a per-line device split: the split-inline version read as one
+   * unfinished sentence per row (`WASD or the arrow keys — or the on-screen stick on
+   * touch`), which is exactly the run-on shape the label/detail split was meant to fix,
+   * just moved one level down. A visitor only ever has one input method in front of them;
+   * the copy they read should only ever mention that one.
+   *
+   * In reading order, each split into the control and what it does — a short label a
+   * visitor's eye can jump to on a second visit, a divider under every row.
+   */
+  lines: [
+    { label: 'Look', detail: 'Drag anywhere to look around.' },
+    { label: 'Move', detail: 'WASD or the arrow keys to walk.' },
+    { label: 'Interact', detail: 'Press E near a station.' },
+    { label: 'Tour', detail: '“Next stop” in the nav glides you to every stop.' },
+  ],
+  /** The touch tier's own copy — no keyboard named anywhere in it. */
+  touchLines: [
+    { label: 'Look', detail: 'Drag anywhere on screen to look around.' },
+    { label: 'Move', detail: 'Use the on-screen stick, bottom left, to walk.' },
+    { label: 'Interact', detail: 'Tap the prompt that appears near a station.' },
+    { label: 'Tour', detail: '“Next stop” in the nav glides you to every stop for you.' },
+  ],
 } as const
 
 /* ────────────────────────────────────────────────────────────────────────────

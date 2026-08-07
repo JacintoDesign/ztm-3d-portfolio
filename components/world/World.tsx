@@ -9,6 +9,7 @@ import { RectAreaLightUniformsLib } from 'three/examples/jsm/lights/RectAreaLigh
 import Camera from '@/components/player/Camera'
 import Interact from '@/components/player/Interact'
 import Player from '@/components/player/Player'
+import ControlsHint from '@/components/ui/ControlsHint'
 import InteractPrompt from '@/components/ui/InteractPrompt'
 import Nav from '@/components/ui/Nav'
 import Overlays from '@/components/ui/Overlays'
@@ -210,6 +211,10 @@ export default function World({
       <Nav />
       {/* §2.2 / §2.3 — the two overlays. Last, so they layer over everything above. */}
       <Overlays about={about} contact={contact} />
+      {/* §14.3 — the controls hint: its own `?` and its own panel, shown once and reachable
+          after. Last for the same reason as `Overlays`, though the two never open together —
+          both write `'overlay'` to the same mode. */}
+      <ControlsHint />
     </div>
   )
 }

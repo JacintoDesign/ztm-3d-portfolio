@@ -1858,7 +1858,24 @@ Audio never autoplays. If the gate is skipped by a deep link, the world is silen
 
 ### 14.3 Controls hint
 
-Appears 900 ms after the gate, bottom-centre, fades after **6 s** or on first input. Desktop: `WASD / drag to look / E to interact`. Touch: `stick to walk / drag to look / tap to interact`. It never returns unless the visitor idles 45 s with no input.
+**A dismissible panel with a persisted "seen" flag, not the auto-fading idle bar this section used to describe.** That design was never built, and it solved the wrong problem — it leaves on its own schedule whether or not the visitor read it, and the only way back was 45 s of standing still, which a visitor who dismissed it early would spend at the food cart, not staring at a hint bar. This version keeps state instead of a timer.
+
+Shown once, automatically, the first time the gate is dismissed on a given browser — `localStorage`, its own key, distinct from §14.2's mute preference. A small panel, centred over the world: four rows, each a label and a detail rather than a run-on sentence — a label a visitor's eye can jump to on a second visit, a divider under every row so four rows read as four rows.
+
+**Two copies of the four rows, picked by §15.1's tier, not one copy trying to cover both.** A desktop visitor has no `E` key story to tell touch's version and a phone has no `WASD` to explain — an inline split (`WASD or the arrow keys — or the on-screen stick on touch`) reads as the same run-on shape the label/detail split exists to fix, just moved one level down. A visitor only ever has one input method in front of them, so the copy they read only ever names that one:
+
+| Control | Desktop | Touch |
+|---|---|---|
+| Look | Drag anywhere to look around. | Drag anywhere on screen to look around. |
+| Move | WASD or the arrow keys to walk. | Use the on-screen stick, bottom left, to walk. |
+| Interact | Press E near a station. | Tap the prompt that appears near a station. |
+| Tour | "Next stop" in the nav glides you to every stop. | "Next stop" in the nav glides you to every stop for you. |
+
+Closes on its own **✕** (top right of the panel), `Escape`, or a tap on the scrim — §12.5's `Escape` stack, the same one the bio and contact overlays register on. Blocks movement while open, the same rule as every other overlay, and restores a suspended locked view rather than dropping to free play, mirroring §2.2/§2.3's close path.
+
+**Reachable again at any time from a standing `?`, left of §14.2's mute toggle on the same row.** Both fixed to the same edge, so the pair reads as one group of standing controls without either one drifting from the corner a thumb actually reaches.
+
+**Top-right everywhere except a portrait phone, where the pair is bottom-right.** `lib/controlsCorner.ts` carries the rule: §15.1's tier is the same coarse-pointer-or-≤820px signal `TouchStick` already uses to decide it exists, and on a phone held upright that is also the hand driving `TouchStick` out of the opposite corner — top-right is a reach across the whole screen and past §12.7's nav, which already lives there, while bottom-right is that same thumb's own corner, left empty by `InteractPrompt` and `ShowcaseControls` both centring rather than running to the edges. Rotating the phone flat brings the top corner back into reach and the pair follows it there — the rule reads live orientation, not just the frozen tier. Live in the world from the first frame after the gate, hidden behind the gate itself before that — §12.7's nav does the same and for the same reason.
 
 ---
 
