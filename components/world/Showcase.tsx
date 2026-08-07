@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { BoxGeometry, Color, MeshStandardMaterial, PlaneGeometry } from 'three'
 import { expose } from '@/lib/debug'
@@ -88,6 +88,16 @@ export default function Showcase({ projects }: { projects: readonly Project[] })
   const index = useShowcaseDisplayIndex()
   const project = projects[index]
 
+  /* §2.1 / §15 — `requestScreenshot` resolves asynchronously with no cancellation token, so a
+     visitor paging faster than a decode can complete would otherwise let a stale response land
+     after a newer one and overwrite the shared material with the wrong project's image. This
+     ref always holds the *current* index; the effect below closes over the index it was
+     requested for, and the two are compared when the callback actually fires. */
+  const currentIndexRef = useRef(index)
+  useEffect(() => {
+    currentIndexRef.current = index
+  }, [index])
+
   useEffect(() => {
     setShowcaseCount(projects.length)
   }, [projects.length])
@@ -169,6 +179,11 @@ export default function Showcase({ projects }: { projects: readonly Project[] })
     retainScreenshots(neighbours, tier)
 
     requestScreenshot(projects[index]?.screenshot ?? '', tier, (texture) => {
+      /* Stale response guard: if the visitor has paged on since this request went out, the
+         index this effect closed over no longer matches the current one — drop it rather than
+         overwrite the material with an image for a project that is no longer showing. */
+      if (currentIndexRef.current !== index) return
+
       /* Only the maps. The tint is the frame loop's now — it rides §2.1's transition — and a
          material built with the tint already on it would show a *failed* load as a pale
          grey-blue plane rather than §2.1's `#0E121A`. Failure with a colour is worse than

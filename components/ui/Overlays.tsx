@@ -5,6 +5,7 @@ import type { About } from '@/lib/about'
 import type { Contact } from '@/lib/contact'
 import { closeOverlay, useOverlay } from '@/lib/overlays'
 import { openProject } from '@/lib/openProject'
+import { stopAutoAdvance } from '@/lib/showcase'
 
 /**
  * §2.2 / §2.3 — the two overlays, drawn over the world.
@@ -280,25 +281,35 @@ function ContactBody({ contact }: { contact: Contact }) {
       <p className="mt-3 text-sm leading-relaxed text-white/60">{contact.supporting}</p>
 
       <ul className="mt-6 divide-y divide-white/10 border-y border-white/10">
-        {contact.channels.map((channel) => (
-          <li key={channel.href}>
-            <button
-              type="button"
-              onClick={() => openProject(channel.href)}
-              className="flex w-full items-center justify-between gap-4 py-3.5 text-left transition-colors hover:bg-white/[0.04]"
-            >
-              <span>
-                <span className="block text-[0.65rem] tracking-[0.3em] text-white/40 uppercase">
-                  {channel.label}
+        {contact.channels.map((channel) => {
+          /* A real `<a href>`, not a `window.open` button: `mailto:`/`tel:` schemes routed
+             through `window.open` commonly leave a dead blank tab, sometimes silently no-op on
+             mobile, and lose every native affordance a stranger would reach for first — long-
+             press "Copy Email Address", middle-click, a screen reader announcing the link. Only
+             http(s) channels get `target="_blank"`; a `mailto:`/`tel:` handoff has no "tab" to
+             open in the first place. */
+          const external = channel.href.startsWith('http')
+          return (
+            <li key={channel.href}>
+              <a
+                href={channel.href}
+                onClick={() => stopAutoAdvance()}
+                {...(external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
+                className="flex w-full items-center justify-between gap-4 py-3.5 text-left transition-colors hover:bg-white/[0.04]"
+              >
+                <span>
+                  <span className="block text-[0.65rem] tracking-[0.3em] text-white/40 uppercase">
+                    {channel.label}
+                  </span>
+                  <span className="mt-1 block text-sm text-white/85">{channel.handle}</span>
                 </span>
-                <span className="mt-1 block text-sm text-white/85">{channel.handle}</span>
-              </span>
-              <span aria-hidden className="text-white/30">
-                ↗
-              </span>
-            </button>
-          </li>
-        ))}
+                <span aria-hidden className="text-white/30">
+                  ↗
+                </span>
+              </a>
+            </li>
+          )
+        })}
       </ul>
 
       {contact.location.length > 0 && (
