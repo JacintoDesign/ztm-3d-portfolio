@@ -4,8 +4,19 @@ import { GATE, PALETTE } from '@/lib/world'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: '終電 / Last Train',
+  title: 'Jacinto Design - 3D portfolio',
   description: GATE.vibeLine,
+  openGraph: {
+    title: 'Jacinto Design - 3D portfolio',
+    description: GATE.vibeLine,
+    type: 'website',
+    siteName: 'Jacinto Design - 3D portfolio',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Jacinto Design - 3D portfolio',
+    description: GATE.vibeLine,
+  },
 }
 
 export const viewport: Viewport = {
