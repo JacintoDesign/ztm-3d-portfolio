@@ -1350,7 +1350,7 @@ export const PROPS = {
    * That file was written for §3.6 with one caller and took this one with no changes.
    */
   scooter: {
-    /** Quaternius, CC0, via poly.pizza — the same source and licence as §3.6's cars. */
+    /** Vespa by Jasmine Roberts, CC-BY 3.0, via poly.pizza (poly.pizza/m/blGLclvvdEM) — a different source and licence from §3.6's cars. */
     model: { file: '/vespa.glb', targetLength: 1.75, yawOffset: Math.PI / 2 },
     /**
      * **Measured off the model after scaling, and authored here anyway**, because
