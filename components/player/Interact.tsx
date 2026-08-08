@@ -32,8 +32,11 @@ export default function Interact(): null {
       if (event.code !== 'KeyE') return
       // Edge-triggered: a held key must not re-open on every repeat.
       if (event.repeat) return
-      // Only from `'play'`. In `'locked'` or `'overlay'` the key belongs to whatever is open.
-      if (!canControl()) return
+      // From `'play'`, and from a guided-path stop — same exception the `useFrame` range
+      // check below already makes, and for the same reason: the prompt is the only thing
+      // on screen telling a visitor what they have arrived at. Otherwise `'locked'` (a
+      // board/showcase lock) or `'overlay'` mean the key belongs to whatever is open.
+      if (!canControl() && !(isLocked() && lockOwner() === 'guidedPath')) return
 
       const station = getInRange()
       if (station === null) return
