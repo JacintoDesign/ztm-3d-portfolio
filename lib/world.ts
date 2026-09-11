@@ -3695,7 +3695,7 @@ export const AUDIO = {
  * (`localStorage`, `lib/controlsHint.ts`'s own key), closed by its own **✕** or `Escape` or
  * a tap on the scrim, and always reachable again after that from a **`?`** button that
  * lives for as long as the world does — top-right beside §14.2's mute toggle, or
- * bottom-right beside it on a portrait phone; see `lib/controlsCorner.ts`.
+ * bottom-right beside it on a live ≤820 px portrait viewport; see `lib/controlsCorner.ts`.
  */
 export const CONTROLS_HINT = {
   /**

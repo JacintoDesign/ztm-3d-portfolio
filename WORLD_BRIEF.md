@@ -1680,6 +1680,8 @@ Radii are ordered board ≫ cart > bank, which is the ordering this section alwa
 
 **§2.1.2's controls are two pills on a phone and one from `sm` up.** Paging, N dots, `GITHUB`, `OPEN` and a close came to about 400 px of controls on a 375 px screen: the ends ran off the edge and the row sat on the stick. They split on the seam already in them — *move between projects* above, *do something with this one* below — and rejoin on desktop.
 
+**The number strip scrolls when N does not fit.** Four plates did; ten `size-8` plates plus the two arrows do not, on an iPhone 12 Pro or anything narrower. The arrows stay pinned and the plates move, and paging — tap, arrow, or auto-advance — keeps the current stop in the visible window rather than leaving it off-screen. On a portrait phone the strip is the screen width, the action pill centres under it, and the cluster sits above §14.2 / §14.3 so that pair keeps a row of its own.
+
 ### 12.6 The guided path
 
 For a visitor who does not want to walk. Reuses the locked-view camera (target pose, ease, release) — keep that general. **§2.1.1 builds that primitive and is its first consumer**, so this section inherits it rather than specifying it again.
@@ -1875,7 +1877,7 @@ Closes on its own **✕** (top right of the panel), `Escape`, or a tap on the sc
 
 **Reachable again at any time from a standing `?`, left of §14.2's mute toggle on the same row.** Both fixed to the same edge, so the pair reads as one group of standing controls without either one drifting from the corner a thumb actually reaches.
 
-**Top-right everywhere except a portrait phone, where the pair is bottom-right.** `lib/controlsCorner.ts` carries the rule: §15.1's tier is the same coarse-pointer-or-≤820px signal `TouchStick` already uses to decide it exists, and on a phone held upright that is also the hand driving `TouchStick` out of the opposite corner — top-right is a reach across the whole screen and past §12.7's nav, which already lives there, while bottom-right is that same thumb's own corner, left empty by `InteractPrompt` and `ShowcaseControls` both centring rather than running to the edges. Rotating the phone flat brings the top corner back into reach and the pair follows it there — the rule reads live orientation, not just the frozen tier. Live in the world from the first frame after the gate, hidden behind the gate itself before that — §12.7's nav does the same and for the same reason.
+**Top-right everywhere except a portrait phone, where the pair is bottom-right.** `lib/controlsCorner.ts` carries the rule: the live viewport against §15.1's 820 px cut, and live orientation — not the frozen tier. `resolveTier()` is cached at first paint because it feeds the Canvas; these buttons are overlay chrome and have to follow a resize (DevTools device mode, a window dragged to phone width) without a reload. On a phone held upright that is also the hand driving `TouchStick` out of the opposite corner — top-right is a reach across the whole screen and past §12.7's nav, which already lives there, while bottom-right is that same thumb's own corner. `ShowcaseControls` lifts above that row on the same cut so the pair is not sharing a baseline with the pager. Rotating the phone flat brings the top corner back into reach and the pair follows it there. Live in the world from the first frame after the gate, hidden behind the gate itself before that — §12.7's nav does the same and for the same reason.
 
 ---
 

@@ -25,7 +25,7 @@ export type AboutPanel = {
   label: string
   title: string
   blurb: string
-  /** Empty when the panel has no link — the *now* panel does not. */
+  /** Empty when the panel has no link. */
   url: string
   linkLabel: string
 }

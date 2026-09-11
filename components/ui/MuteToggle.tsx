@@ -38,7 +38,8 @@ export default function MuteToggle() {
       aria-label={muted ? 'Unmute' : 'Mute'}
       className="fixed z-[65] grid size-8 cursor-pointer place-items-center rounded-full border border-white/10 bg-black/55 text-white/70 backdrop-blur-md transition-colors hover:border-white/25 hover:text-white sm:size-9"
       style={{
-        [corner]: `calc(env(safe-area-inset-${corner}, 0px) + 0.75rem)`,
+        top: corner === 'top' ? 'calc(env(safe-area-inset-top, 0px) + 0.75rem)' : 'auto',
+        bottom: corner === 'bottom' ? 'calc(env(safe-area-inset-bottom, 0px) + 0.75rem)' : 'auto',
         right: 'calc(env(safe-area-inset-right, 0px) + 0.5rem)',
       }}
     >

@@ -1,9 +1,11 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
+import { useControlsCorner } from '@/lib/controlsCorner'
 import { isLocked, releaseLock, useLockArrived, useLockOwner } from '@/lib/lockedView'
 import { openProject } from '@/lib/openProject'
 import type { Project } from '@/lib/projects'
+import { usePrefersReducedMotion } from '@/lib/reducedMotion'
 import { page, useShowcaseIndex } from '@/lib/showcase'
 import { useMode } from '@/lib/store'
 
@@ -43,6 +45,26 @@ export default function ShowcaseControls({ projects }: { projects: readonly Proj
   const locked = mode === 'locked' && owner === 'showcase' && arrived
   /* N from the prop, not from the store — the store's copy exists for the frame loop. */
   const count = projects.length
+  const corner = useControlsCorner()
+  const reduced = usePrefersReducedMotion()
+  const scrollerRef = useRef<HTMLDivElement>(null)
+  const currentRef = useRef<HTMLButtonElement>(null)
+
+  /**
+   * Keep the current stop in the strip's visible window. Ten `size-8` plates do not fit
+   * a 390 px phone; the strip scrolls rather than overflowing, and paging — manual or
+   * auto-advance — moves the window with the selection instead of leaving it off-screen.
+   * `scrollTo` on this node only: `scrollIntoView` can shift ancestors, and `html, body`
+   * are `overflow: hidden` precisely so nothing else may.
+   */
+  useEffect(() => {
+    if (!locked) return
+    const scroller = scrollerRef.current
+    const current = currentRef.current
+    if (scroller === null || current === null) return
+    const left = current.offsetLeft - (scroller.clientWidth - current.offsetWidth) / 2
+    scroller.scrollTo({ left, behavior: reduced ? 'auto' : 'smooth' })
+  }, [index, locked, reduced, count])
 
   /**
    * §2.1's keyboard paging. Bound here rather than in `lib/input.ts` because these keys mean
@@ -71,9 +93,15 @@ export default function ShowcaseControls({ projects }: { projects: readonly Proj
 
   return (
     <div
-      className="pointer-events-none fixed inset-x-0 bottom-0 z-20 flex flex-col items-center gap-3"
+      className="pointer-events-none fixed inset-x-0 bottom-0 z-20 flex min-w-0 flex-col items-center gap-3"
       style={{
-        paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 1.75rem)',
+        /* On a portrait phone §14.2 / §14.3 sit in this same corner at `size-8` + 0.75rem.
+           Lift the cluster by that row plus 1rem, so the pair reads as its own row under
+           the action pill rather than sharing its baseline. Desktop keeps the original 1.75. */
+        paddingBottom:
+          corner === 'bottom'
+            ? 'calc(env(safe-area-inset-bottom, 0px) + 3.75rem)'
+            : 'calc(env(safe-area-inset-bottom, 0px) + 1.75rem)',
         opacity: locked ? 1 : 0,
         /* §12.5's 180 ms, as a CSS transition rather than a JS interpolation — nothing here
            runs per frame, and it reverses correctly if the lock is released mid-fade. */
@@ -107,47 +135,61 @@ export default function ShowcaseControls({ projects }: { projects: readonly Proj
        * whole thing sat on top of §12.3's stick. Splitting on the seam that is already there
        * — *move between projects* above, *do something with this one* below — costs nothing
        * on desktop, where they rejoin.
+       *
+       * **The number strip scrolls when N does not fit.** Four plates did; ten `size-8`
+       * plates plus the two arrows do not, on an iPhone 12 Pro or anything narrower. The
+       * arrows stay pinned; the plates move. On a phone the strip is the screen width and
+       * the action pill centres under it; the cluster sits above §14.2 / §14.3 so those
+       * two keep a row of their own.
        */}
-      <div className="pointer-events-none flex w-full flex-col items-center gap-2 px-3 sm:w-auto sm:flex-row sm:gap-1.5 sm:rounded-full sm:border sm:border-white/15 sm:bg-black/60 sm:p-1.5 sm:px-1.5 sm:backdrop-blur-sm">
-        <div className="pointer-events-auto flex items-center gap-1 rounded-full border border-white/15 bg-black/60 p-1.5 backdrop-blur-sm sm:gap-1.5 sm:border-0 sm:bg-transparent sm:p-0 sm:backdrop-blur-none">
+      <div className="pointer-events-none flex w-full min-w-0 max-w-full flex-col items-center gap-2 px-3 sm:w-auto sm:max-w-[min(42rem,calc(100vw-1.5rem))] sm:flex-row sm:gap-1.5 sm:rounded-full sm:border sm:border-white/15 sm:bg-black/60 sm:p-1.5 sm:px-1.5 sm:backdrop-blur-sm">
+        <div className="pointer-events-auto flex min-w-0 w-full items-center gap-1 rounded-full border border-white/15 bg-black/60 p-1.5 backdrop-blur-sm sm:w-auto sm:max-w-full sm:gap-1.5 sm:border-0 sm:bg-transparent sm:p-0 sm:backdrop-blur-none">
           <button
             type="button"
             aria-label="Previous project"
             onClick={() => page(-1, performance.now())}
-            className="grid size-8 place-items-center rounded-full text-white/70 transition-colors hover:bg-white/10 hover:text-white sm:size-9"
+            className="grid size-8 shrink-0 place-items-center rounded-full text-white/70 transition-colors hover:bg-white/10 hover:text-white sm:size-9"
           >
             ‹
           </button>
 
-          {/* N stops, read from the project list. Never hardcoded — §2.1. */}
-          {projects.map((entry, i) => (
-            <button
-              key={entry.url || entry.name}
-              type="button"
-              aria-label={`Show ${entry.name}`}
-              aria-current={i === index}
-              onClick={() => page(i - index, performance.now())}
-              className={
-                i === index
-                  ? 'grid size-8 place-items-center rounded-full bg-[#FF2E6A] text-sm text-white sm:size-9'
-                  : 'grid size-8 place-items-center rounded-full text-sm text-white/55 transition-colors hover:bg-white/10 hover:text-white sm:size-9'
-              }
-            >
-              {i + 1}
-            </button>
-          ))}
+          <div
+            ref={scrollerRef}
+            className="min-w-0 flex-1 touch-pan-x overflow-x-auto overscroll-x-contain [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+          >
+            {/* N stops, read from the project list. Never hardcoded — §2.1. */}
+            <div className="flex w-max items-center gap-1 sm:gap-1.5">
+              {projects.map((entry, i) => (
+                <button
+                  key={entry.url || entry.name}
+                  ref={i === index ? currentRef : undefined}
+                  type="button"
+                  aria-label={`Show ${entry.name}`}
+                  aria-current={i === index}
+                  onClick={() => page(i - index, performance.now())}
+                  className={
+                    i === index
+                      ? 'grid size-8 shrink-0 place-items-center rounded-full bg-[#FF2E6A] text-sm text-white sm:size-9'
+                      : 'grid size-8 shrink-0 place-items-center rounded-full text-sm text-white/55 transition-colors hover:bg-white/10 hover:text-white sm:size-9'
+                  }
+                >
+                  {i + 1}
+                </button>
+              ))}
+            </div>
+          </div>
 
           <button
             type="button"
             aria-label="Next project"
             onClick={() => page(+1, performance.now())}
-            className="grid size-8 place-items-center rounded-full text-white/70 transition-colors hover:bg-white/10 hover:text-white sm:size-9"
+            className="grid size-8 shrink-0 place-items-center rounded-full text-white/70 transition-colors hover:bg-white/10 hover:text-white sm:size-9"
           >
             ›
           </button>
         </div>
 
-        <div className="pointer-events-auto flex items-center gap-1 rounded-full border border-white/15 bg-black/60 p-1.5 backdrop-blur-sm sm:gap-1.5 sm:border-0 sm:bg-transparent sm:p-0 sm:backdrop-blur-none">
+        <div className="pointer-events-auto flex shrink-0 items-center gap-1 rounded-full border border-white/15 bg-black/60 p-1.5 backdrop-blur-sm sm:gap-1.5 sm:border-0 sm:bg-transparent sm:p-0 sm:backdrop-blur-none">
           {/* §2.1.2 — the GitHub link came off the wall with the rest. It was a 0.30 × 0.18
               enamel plate carrying 0.038 m type at 7.3 m: about three device pixels a glyph. */}
           <button

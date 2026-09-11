@@ -9,7 +9,7 @@ import type { Project } from '@/lib/projects'
  *
  * **Server only.** No `'use client'`, and nothing in `components/` may import it: it touches
  * the filesystem. `app/page.tsx` calls it and passes the result down as a plain prop, so no
- * markdown and no parser reaches the browser — the four projects arrive in the RSC payload
+ * markdown and no parser reaches the browser — the projects arrive in the RSC payload
  * at about 1.4 kB with no fetch. That is also why §2.1's *fails quietly* rule applies only
  * to the screenshot and never to the text: by the time the world renders, the text is there
  * or the build failed.
@@ -40,8 +40,8 @@ const HEADING = /^###\s+(\S+)\s+—\s+(.+)$/
  * `**Field:** value` at the start of a line — the *prose* form, without the list bullet.
  *
  * `CONTENT.md` uses both and they are not interchangeable. The `Projects` section puts every
- * field in a bulleted list; `Intro`, `Latest Course Panel`, `Now Panel` and `Contact` write
- * them as standalone paragraphs. A parser built on `FIELD` alone finds nothing outside
+ * field in a bulleted list; `Intro`, `Foundational Course Panel`, `Now Panel` and `Contact`
+ * write them as standalone paragraphs. A parser built on `FIELD` alone finds nothing outside
  * `Projects` and returns an empty About with no error anywhere.
  */
 const PROSE_FIELD = /^\*\*([^*]+):\*\*\s*(.*)$/
@@ -271,8 +271,8 @@ export async function loadAbout(): Promise<About> {
     location: get('Location'),
     stats,
     panels,
-    course: panel(source, 'Latest Course Panel'),
-    now: panel(source, 'Now Panel (Currently building)'),
+    course: panel(source, 'Foundational Course Panel'),
+    now: panel(source, 'Now Panel'),
   }
 }
 

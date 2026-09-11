@@ -42,11 +42,17 @@ const orientationListeners = new Set<() => void>()
 function ensureOrientationListener(): void {
   if (orientationMql !== null || typeof window === 'undefined') return
   orientationMql = window.matchMedia(PORTRAIT)
-  isPortrait = orientationMql.matches
-  orientationMql.addEventListener('change', (event) => {
-    isPortrait = event.matches
+  const update = (): void => {
+    const next = orientationMql?.matches ?? false
+    if (next === isPortrait) return
+    isPortrait = next
     for (const notify of orientationListeners) notify()
-  })
+  }
+  isPortrait = orientationMql.matches
+  orientationMql.addEventListener('change', update)
+  /* `resize` as well: DevTools device mode and CDP metric overrides sometimes skip the
+     media-query `change` event while still updating `.matches` and firing `resize`. */
+  window.addEventListener('resize', update)
 }
 
 function subscribeOrientation(onStoreChange: () => void): () => void {
@@ -59,7 +65,7 @@ function subscribeOrientation(onStoreChange: () => void): () => void {
 
 function getOrientationSnapshot(): boolean {
   ensureOrientationListener()
-  return isPortrait
+  return orientationMql?.matches ?? isPortrait
 }
 
 function getOrientationServerSnapshot(): boolean {
@@ -73,4 +79,46 @@ export function useIsPortrait(): boolean {
     getOrientationSnapshot,
     getOrientationServerSnapshot,
   )
+}
+
+/**
+ * §15.1's 820 px cut, **live**. `resolveTier()` freezes the same query for the Canvas; overlay
+ * chrome that has to follow a resize — DevTools device mode, a window dragged narrow — reads
+ * this instead. Server snapshot is `false` (desktop), matching `useIsPortrait`.
+ */
+const NARROW = '(max-width: 820px)'
+
+let narrowMql: MediaQueryList | null = null
+let isNarrow = false
+const narrowListeners = new Set<() => void>()
+
+function ensureNarrowListener(): void {
+  if (narrowMql !== null || typeof window === 'undefined') return
+  narrowMql = window.matchMedia(NARROW)
+  const update = (): void => {
+    const next = narrowMql?.matches ?? false
+    if (next === isNarrow) return
+    isNarrow = next
+    for (const notify of narrowListeners) notify()
+  }
+  isNarrow = narrowMql.matches
+  narrowMql.addEventListener('change', update)
+  window.addEventListener('resize', update)
+}
+
+function subscribeNarrow(onStoreChange: () => void): () => void {
+  ensureNarrowListener()
+  narrowListeners.add(onStoreChange)
+  return () => {
+    narrowListeners.delete(onStoreChange)
+  }
+}
+
+function getNarrowSnapshot(): boolean {
+  ensureNarrowListener()
+  return narrowMql?.matches ?? isNarrow
+}
+
+export function useIsNarrow(): boolean {
+  return useSyncExternalStore(subscribeNarrow, getNarrowSnapshot, () => false)
 }

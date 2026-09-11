@@ -72,10 +72,12 @@ export default function ControlsHint() {
            actually changes between breakpoints — `MuteToggle` growing from `size-8` to
            `size-9` moves this button's offset by the same quarter-rem. `corner`'s edge is
            the one property that changes between *devices*, so it stays dynamic, in `style`,
-           alongside the other safe-area insets in this file. */
+           alongside the other safe-area insets in this file. Both `top` and `bottom` are
+           written so a switch from one corner to the other cannot leave a leftover inset. */
         className="fixed right-[calc(env(safe-area-inset-right,0px)+3rem)] z-40 grid size-8 cursor-pointer place-items-center rounded-full border border-white/10 bg-black/55 text-sm text-white/70 backdrop-blur-md transition-colors hover:border-white/25 hover:text-white sm:right-[calc(env(safe-area-inset-right,0px)+3.25rem)] sm:size-9 sm:text-base"
         style={{
-          [corner]: `calc(env(safe-area-inset-${corner}, 0px) + 0.75rem)`,
+          top: corner === 'top' ? 'calc(env(safe-area-inset-top, 0px) + 0.75rem)' : 'auto',
+          bottom: corner === 'bottom' ? 'calc(env(safe-area-inset-bottom, 0px) + 0.75rem)' : 'auto',
         }}
       >
         ?
